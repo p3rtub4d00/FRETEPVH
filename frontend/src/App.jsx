@@ -12,17 +12,37 @@ const theme = {
   danger: '#EF4444'
 };
 
+// Estilos
 const styles = {
   wrapper: { minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', background: theme.bg, fontFamily: "'Inter', sans-serif" },
   container: { width: '100%', maxWidth: '500px', background: theme.white, minHeight: '100vh', boxShadow: '0 0 20px rgba(0,0,0,0.05)', paddingBottom: '80px' },
   header: { padding: '20px', background: theme.primary, color: theme.white, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   content: { padding: '20px' },
+  
+  // Inputs
   input: { width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid #E5E7EB', fontSize: '16px', marginBottom: '15px', background: '#F9FAFB' },
   select: { width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid #E5E7EB', fontSize: '16px', marginBottom: '15px', background: '#fff' },
   
-  // Botões
+  // Botões Normais
   btnPrimary: { width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: theme.primary, color: theme.accent, fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' },
-  btnSearch: { width: '100%', padding: '18px', borderRadius: '50px', border: 'none', background: theme.accent, color: 'black', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '20px', boxShadow: '0 4px 15px rgba(250, 204, 21, 0.4)' },
+  
+  // O BOTÃO QUE ESTAVA FALTANDO (Grande e Amarelo)
+  btnSearch: { 
+    width: '100%', 
+    padding: '20px', 
+    borderRadius: '12px', 
+    border: 'none', 
+    background: '#FACC15', // Amarelo forte
+    color: '#000', 
+    fontSize: '18px', 
+    fontWeight: '900', 
+    cursor: 'pointer', 
+    marginBottom: '30px', 
+    marginTop: '20px',
+    boxShadow: '0 4px 15px rgba(250, 204, 21, 0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: '1px'
+  },
   
   // Tags e Filtros
   btnTag: { padding: '8px 12px', borderRadius: '20px', border: '1px solid #E5E7EB', background: 'white', cursor: 'pointer', fontSize: '13px', marginRight: '6px', marginBottom: '8px', color: '#555' },
@@ -52,15 +72,19 @@ function Auth() {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', phone: '', carModel: '', vehicleType: 'CARRO', role: 'CLIENT' });
 
   const handleSubmit = async () => {
-    const endpoint = isLogin ? '/api/login' : '/api/register';
-    const res = await fetch(endpoint, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData)
-    });
-    const data = await res.json();
-    if (res.ok) {
-      localStorage.setItem('user', JSON.stringify(data));
-      navigate(data.role === 'DRIVER' ? '/motorista' : '/cliente');
-    } else alert(data.error);
+    try {
+      const endpoint = isLogin ? '/api/login' : '/api/register';
+      const res = await fetch(endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('user', JSON.stringify(data));
+        navigate(data.role === 'DRIVER' ? '/motorista' : '/cliente');
+      } else alert(data.error);
+    } catch (e) {
+      alert("Erro ao conectar. Tente novamente.");
+    }
   };
 
   return (
@@ -111,20 +135,20 @@ function ClientHome() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   
-  // Estados do Formulário
+  // Estados
   const [location, setLocation] = useState({ from: '', to: '' });
   const [filterType, setFilterType] = useState('CARRO');
   const [needHelper, setNeedHelper] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [drivers, setDrivers] = useState([]);
   
-  // Estado para CONTROLAR A VISIBILIDADE dos resultados
+  // --- O SEGREDO DO BOTÃO ---
+  // showResults começa como FALSE. Nada aparece até clicar.
   const [showResults, setShowResults] = useState(false);
 
   const commonItems = ['Geladeira', 'Sofá', 'Cama', 'Fogão', 'Mesa', 'Caixas', 'Moto', 'Outros'];
 
   useEffect(() => { 
-    // Carrega motoristas em segundo plano, mas não mostra ainda
     fetch('/api/drivers').then(r => r.json()).then(setDrivers); 
   }, []);
 
@@ -143,9 +167,13 @@ function ClientHome() {
       alert("Por favor, preencha onde retirar e onde entregar.");
       return;
     }
-    setShowResults(true); // AGORA mostra a lista
-    // Rola a tela para baixo suavemente
-    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+    // SÓ AQUI A LISTA VAI APARECER
+    setShowResults(true); 
+    
+    // Rola a tela para baixo para ver os resultados
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }, 100);
   };
 
   const getWhatsAppLink = (driverPhone) => {
@@ -165,16 +193,13 @@ function ClientHome() {
           <button style={{ background: 'none', border: '1px solid #555', padding: '5px 10px', borderRadius: '5px', color: 'white', cursor: 'pointer' }} onClick={handleLogout}>Sair</button>
         </div>
         
-        {/* Mapa Visual */}
         <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=-63.95,-8.8,-63.85,-8.7&layer=mapnik" style={{ width: '100%', height: '180px', border: 0 }} />
 
         <div style={styles.content}>
-          {/* PASSO 1: ONDE */}
           <h3 style={{marginTop: 0}}>📍 1. Onde?</h3>
           <input style={styles.input} placeholder="Retirar em (Bairro/Rua)" value={location.from} onChange={e => setLocation({...location, from: e.target.value})} />
           <input style={styles.input} placeholder="Entregar em (Bairro/Rua)" value={location.to} onChange={e => setLocation({...location, to: e.target.value})} />
 
-          {/* PASSO 2: O QUE */}
           <h3>📦 2. O que vamos levar?</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
             {commonItems.map(item => (
@@ -201,7 +226,6 @@ function ClientHome() {
             />
           </div>
 
-          {/* PASSO 3: VEÍCULO */}
           <h3>🚚 3. Tipo de Veículo</h3>
           <div style={styles.filterContainer}>
             {[
@@ -219,19 +243,20 @@ function ClientHome() {
             ))}
           </div>
           
-          {/* BOTÃO DE BUSCA (AÇÃO PRINCIPAL) */}
+          {/* --- AQUI ESTÁ O BOTÃO --- */}
+          {/* Se clicar, roda handleSearch e libera a lista abaixo */}
           <button style={styles.btnSearch} onClick={handleSearch}>
             🔍 BUSCAR MOTORISTAS
           </button>
-
-          {/* RESULTADOS (SÓ APARECEM APÓS CLIQUE) */}
+          
+          {/* --- ÁREA DE RESULTADOS (SÓ APARECE SE showResults === true) --- */}
           {showResults && (
-            <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-              <h3 style={{ textAlign: 'center' }}>Motoristas Disponíveis</h3>
+            <div style={{ marginTop: '20px', borderTop: '2px dashed #eee', paddingTop: '20px' }}>
+              <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>Resultados Encontrados</h3>
               
               {filteredDrivers.length === 0 ? (
-                <p style={{ textAlign: 'center', color: '#888' }}>
-                  Nenhum veículo do tipo <strong>{filterType}</strong> online agora. Tente outro tipo.
+                <p style={{ textAlign: 'center', color: '#888', padding: '20px' }}>
+                  Nenhum motorista de <strong>{filterType}</strong> disponível agora. Tente mudar o veículo.
                 </p>
               ) : (
                 filteredDrivers.map(d => (
@@ -239,7 +264,7 @@ function ClientHome() {
                     {d.plan === 'VIP' && <div style={{ position: 'absolute', top: -10, right: 10, background: theme.accent, fontSize: '10px', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>VIP</div>}
                     
                     <div style={{ display: 'flex', gap: '15px' }}>
-                      <img src={d.photo} style={{ width: 60, height: 60, borderRadius: '50%' }} />
+                      <img src={d.photo} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover' }} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 'bold', fontSize: '18px' }}>{d.name} {d.isVerified && <VerifiedBadge />}</div>
                         <div style={{ color: '#666', fontSize: '12px' }}>{d.carModel}</div>
@@ -261,6 +286,7 @@ function ClientHome() {
               )}
             </div>
           )}
+          {/* FIM DA ÁREA DE RESULTADOS */}
 
         </div>
       </div>
