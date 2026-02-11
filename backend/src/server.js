@@ -9,72 +9,103 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- BANCO DE DADOS VOLÁTIL (Na memória) ---
+// --- DADOS ---
+// Pré-carreguei alguns motoristas para o sistema não parecer vazio
 let users = [
-  { email: "motorista@teste.com", password: "123", role: "DRIVER", name: "Carlos Motorista" },
-  { email: "cliente@teste.com", password: "123", role: "CLIENT", name: "Ana Cliente" }
+  { 
+    id: 1,
+    name: "Carlos Silva", 
+    email: "motorista@teste.com", 
+    password: "123", 
+    role: "DRIVER", 
+    phone: "69999999999", 
+    carModel: "Fiorino Branca 2020",
+    rating: 4.9,
+    trips: 142,
+    isAvailable: true,
+    photo: "https://randomuser.me/api/portraits/men/32.jpg"
+  },
+  { 
+    id: 2,
+    name: "Ana Pereira", 
+    email: "ana@teste.com", 
+    password: "123", 
+    role: "DRIVER", 
+    phone: "69988888888", 
+    carModel: "Strada Cabine Dupla",
+    rating: 5.0,
+    trips: 89,
+    isAvailable: true,
+    photo: "https://randomuser.me/api/portraits/women/44.jpg"
+  },
+  { 
+    id: 3,
+    name: "João Cliente", 
+    email: "cliente@teste.com", 
+    password: "123", 
+    role: "CLIENT", 
+    phone: "69977777777" 
+  }
 ];
-let orders = [];
 
 app.use(cors());
 app.use(express.json());
 
-// --- ROTAS DE AUTENTICAÇÃO ---
+// --- ROTAS ---
+
 app.post('/api/login', (req, res) => {
   const { email, password } = req.body;
-  const user = users.find(u => u.email === email && u.password === password); // Senha simples para teste
-  if (!user) return res.status(401).json({ error: "Email ou senha incorretos" });
+  const user = users.find(u => u.email === email && u.password === password);
+  if (!user) return res.status(401).json({ error: "Dados incorretos" });
   return res.json(user);
 });
 
 app.post('/api/register', (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, phone, carModel } = req.body;
   if (users.find(u => u.email === email)) {
     return res.status(400).json({ error: "Email já cadastrado" });
   }
-  const newUser = { name, email, password, role };
+  
+  const newUser = { 
+    id: Date.now(),
+    name, 
+    email, 
+    password, 
+    role, 
+    phone,
+    carModel: role === 'DRIVER' ? carModel : null,
+    rating: 5.0, // Começa com 5 estrelas
+    trips: 0,
+    isAvailable: role === 'DRIVER', // Já entra disponível se for motorista
+    photo: `https://ui-avatars.com/api/?name=${name}&background=random`
+  };
+  
   users.push(newUser);
   res.json(newUser);
 });
 
-// --- ROTAS DE PEDIDOS ---
-app.post('/api/orders', (req, res) => {
-  // Agora recebemos origem, destino e forma de pagamento
-  const order = { 
-    id: Date.now(), 
-    ...req.body, 
-    status: 'PENDENTE',
-    createdAt: new Date()
-  };
-  orders.push(order);
-  res.json(order);
+// Rota para buscar motoristas disponíveis
+app.get('/api/drivers', (req, res) => {
+  // Retorna apenas motoristas que estão "Online" (isAvailable = true)
+  const availableDrivers = users.filter(u => u.role === 'DRIVER' && u.isAvailable);
+  res.json(availableDrivers);
 });
 
-app.get('/api/orders', (req, res) => {
-  const status = req.query.status;
-  if (status) return res.json(orders.filter(o => o.status === status));
-  res.json(orders);
-});
-
-app.post('/api/orders/:id/accept', (req, res) => {
-  const { id } = req.params;
-  const { driverName } = req.body;
-  const order = orders.find(o => o.id == id);
-  if (order) {
-    order.status = 'ACEITO';
-    order.driverName = driverName;
-    res.json(order);
+// Rota para motorista mudar status (Online/Offline)
+app.post('/api/users/:email/status', (req, res) => {
+  const { isAvailable } = req.body;
+  const user = users.find(u => u.email === req.params.email);
+  if (user) {
+    user.isAvailable = isAvailable;
+    res.json(user);
   } else {
-    res.status(404).json({ error: "Pedido não existe" });
+    res.status(404).json({ error: "User not found" });
   }
 });
 
-// --- ENTREGA DO FRONTEND ---
+// --- SERVIR FRONTEND ---
 const frontendPath = path.join(__dirname, '../../frontend/dist');
 app.use(express.static(frontendPath));
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
-});
+app.get('*', (req, res) => res.sendFile(path.join(frontendPath, 'index.html')));
 
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
