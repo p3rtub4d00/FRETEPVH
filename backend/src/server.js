@@ -9,8 +9,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- DADOS ---
-// Pré-carreguei alguns motoristas para o sistema não parecer vazio
+// --- DADOS DO BANCO (SIMULADO) ---
 let users = [
   { 
     id: 1,
@@ -21,8 +20,12 @@ let users = [
     phone: "69999999999", 
     carModel: "Fiorino Branca 2020",
     rating: 4.9,
-    trips: 142,
+    trips: 154, // Nível Ouro
     isAvailable: true,
+    isVerified: true, // Tem selo azul
+    plan: "VIP", // Aparece no topo
+    pixKey: "carlos@pix.com",
+    emergencyPhone: "69900000000",
     photo: "https://randomuser.me/api/portraits/men/32.jpg"
   },
   { 
@@ -34,8 +37,12 @@ let users = [
     phone: "69988888888", 
     carModel: "Strada Cabine Dupla",
     rating: 5.0,
-    trips: 89,
+    trips: 42, // Nível Prata
     isAvailable: true,
+    isVerified: false,
+    plan: "FREE",
+    pixKey: "69988888888",
+    emergencyPhone: "69900000000",
     photo: "https://randomuser.me/api/portraits/women/44.jpg"
   },
   { 
@@ -74,9 +81,13 @@ app.post('/api/register', (req, res) => {
     role, 
     phone,
     carModel: role === 'DRIVER' ? carModel : null,
-    rating: 5.0, // Começa com 5 estrelas
+    rating: 5.0,
     trips: 0,
-    isAvailable: role === 'DRIVER', // Já entra disponível se for motorista
+    isAvailable: role === 'DRIVER',
+    isVerified: false, // Começa sem verificação
+    plan: 'FREE', // Começa no plano grátis
+    pixKey: phone, // Usa o telefone como PIX padrão
+    emergencyPhone: '',
     photo: `https://ui-avatars.com/api/?name=${name}&background=random`
   };
   
@@ -84,23 +95,47 @@ app.post('/api/register', (req, res) => {
   res.json(newUser);
 });
 
-// Rota para buscar motoristas disponíveis
+// Buscar Motoristas (Com ordenação Inteligente)
 app.get('/api/drivers', (req, res) => {
-  // Retorna apenas motoristas que estão "Online" (isAvailable = true)
-  const availableDrivers = users.filter(u => u.role === 'DRIVER' && u.isAvailable);
-  res.json(availableDrivers);
+  let drivers = users.filter(u => u.role === 'DRIVER' && u.isAvailable);
+  
+  // ORDENAÇÃO: 1º VIPs, 2º Maior Avaliação, 3º Mais Viagens
+  drivers.sort((a, b) => {
+    if (a.plan === 'VIP' && b.plan !== 'VIP') return -1;
+    if (a.plan !== 'VIP' && b.plan === 'VIP') return 1;
+    return b.rating - a.rating;
+  });
+
+  res.json(drivers);
 });
 
-// Rota para motorista mudar status (Online/Offline)
+// Atualizar Status (Online/Offline)
 app.post('/api/users/:email/status', (req, res) => {
   const { isAvailable } = req.body;
   const user = users.find(u => u.email === req.params.email);
   if (user) {
     user.isAvailable = isAvailable;
     res.json(user);
-  } else {
-    res.status(404).json({ error: "User not found" });
-  }
+  } else res.status(404).json({ error: "User not found" });
+});
+
+// Comprar VIP (Simulação)
+app.post('/api/users/:email/upgrade', (req, res) => {
+  const user = users.find(u => u.email === req.params.email);
+  if (user) {
+    user.plan = 'VIP';
+    res.json(user);
+  } else res.status(404).json({ error: "User not found" });
+});
+
+// Atualizar Dados de Segurança (Pânico/Pix)
+app.post('/api/users/:email/update', (req, res) => {
+  const user = users.find(u => u.email === req.params.email);
+  if (user) {
+    if (req.body.emergencyPhone) user.emergencyPhone = req.body.emergencyPhone;
+    if (req.body.pixKey) user.pixKey = req.body.pixKey;
+    res.json(user);
+  } else res.status(404).json({ error: "User not found" });
 });
 
 // --- SERVIR FRONTEND ---
