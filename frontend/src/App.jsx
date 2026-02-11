@@ -1,37 +1,55 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 
-// --- CORES E ESTILO (DESIGN SYSTEM) ---
+// --- DESIGN SYSTEM AVANÇADO ---
 const theme = {
-  primary: '#000000', // Preto Uber/99
-  accent: '#FACC15', // Amarelo Taxi
+  primary: '#111827', // Preto Premium
+  accent: '#FACC15', // Ouro VIP
+  secondary: '#374151',
   bg: '#F3F4F6',
   white: '#FFFFFF',
   text: '#1F2937',
-  green: '#22C55E' // Cor do WhatsApp
+  green: '#22C55E', // WhatsApp/Sucesso
+  blue: '#3B82F6', // Verificado
+  danger: '#EF4444' // Pânico
 };
 
 const styles = {
   wrapper: { minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', background: theme.bg, fontFamily: "'Inter', sans-serif" },
-  container: { width: '100%', maxWidth: '500px', background: theme.white, minHeight: '100vh', boxShadow: '0 0 20px rgba(0,0,0,0.05)' },
+  container: { width: '100%', maxWidth: '500px', background: theme.white, minHeight: '100vh', boxShadow: '0 0 20px rgba(0,0,0,0.05)', paddingBottom: '80px' },
   header: { padding: '20px', background: theme.primary, color: theme.white, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { margin: 0, fontSize: '20px', fontWeight: 'bold', color: theme.accent },
   content: { padding: '20px' },
-  inputGroup: { marginBottom: '15px' },
-  label: { display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: '600', color: '#4B5563' },
-  input: { width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid #E5E7EB', fontSize: '16px', outline: 'none', background: '#F9FAFB' },
-  select: { width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid #E5E7EB', fontSize: '16px', background: '#fff' },
-  btnPrimary: { width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: theme.primary, color: theme.accent, fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' },
-  btnSuccess: { width: '100%', padding: '12px', borderRadius: '8px', border: 'none', background: theme.green, color: 'white', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' },
-  card: { background: 'white', border: '1px solid #F3F4F6', borderRadius: '16px', padding: '16px', marginBottom: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' },
-  driverHeader: { display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '10px' },
-  avatar: { width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${theme.accent}` },
-  stats: { display: 'flex', gap: '15px', fontSize: '12px', color: '#6B7280', marginTop: '5px' },
-  badge: { padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', background: '#FEF3C7', color: '#D97706' },
-  mapFrame: { width: '100%', height: '180px', borderRadius: '12px', border: 'none', marginBottom: '15px', background: '#eee' }
+  input: { width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid #E5E7EB', fontSize: '16px', marginBottom: '15px', background: '#F9FAFB' },
+  btnPrimary: { width: '100%', padding: '16px', borderRadius: '12px', border: 'none', background: theme.primary, color: theme.accent, fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' },
+  btnVip: { width: '100%', padding: '12px', borderRadius: '8px', border: `2px solid ${theme.accent}`, background: '#FEFCE8', color: '#B45309', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '15px' },
+  btnPanic: { width: '100%', padding: '15px', borderRadius: '50px', border: 'none', background: theme.danger, color: 'white', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.4)', marginTop: '20px' },
+  card: { background: 'white', border: '1px solid #F3F4F6', borderRadius: '16px', padding: '16px', marginBottom: '16px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', position: 'relative' },
+  vipCard: { border: `2px solid ${theme.accent}`, background: '#FFFBEB' },
+  badge: { padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', display: 'inline-block', marginRight: '5px' },
 };
 
-// --- COMPONENTE LOGIN / CADASTRO ---
+// --- COMPONENTES AUXILIARES ---
+
+// Medalha de Gamificação
+const RankBadge = ({ trips }) => {
+  let label = "🥉 BRONZE";
+  let color = "#B45309";
+  let bg = "#FEF3C7";
+
+  if (trips > 50) { label = "🥈 PRATA"; color = "#374151"; bg = "#F3F4F6"; }
+  if (trips > 100) { label = "🥇 OURO"; color = "#B45309"; bg = "#FDE68A"; }
+
+  return <span style={{ ...styles.badge, background: bg, color: color }}>{label}</span>;
+};
+
+// Selo de Verificado
+const VerifiedBadge = () => (
+  <span style={{ color: theme.blue, marginLeft: '5px', fontSize: '14px' }} title="Motorista Verificado">
+    Verified ☑️
+  </span>
+);
+
+// --- TELA LOGIN/CADASTRO ---
 function Auth() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
@@ -40,71 +58,40 @@ function Auth() {
   const handleSubmit = async () => {
     const endpoint = isLogin ? '/api/login' : '/api/register';
     const res = await fetch(endpoint, {
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData)
     });
     const data = await res.json();
     if (res.ok) {
       localStorage.setItem('user', JSON.stringify(data));
       navigate(data.role === 'DRIVER' ? '/motorista' : '/cliente');
-    } else {
-      alert(data.error);
-    }
+    } else alert(data.error);
   };
 
   return (
     <div style={styles.wrapper}>
       <div style={styles.container}>
-        <div style={{...styles.header, justifyContent: 'center', padding: '40px 20px'}}>
-          <div style={{textAlign: 'center'}}>
-            <h1 style={{fontSize: '32px', color: theme.accent, margin: 0}}>99Frete</h1>
-            <p style={{color: '#9CA3AF', margin: '5px 0'}}>Conectando PVH</p>
-          </div>
+        <div style={{ ...styles.header, justifyContent: 'center', padding: '50px 20px' }}>
+          <h1 style={{ color: theme.accent, margin: 0 }}>99Frete PRO</h1>
         </div>
         <div style={styles.content}>
+          {!isLogin && <input style={styles.input} placeholder="Nome Completo" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />}
+          <input style={styles.input} placeholder="E-mail" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+          <input style={styles.input} type="password" placeholder="Senha" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+          
           {!isLogin && (
             <>
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>Nome Completo</label>
-                <input style={styles.input} placeholder="Seu nome" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
-              </div>
-              <div style={styles.inputGroup}>
-                <label style={styles.label}>WhatsApp / Telefone</label>
-                <input style={styles.input} type="tel" placeholder="(69) 99999-9999" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
-              </div>
+              <input style={styles.input} placeholder="WhatsApp (69) 9..." value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+              <select style={styles.input} value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
+                <option value="CLIENT">Cliente</option>
+                <option value="DRIVER">Motorista</option>
+              </select>
+              {formData.role === 'DRIVER' && <input style={styles.input} placeholder="Modelo do Carro" value={formData.carModel} onChange={e => setFormData({...formData, carModel: e.target.value})} />}
             </>
-          )}
-          
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>E-mail</label>
-            <input style={styles.input} type="email" placeholder="email@exemplo.com" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-          </div>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Senha</label>
-            <input style={styles.input} type="password" placeholder="******" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
-          </div>
-
-          {!isLogin && (
-             <div style={styles.inputGroup}>
-               <label style={styles.label}>Você quer:</label>
-               <select style={styles.select} value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})}>
-                 <option value="CLIENT">📦 Contratar Frete</option>
-                 <option value="DRIVER">🚚 Ser Motorista</option>
-               </select>
-             </div>
-          )}
-
-          {!isLogin && formData.role === 'DRIVER' && (
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>Modelo do Veículo</label>
-              <input style={styles.input} placeholder="Ex: Strada 2021 Branca" value={formData.carModel} onChange={e => setFormData({...formData, carModel: e.target.value})} />
-            </div>
           )}
 
           <button style={styles.btnPrimary} onClick={handleSubmit}>{isLogin ? 'ENTRAR' : 'CADASTRAR'}</button>
-          <p style={{textAlign: 'center', color: '#6B7280', marginTop: '20px', cursor: 'pointer'}} onClick={() => setIsLogin(!isLogin)}>
-            {isLogin ? 'Criar nova conta' : 'Já tenho conta'}
+          <p style={{ textAlign: 'center', cursor: 'pointer', color: '#666' }} onClick={() => setIsLogin(!isLogin)}>
+            {isLogin ? 'Criar conta' : 'Já tenho conta'}
           </p>
         </div>
       </div>
@@ -112,26 +99,18 @@ function Auth() {
   );
 }
 
-// --- ÁREA DO CLIENTE (BUSCA) ---
+// --- CLIENTE ---
 function ClientHome() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const [drivers, setDrivers] = useState([]);
   const [location, setLocation] = useState({ from: '', to: '' });
 
-  useEffect(() => {
-    // Busca motoristas ao carregar
-    fetch('/api/drivers').then(r => r.json()).then(setDrivers);
-  }, []);
+  useEffect(() => { fetch('/api/drivers').then(r => r.json()).then(setDrivers); }, []);
 
-  const openWhatsApp = (driverPhone, driverName) => {
-    const text = `Olá ${driverName}, vi seu perfil no 99Frete. Preciso levar algo de ${location.from} para ${location.to}. Qual o valor?`;
-    window.open(`https://wa.me/55${driverPhone.replace(/\D/g,'')}?text=${encodeURIComponent(text)}`, '_blank');
-  };
-
-  const openMaps = () => {
-    if(!location.from || !location.to) return alert("Preencha origem e destino");
-    window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(location.from)}&destination=${encodeURIComponent(location.to)}`, '_blank');
+  const copyPix = (pix) => {
+    navigator.clipboard.writeText(pix);
+    alert('Chave PIX copiada: ' + pix);
   };
 
   return (
@@ -139,125 +118,130 @@ function ClientHome() {
       <div style={styles.container}>
         <div style={styles.header}>
           <span>Olá, {user.name}</span>
-          <span style={{fontSize: '12px', background: '#333', padding: '5px 10px', borderRadius: '20px'}} onClick={() => navigate('/')}>Sair</span>
+          <button style={{ background: 'none', border: 'none', color: 'white' }} onClick={() => navigate('/')}>Sair</button>
         </div>
         
-        {/* Mapa Estático Visual */}
-        <iframe 
-          src="https://www.openstreetmap.org/export/embed.html?bbox=-63.95,-8.8,-63.85,-8.7&amp;layer=mapnik" 
-          style={styles.mapFrame}
-        ></iframe>
+        <iframe src="https://www.openstreetmap.org/export/embed.html?bbox=-63.95,-8.8,-63.85,-8.7&layer=mapnik" style={{ width: '100%', height: '200px', border: 0 }} />
 
         <div style={styles.content}>
-          <h2 style={{marginTop: 0}}>Para onde vamos?</h2>
+          <h3>Encontre seu Frete</h3>
+          <input style={styles.input} placeholder="📍 Origem" value={location.from} onChange={e => setLocation({...location, from: e.target.value})} />
+          <input style={styles.input} placeholder="🚩 Destino" value={location.to} onChange={e => setLocation({...location, to: e.target.value})} />
           
-          <div style={styles.inputGroup}>
-            <input style={styles.input} placeholder="📍 Retirar em (Origem)" value={location.from} onChange={e => setLocation({...location, from: e.target.value})} />
-          </div>
-          <div style={styles.inputGroup}>
-            <input style={styles.input} placeholder="🏁 Entregar em (Destino)" value={location.to} onChange={e => setLocation({...location, to: e.target.value})} />
-          </div>
-
-          {location.from && location.to && (
-            <button style={{...styles.btnPrimary, background: '#fff', color: '#000', border: '1px solid #ddd', marginBottom: '20px'}} onClick={openMaps}>
-              🗺️ Ver Rota no Maps
-            </button>
-          )}
-
-          <h3 style={{marginBottom: '15px'}}>Motoristas Disponíveis</h3>
-          
-          {drivers.map(driver => (
-            <div key={driver.id} style={styles.card}>
-              <div style={styles.driverHeader}>
-                <img src={driver.photo} style={styles.avatar} alt="Driver" />
-                <div>
-                  <div style={{fontWeight: 'bold', fontSize: '18px'}}>{driver.name}</div>
-                  <div style={{color: '#4B5563'}}>{driver.carModel}</div>
-                  <div style={styles.stats}>
-                    <span>⭐ {driver.rating}</span>
-                    <span>🚗 {driver.trips} viagens</span>
+          {drivers.map(d => (
+            <div key={d.id} style={{ ...styles.card, ...(d.plan === 'VIP' ? styles.vipCard : {}) }}>
+              {d.plan === 'VIP' && <div style={{ position: 'absolute', top: -10, right: 10, background: theme.accent, fontSize: '10px', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>DESTAQUE VIP</div>}
+              
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <img src={d.photo} style={{ width: 60, height: 60, borderRadius: '50%' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 'bold', fontSize: '18px' }}>
+                    {d.name} {d.isVerified && <VerifiedBadge />}
+                  </div>
+                  <div style={{ color: '#666', fontSize: '14px' }}>{d.carModel}</div>
+                  <div style={{ marginTop: '5px' }}>
+                    <RankBadge trips={d.trips} />
+                    <span style={{ fontSize: '12px', color: '#666' }}>⭐ {d.rating}</span>
                   </div>
                 </div>
               </div>
-              
-              <button style={styles.btnSuccess} onClick={() => openWhatsApp(driver.phone, driver.name)}>
-                 📲 NEGOCIAR NO WHATSAPP
-              </button>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                <button 
+                  onClick={() => window.open(`https://wa.me/55${d.phone.replace(/\D/g,'')}?text=Olá, vi no 99Frete. Frete de ${location.from} para ${location.to}?`, '_blank')}
+                  style={{ ...styles.btnPrimary, flex: 1, margin: 0, background: theme.green, color: 'white' }}
+                >
+                  WhatsApp
+                </button>
+                <button onClick={() => copyPix(d.pixKey)} style={{ padding: '10px', borderRadius: '10px', border: '1px solid #ddd', background: '#fff' }}>
+                  🔑 Pix
+                </button>
+              </div>
             </div>
           ))}
-
-          {drivers.length === 0 && <p>Nenhum motorista online agora.</p>}
         </div>
       </div>
     </div>
   );
 }
 
-// --- ÁREA DO MOTORISTA ---
+// --- MOTORISTA ---
 function DriverHome() {
   const navigate = useNavigate();
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
-  const [isOnline, setIsOnline] = useState(user.isAvailable);
+  const [emergencyContact, setEmergencyContact] = useState(user.emergencyPhone || '');
+  const [pixKey, setPixKey] = useState(user.pixKey || '');
 
   const toggleStatus = async () => {
-    const newState = !isOnline;
-    setIsOnline(newState);
-    
-    // Atualiza no backend
-    await fetch(`/api/users/${user.email}/status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isAvailable: newState })
+    const newState = !user.isAvailable;
+    await fetch(`/api/users/${user.email}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isAvailable: newState }) });
+    const u = { ...user, isAvailable: newState };
+    setUser(u); localStorage.setItem('user', JSON.stringify(u));
+  };
+
+  const buyVip = async () => {
+    if(confirm("Deseja ativar o Plano VIP por R$ 49,90/mês? (Simulação)")) {
+      await fetch(`/api/users/${user.email}/upgrade`, { method: 'POST' });
+      const u = { ...user, plan: 'VIP' };
+      setUser(u); localStorage.setItem('user', JSON.stringify(u));
+      alert("Parabéns! Você agora é VIP e aparecerá no topo.");
+    }
+  };
+
+  const saveSettings = async () => {
+    await fetch(`/api/users/${user.email}/update`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emergencyPhone: emergencyContact, pixKey: pixKey })
     });
-    
-    // Atualiza local
-    const updatedUser = { ...user, isAvailable: newState };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
+    const u = { ...user, emergencyPhone: emergencyContact, pixKey };
+    setUser(u); localStorage.setItem('user', JSON.stringify(u));
+    alert("Dados salvos!");
+  };
+
+  const panic = () => {
+    if(!user.emergencyPhone) return alert("Configure um contato de emergência abaixo primeiro!");
+    window.open(`https://wa.me/55${user.emergencyPhone.replace(/\D/g,'')}?text=SOCORRO! Preciso de ajuda urgente. Minha localização: https://maps.google.com/?q=-8.7619,-63.9039`, '_blank');
   };
 
   return (
     <div style={styles.wrapper}>
       <div style={styles.container}>
         <div style={styles.header}>
-          <span>Painel Motorista</span>
+          <span>Painel {user.plan === 'VIP' ? '💎 VIP' : ''}</span>
           <span onClick={() => navigate('/')}>Sair</span>
         </div>
-        
-        <div style={{padding: '30px', textAlign: 'center'}}>
-          <img src={user.photo} style={{width: '100px', height: '100px', borderRadius: '50%', marginBottom: '10px'}} />
-          <h2>{user.name}</h2>
-          <p style={{color: '#666'}}>{user.carModel}</p>
-          
-          <div style={{display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '30px'}}>
-            <div style={{background: '#F3F4F6', padding: '15px', borderRadius: '10px', width: '100px'}}>
-              <div style={{fontSize: '24px', fontWeight: 'bold'}}>⭐ {user.rating}</div>
-              <div style={{fontSize: '12px'}}>Avaliação</div>
-            </div>
-            <div style={{background: '#F3F4F6', padding: '15px', borderRadius: '10px', width: '100px'}}>
-              <div style={{fontSize: '24px', fontWeight: 'bold'}}>{user.trips}</div>
-              <div style={{fontSize: '12px'}}>Viagens</div>
-            </div>
+
+        <div style={styles.content}>
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <img src={user.photo} style={{ width: 80, height: 80, borderRadius: '50%', border: user.plan === 'VIP' ? `3px solid ${theme.accent}` : 'none' }} />
+            <h2>{user.name} {user.isVerified && <VerifiedBadge />}</h2>
+            <RankBadge trips={user.trips} />
           </div>
 
-          <button 
-            onClick={toggleStatus}
-            style={{
-              ...styles.btnPrimary, 
-              background: isOnline ? theme.green : '#EF4444', 
-              color: 'white',
-              fontSize: '20px',
-              padding: '20px'
-            }}
-          >
-            {isOnline ? 'VOCÊ ESTÁ ONLINE 🟢' : 'VOCÊ ESTÁ OFFLINE 🔴'}
+          {user.plan !== 'VIP' && (
+            <button style={styles.btnVip} onClick={buyVip}>
+              🚀 SEJA VIP - Aumente suas corridas
+            </button>
+          )}
+
+          <button onClick={toggleStatus} style={{ ...styles.btnPrimary, background: user.isAvailable ? theme.green : '#ccc', color: 'white' }}>
+            {user.isAvailable ? '🟢 ONLINE (Recebendo Pedidos)' : '🔴 OFFLINE'}
           </button>
+
+          <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #eee' }} />
+
+          <h3>Configurações de Segurança</h3>
+          <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Sua Chave PIX</label>
+          <input style={styles.input} value={pixKey} onChange={e => setPixKey(e.target.value)} placeholder="CPF, Email ou Telefone" />
           
-          <p style={{marginTop: '20px', color: '#6B7280'}}>
-            {isOnline 
-              ? "Clientes podem ver seu perfil e chamar no WhatsApp." 
-              : "Fique online para receber chamados."}
-          </p>
+          <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Contato de Emergência (Pânico)</label>
+          <input style={styles.input} value={emergencyContact} onChange={e => setEmergencyContact(e.target.value)} placeholder="Whatsapp de alguém de confiança" />
+          
+          <button style={{ ...styles.btnPrimary, background: '#333', color: 'white', padding: '10px' }} onClick={saveSettings}>Salvar Configurações</button>
+
+          <button style={styles.btnPanic} onClick={panic}>
+            🚨 BOTÃO DE PÂNICO
+          </button>
+          <p style={{ textAlign: 'center', fontSize: '12px', color: '#888' }}>Envia sua localização para seu contato de emergência.</p>
         </div>
       </div>
     </div>
