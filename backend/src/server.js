@@ -3,54 +3,66 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// --- CONFIGURAÇÃO DE CAMINHOS ---
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- DADOS EM MEMÓRIA (SIMPLIFICADO) ---
+// --- BANCO DE DADOS VOLÁTIL (Na memória) ---
 let users = [
-  { email: "motorista@teste.com", role: "DRIVER", name: "Sr. Motorista" },
-  { email: "cliente@teste.com", role: "CLIENT", name: "João Cliente" }
+  { email: "motorista@teste.com", password: "123", role: "DRIVER", name: "Carlos Motorista" },
+  { email: "cliente@teste.com", password: "123", role: "CLIENT", name: "Ana Cliente" }
 ];
 let orders = [];
 
-// --- MIDDLEWARES ---
 app.use(cors());
 app.use(express.json());
 
-// --- ROTAS DA API ---
-
-// 1. Login Simples
+// --- ROTAS DE AUTENTICAÇÃO ---
 app.post('/api/login', (req, res) => {
-  const { email } = req.body;
-  const user = users.find(u => u.email === email);
-  if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+  const { email, password } = req.body;
+  const user = users.find(u => u.email === email && u.password === password); // Senha simples para teste
+  if (!user) return res.status(401).json({ error: "Email ou senha incorretos" });
   return res.json(user);
 });
 
-// 2. Criar Pedido
+app.post('/api/register', (req, res) => {
+  const { name, email, password, role } = req.body;
+  if (users.find(u => u.email === email)) {
+    return res.status(400).json({ error: "Email já cadastrado" });
+  }
+  const newUser = { name, email, password, role };
+  users.push(newUser);
+  res.json(newUser);
+});
+
+// --- ROTAS DE PEDIDOS ---
 app.post('/api/orders', (req, res) => {
-  const order = { id: Date.now(), ...req.body, status: 'PENDENTE' };
+  // Agora recebemos origem, destino e forma de pagamento
+  const order = { 
+    id: Date.now(), 
+    ...req.body, 
+    status: 'PENDENTE',
+    createdAt: new Date()
+  };
   orders.push(order);
   res.json(order);
 });
 
-// 3. Listar Pedidos
 app.get('/api/orders', (req, res) => {
   const status = req.query.status;
   if (status) return res.json(orders.filter(o => o.status === status));
   res.json(orders);
 });
 
-// 4. Aceitar Pedido
 app.post('/api/orders/:id/accept', (req, res) => {
   const { id } = req.params;
+  const { driverName } = req.body;
   const order = orders.find(o => o.id == id);
   if (order) {
     order.status = 'ACEITO';
+    order.driverName = driverName;
     res.json(order);
   } else {
     res.status(404).json({ error: "Pedido não existe" });
@@ -58,8 +70,6 @@ app.post('/api/orders/:id/accept', (req, res) => {
 });
 
 // --- ENTREGA DO FRONTEND ---
-// O servidor busca a pasta 'dist' que foi gerada dentro de 'frontend'
-// Atenção: Certifique-se de que o comando de build rodou antes de iniciar o servidor
 const frontendPath = path.join(__dirname, '../../frontend/dist');
 app.use(express.static(frontendPath));
 
