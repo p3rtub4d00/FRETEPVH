@@ -33,7 +33,7 @@ function Login() {
         console.error("Erro de conexão:", error);
         alert("Erro ao conectar com o servidor.");
     }
-  }
+  } 
 
   return (
     <div style={{ ...styles.container, textAlign: 'center', marginTop: 50 }}>
