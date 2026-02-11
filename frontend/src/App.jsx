@@ -15,15 +15,24 @@ function Login() {
   
   async function login(role) {
     const email = role === 'DRIVER' ? 'motorista@teste.com' : 'cliente@teste.com';
-    // Em produção, usa o caminho relativo /api, que funciona tanto local quanto no Render
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const user = await res.json();
-    localStorage.setItem('user', JSON.stringify(user));
-    navigate(role === 'DRIVER' ? '/motorista' : '/cliente');
+    // Em produção, usa o caminho relativo /api
+    try {
+        const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+        });
+        if (res.ok) {
+            const user = await res.json();
+            localStorage.setItem('user', JSON.stringify(user));
+            navigate(role === 'DRIVER' ? '/motorista' : '/cliente');
+        } else {
+            alert("Erro no login");
+        }
+    } catch (error) {
+        console.error("Erro de conexão:", error);
+        alert("Erro ao conectar com o servidor.");
+    }
   }
 
   return (
@@ -84,6 +93,8 @@ function DriverArea() {
   async function aceitar(id) {
     await fetch(`/api/orders/${id}/accept`, { method: 'POST' });
     alert('Corrida Aceita!');
+    // Recarregar lista após aceitar
+    fetch('/api/orders?status=PENDENTE').then(r => r.json()).then(setOrders);
   }
 
   return (
