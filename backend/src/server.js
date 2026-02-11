@@ -18,7 +18,7 @@ let users = [
     password: "123", 
     role: "DRIVER", 
     phone: "69999999999", 
-    vehicleType: "PICKUP", // Categoria para filtro
+    vehicleType: "CARRO", // Fiorino/Pickup
     carModel: "Fiorino Branca 2020",
     rating: 4.9,
     trips: 154, 
@@ -36,7 +36,7 @@ let users = [
     password: "123", 
     role: "DRIVER", 
     phone: "69988888888", 
-    vehicleType: "CAMINHAO", // Categoria para filtro
+    vehicleType: "CAMINHAO", // Mudanças
     carModel: "Caminhão 3/4 Baú",
     rating: 5.0,
     trips: 42, 
@@ -54,7 +54,7 @@ let users = [
     password: "123", 
     role: "DRIVER", 
     phone: "69977777777", 
-    vehicleType: "MOTO", // Categoria para filtro
+    vehicleType: "MOTO", // Pequenos volumes
     carModel: "Honda Fan 160",
     rating: 4.8,
     trips: 310, 
@@ -101,7 +101,7 @@ app.post('/api/register', (req, res) => {
     role, 
     phone,
     carModel: role === 'DRIVER' ? carModel : null,
-    vehicleType: role === 'DRIVER' ? (vehicleType || 'PICKUP') : null,
+    vehicleType: role === 'DRIVER' ? (vehicleType || 'CARRO') : null,
     rating: 5.0,
     trips: 0,
     isAvailable: role === 'DRIVER',
@@ -118,7 +118,7 @@ app.post('/api/register', (req, res) => {
 
 app.get('/api/drivers', (req, res) => {
   let drivers = users.filter(u => u.role === 'DRIVER' && u.isAvailable);
-  // Ordenação: VIP primeiro
+  // Ordenação: VIP primeiro, depois Rating
   drivers.sort((a, b) => {
     if (a.plan === 'VIP' && b.plan !== 'VIP') return -1;
     if (a.plan !== 'VIP' && b.plan === 'VIP') return 1;
@@ -127,6 +127,7 @@ app.get('/api/drivers', (req, res) => {
   res.json(drivers);
 });
 
+// Atualizar Status
 app.post('/api/users/:email/status', (req, res) => {
   const { isAvailable } = req.body;
   const user = users.find(u => u.email === req.params.email);
@@ -136,6 +137,7 @@ app.post('/api/users/:email/status', (req, res) => {
   } else res.status(404).json({ error: "User not found" });
 });
 
+// Comprar VIP
 app.post('/api/users/:email/upgrade', (req, res) => {
   const user = users.find(u => u.email === req.params.email);
   if (user) {
@@ -144,6 +146,7 @@ app.post('/api/users/:email/upgrade', (req, res) => {
   } else res.status(404).json({ error: "User not found" });
 });
 
+// Configurações
 app.post('/api/users/:email/update', (req, res) => {
   const user = users.find(u => u.email === req.params.email);
   if (user) {
