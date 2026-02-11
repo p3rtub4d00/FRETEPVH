@@ -57,8 +57,9 @@ app.post('/api/orders/:id/accept', (req, res) => {
   }
 });
 
-// --- ENTREGA DO FRONTEND (O PULO DO GATO) ---
-// O servidor busca a pasta 'dist' que está dentro de 'frontend'
+// --- ENTREGA DO FRONTEND ---
+// O servidor busca a pasta 'dist' que foi gerada dentro de 'frontend'
+// Atenção: Certifique-se de que o comando de build rodou antes de iniciar o servidor
 const frontendPath = path.join(__dirname, '../../frontend/dist');
 app.use(express.static(frontendPath));
 
