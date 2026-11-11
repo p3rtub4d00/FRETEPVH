@@ -24,7 +24,8 @@ import {
   Flag,
   Camera,
 } from "lucide-react";
-import { initialState, loadDemo, money, statusLabels } from "./demo.js";
+import { money, statusLabels } from "./format.js";
+import { api } from "./api.js";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
 const navigation = {
@@ -78,7 +79,7 @@ function Empty({ title, children }) {
     </div>
   );
 }
-function Modal({ title, onClose, children }) {
+function Modal({ title, onClose, children, error, busy }) {
   const ref = useRef(null);
   useEffect(() => {
     const element = ref.current;
@@ -99,12 +100,18 @@ function Modal({ title, onClose, children }) {
           <X />
         </button>
       </div>
-      {children}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {busy && <p role="status">Salvando…</p>}
+      <fieldset disabled={busy}>{children}</fieldset>
     </dialog>
   );
 }
 
-function RequestForm({ onCreate, onClose }) {
+function RequestForm({ onCreate, onClose, requestError }) {
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -165,7 +172,7 @@ function RequestForm({ onCreate, onClose }) {
       event.target.value = "";
     }
   }
-  function submit(event) {
+  async function submit(event) {
     event.preventDefault();
     setError("");
     if (step === 0 && data.origin.trim() === data.destination.trim()) {
@@ -180,10 +187,15 @@ function RequestForm({ onCreate, onClose }) {
       setError("Escolha uma data e um horário futuros.");
       return;
     }
-    onCreate(data);
+    setLoading(true);
+    try {
+      await onCreate(data);
+    } finally {
+      setLoading(false);
+    }
   }
   return (
-    <Modal title="Solicitar frete" onClose={onClose}>
+    <Modal title="Solicitar frete" onClose={onClose} error={requestError}>
       <div className="steps">
         {["Trajeto", "Carga", "Agendamento"].map((label, index) => (
           <span key={label} className={index <= step ? "active" : ""}>
@@ -356,7 +368,7 @@ function RequestForm({ onCreate, onClose }) {
             </button>
           )}
           <button className="primary" disabled={loading}>
-            {step === 2 ? "Publicar pedido de teste" : "Continuar"}
+            {step === 2 ? "Publicar pedido" : "Continuar"}
             <ArrowRight size={17} />
           </button>
         </div>
@@ -365,73 +377,91 @@ function RequestForm({ onCreate, onClose }) {
   );
 }
 
-export default function App() {
-  const [state, setState] = useState(loadDemo);
-  const [area, setArea] = useState(() => {
-    const value = location.pathname.split("/")[1];
-    return areas[value] ? value : "cliente";
+export default function App({ user, onLogout, onExpired }) {
+  const area = user.role;
+  const [state, setState] = useState({
+    requests: [],
+    drivers: [],
+    users: [],
+    available: false,
+    user,
   });
   const [page, setPage] = useState("inicio");
   const [modal, setModal] = useState(null);
   const [notice, setNotice] = useState("");
   const [install, setInstall] = useState(null);
   const [filter, setFilter] = useState("all");
-  useEffect(() => {
-    try {
-      localStorage.setItem("freteon-demo-v1", JSON.stringify(state));
-    } catch {
-      setNotice(
-        "O armazenamento do navegador está cheio ou indisponível. As alterações desta sessão podem ser perdidas ao fechar.",
-      );
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const mounted = useRef(true);
+  const inFlight = useRef(false);
+  function showError(error) {
+    if (error.status === 401) onExpired();
+    else setNotice(error.message);
+  }
+  async function refresh() {
+    const data = await api("/state");
+    if (mounted.current) {
+      setState(data);
+      setLoaded(true);
     }
-  }, [state]);
+  }
   useEffect(() => {
+    mounted.current = true;
+    refresh().catch(showError);
+    const interval = setInterval(() => {
+      if (!document.hidden && !inFlight.current) refresh().catch(showError);
+    }, 15000);
     const handler = (event) => {
       event.preventDefault();
       setInstall(event);
     };
-    const pop = () => {
-      const next = location.pathname.split("/")[1];
-      setArea(areas[next] ? next : "cliente");
-      setPage("inicio");
-    };
     window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("popstate", pop);
     return () => {
+      mounted.current = false;
+      clearInterval(interval);
       window.removeEventListener("beforeinstallprompt", handler);
-      window.removeEventListener("popstate", pop);
     };
   }, []);
-  function changeArea(next) {
-    setArea(next);
-    setPage("inicio");
-    setFilter("all");
-    history.pushState({}, "", `/${next}`);
+  async function mutate(path, method, body, after) {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
+    setNotice("");
+    try {
+      await api(path, { method, body });
+      await refresh();
+      after?.();
+      return true;
+    } catch (error) {
+      showError(error);
+      return false;
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
+    }
   }
-  function updateRequest(id, patch) {
-    setState((previous) => ({
-      ...previous,
-      requests: previous.requests.map((request) =>
-        request.id === id ? { ...request, ...patch } : request,
-      ),
-    }));
+  async function updateRequest(id, patch) {
+    return mutate(`/requests/${id}`, "PATCH", patch);
   }
-  function createRequest(data) {
-    const request = {
-      ...data,
-      id: `FON-${crypto.randomUUID().slice(0, 6).toUpperCase()}`,
-      status: "open",
-      proposals: [],
-    };
-    setState((previous) => ({
-      ...previous,
-      requests: [request, ...previous.requests],
-    }));
-    setModal(null);
-    setPage("fretes");
-    setNotice(
-      "Pedido de teste publicado. Acesse Motorista para enviar uma proposta.",
+  async function createRequest(data) {
+    return mutate("/requests", "POST", data, () => {
+      setModal(null);
+      setPage("fretes");
+      setNotice("Pedido publicado. Aguarde as propostas dos motoristas.");
+    });
+  }
+  function reviewDriver(status) {
+    return mutate(`/drivers/${modal.driverId}`, "PATCH", { status }, () =>
+      setModal(null),
     );
+  }
+  async function logout() {
+    try {
+      await onLogout();
+    } catch (error) {
+      showError(error);
+    }
   }
   const active = state.requests.filter((request) =>
     ["open", "booked", "transit"].includes(request.status),
@@ -443,7 +473,8 @@ export default function App() {
     ? state.requests.find((request) => request.id === modal.id)
     : null;
   const pending = state.drivers.filter((driver) => driver.status === "pending");
-  const driver = state.drivers[0];
+  const driver =
+    state.drivers.find((person) => person.id === user.id) || state.user;
   const totalProposals = active.reduce(
     (sum, request) => sum + request.proposals.length,
     0,
@@ -457,16 +488,14 @@ export default function App() {
     requests =
       page === "propostas"
         ? state.requests.filter((request) =>
-            request.proposals.some(
-              (proposal) => proposal.driverId === "marcos",
-            ),
+            request.proposals.some((proposal) => proposal.driverId === user.id),
           )
         : state.requests.filter(
             (request) =>
               request.status === "open" ||
               (request.proposals.find(
                 (proposal) => proposal.id === request.selectedId,
-              )?.driverId === "marcos" &&
+              )?.driverId === user.id &&
                 ["booked", "transit"].includes(request.status)),
           );
   else if (page === "inicio") requests = active;
@@ -497,7 +526,7 @@ export default function App() {
                   "pt-BR",
                   { day: "2-digit", month: "short" },
                 )
-              : "Exemplo"}{" "}
+              : "Sem data"}{" "}
             · {request.time}
           </span>
           <span>{request.helper ? "Com ajudante" : "Sem ajudante"}</span>
@@ -519,15 +548,14 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      {busy && (
+        <div className="operation-status" role="status">
+          Salvando…
+        </div>
+      )}
+
       <aside className="sidebar">
-        <a
-          href="/cliente"
-          onClick={(event) => {
-            event.preventDefault();
-            changeArea("cliente");
-          }}
-          className="brand"
-        >
+        <a href="/" className="brand">
           <img src="/assets/logo.png" alt="FreteOn" />
         </a>
         <div className="location">
@@ -600,31 +628,25 @@ export default function App() {
               <Bell size={20} />
               {totalProposals > 0 && <span className="notification-dot" />}
             </button>
-            <span className="avatar">
-              {area === "cliente" ? "JC" : area === "motorista" ? "ML" : "AD"}
-            </span>
+            <span className="avatar">{state.user.initials}</span>
           </div>
         </header>
-        <div className="demo-bar">
+        <div className="account-bar">
           <span>
-            <span className="demo-dot" />
-            Demonstração · dados fictícios
+            {state.user.name} · {areas[area]}
           </span>
-          <label>
-            <span className="sr-only">Visualizar área</span>
-            <select
-              value={area}
-              onChange={(event) => changeArea(event.target.value)}
-            >
-              {Object.entries(areas).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <button onClick={logout}>Sair da conta</button>
         </div>
         <main>
+          {!loaded && <p role="status">Carregando seus dados…</p>}
+          {area === "motorista" && state.user.status !== "approved" && (
+            <p className="info" role="status">
+              {state.user.status === "rejected"
+                ? "Seu cadastro foi reprovado. Procure a administração."
+                : "Cadastro recebido! Aguarde a aprovação do administrador para receber pedidos e enviar propostas."}
+            </p>
+          )}
+
           {notice && (
             <div className="notice" role="status">
               <span>{notice}</span>
@@ -648,9 +670,9 @@ export default function App() {
               <h1>
                 {page === "inicio"
                   ? area === "cliente"
-                    ? "Olá, João."
+                    ? `Olá, ${state.user.name.split(" ")[0]}.`
                     : area === "motorista"
-                      ? "Olá, Marcos."
+                      ? `Olá, ${state.user.name.split(" ")[0]}.`
                       : "Visão geral"
                   : navigation[area].find((item) => item[0] === page)?.[1]}
               </h1>
@@ -675,7 +697,9 @@ export default function App() {
               <button
                 className={`availability ${state.available ? "online" : ""}`}
                 onClick={() =>
-                  setState({ ...state, available: !state.available })
+                  mutate("/availability", "PATCH", {
+                    available: !state.available,
+                  })
                 }
               >
                 <span />
@@ -750,7 +774,7 @@ export default function App() {
                       : area === "motorista"
                         ? state.requests.filter((request) =>
                             request.proposals.some(
-                              (proposal) => proposal.driverId === "marcos",
+                              (proposal) => proposal.driverId === user.id,
                             ),
                           ).length
                         : totalProposals}
@@ -783,7 +807,12 @@ export default function App() {
                     <span className="avatar">{person.initials}</span>
                     <div>
                       <strong>{person.name}</strong>
-                      <p>{person.vehicle}</p>
+                      <p>
+                        {person.vehicle || areas[person.role]}{" "}
+                        {area === "master" && person.phone
+                          ? `· ${person.phone}`
+                          : ""}
+                      </p>
                     </div>
                     <span
                       className={`status ${person.status === "approved" ? "completed" : "open"}`}
@@ -807,7 +836,7 @@ export default function App() {
                 ))}
                 {page === "inicio" && !pending.length && (
                   <Empty title="Análises em dia">
-                    Todos os cadastros de exemplo foram analisados.
+                    Todos os cadastros foram analisados.
                   </Empty>
                 )}
               </div>
@@ -829,11 +858,9 @@ export default function App() {
             </section>
           ) : page === "perfil" ? (
             <section className="panel profile">
-              <span className="avatar large">
-                {area === "cliente" ? "JC" : "ML"}
-              </span>
-              <h2>{area === "cliente" ? "João Cliente" : "Marcos Lima"}</h2>
-              <p>Perfil de demonstração · Porto Velho, RO</p>
+              <span className="avatar large">{state.user.initials}</span>
+              <h2>{state.user.name}</h2>
+              <p>{state.user.phone} · Porto Velho, RO</p>
               {area === "motorista" && (
                 <>
                   <div className="profile-item">
@@ -846,34 +873,38 @@ export default function App() {
                   <div className="profile-item">
                     <ShieldCheck />
                     <div>
-                      <strong>Documentação aprovada — exemplo</strong>
+                      <strong>Situação do cadastro</strong>
                       <p>
-                        Cadastro e documentos serão enviados na etapa de
-                        operação real.
+                        {driver.status === "approved"
+                          ? "Cadastro aprovado."
+                          : driver.status === "rejected"
+                            ? "Cadastro reprovado. Entre em contato com a administração."
+                            : "Aguardando aprovação do administrador."}{" "}
+                        A verificação documental será adicionada em uma próxima
+                        etapa.
                       </p>
                     </div>
                   </div>
                 </>
               )}
-              <button
-                className="secondary"
-                onClick={() => setModal({ type: "reset" })}
-              >
-                Restaurar demonstração
+              <button className="secondary" onClick={logout}>
+                Sair da conta
               </button>
             </section>
           ) : page === "usuarios" ? (
             <section className="panel">
-              <h2>Usuários de demonstração</h2>
-              {[
-                { name: "João Cliente", initials: "JC", vehicle: "Cliente" },
-                ...state.drivers,
-              ].map((person) => (
-                <div key={person.name} className="person-row">
+              <h2>Usuários cadastrados</h2>
+              {state.users.map((person) => (
+                <div key={person.id} className="person-row">
                   <span className="avatar">{person.initials}</span>
                   <div>
                     <strong>{person.name}</strong>
-                    <p>{person.vehicle}</p>
+                    <p>
+                      {person.vehicle || areas[person.role]}{" "}
+                      {area === "master" && person.phone
+                        ? `· ${person.phone}`
+                        : ""}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -881,7 +912,7 @@ export default function App() {
           ) : page === "denuncias" ? (
             <section className="panel">
               <Empty title="Nenhuma denúncia">
-                As denúncias recebidas aparecerão aqui para análise.
+                O envio de denúncias estará disponível em uma próxima etapa.
               </Empty>
             </section>
           ) : (
@@ -964,10 +995,19 @@ export default function App() {
         </nav>
       </div>
       {modal?.type === "create" && (
-        <RequestForm onCreate={createRequest} onClose={() => setModal(null)} />
+        <RequestForm
+          requestError={notice}
+          onCreate={createRequest}
+          onClose={() => setModal(null)}
+        />
       )}
       {modal?.type === "detail" && selected && (
-        <Modal title={selected.title} onClose={() => setModal(null)}>
+        <Modal
+          error={notice}
+          busy={busy}
+          title={selected.title}
+          onClose={() => setModal(null)}
+        >
           <span className={`status ${selected.status}`}>
             {statusLabels[selected.status]}
           </span>
@@ -987,28 +1027,21 @@ export default function App() {
             <ProposalForm
               key={selected.id}
               request={selected}
-              available={state.available}
-              onSubmit={(proposal) => {
-                const own = selected.proposals.find(
-                  (item) => item.driverId === "marcos",
-                );
-                updateRequest(selected.id, {
-                  proposals: [
-                    ...selected.proposals.filter(
-                      (item) => item.driverId !== "marcos",
-                    ),
-                    {
-                      ...proposal,
-                      id: own?.id || crypto.randomUUID(),
-                      driverId: "marcos",
-                    },
-                  ],
-                });
-                setNotice(
-                  "Proposta de teste enviada. Veja o resultado na área Cliente.",
-                );
-                setModal(null);
-              }}
+              available={
+                state.available && state.user.status === "approved" && !busy
+              }
+              driverId={user.id}
+              onSubmit={(proposal) =>
+                mutate(
+                  `/requests/${selected.id}/proposals`,
+                  "POST",
+                  proposal,
+                  () => {
+                    setModal(null);
+                    setNotice("Proposta enviada ao cliente.");
+                  },
+                )
+              }
             />
           ) : (
             <>
@@ -1035,7 +1068,8 @@ export default function App() {
                           <strong>{person.name}</strong>
                           <small>
                             <Star size={13} />
-                            {person.rating} · {person.trips} fretes
+                            {person?.rating || "Novo"} · {person?.trips || 0}{" "}
+                            fretes
                           </small>
                         </div>
                         <strong className="price">
@@ -1066,8 +1100,7 @@ export default function App() {
                 })}
               {!selected.proposals.length && (
                 <p className="info">
-                  Aguardando propostas. Na demonstração, acesse Motorista para
-                  enviar uma oferta.
+                  Aguardando propostas dos motoristas disponíveis.
                 </p>
               )}
             </>
@@ -1075,7 +1108,7 @@ export default function App() {
           {area === "motorista" &&
             selected.proposals.find(
               (proposal) => proposal.id === selected.selectedId,
-            )?.driverId === "marcos" &&
+            )?.driverId === user.id &&
             ["booked", "transit"].includes(selected.status) && (
               <button
                 className="primary full"
@@ -1087,8 +1120,8 @@ export default function App() {
                 }
               >
                 {selected.status === "booked"
-                  ? "Iniciar transporte de teste"
-                  : "Concluir frete de teste"}
+                  ? "Iniciar transporte"
+                  : "Concluir frete"}
               </button>
             )}
           {area === "cliente" && selected.status === "completed" && (
@@ -1126,6 +1159,8 @@ export default function App() {
       )}
       {modal?.type === "confirm" && selected && (
         <Modal
+          error={notice}
+          busy={busy}
           title="Confirmar motorista"
           onClose={() => setModal({ type: "detail", id: selected.id })}
         >
@@ -1150,34 +1185,39 @@ export default function App() {
             .
           </p>
           <p className="info">
-            Esta contratação é uma simulação. Nenhum pagamento será realizado.
+            Combine o pagamento diretamente com o motorista. O FreteOn registra
+            sua contratação.
           </p>
           <button
             className="primary full"
-            onClick={() => {
-              updateRequest(selected.id, {
-                status: "booked",
-                selectedId: modal.proposalId,
-              });
-              setModal({ type: "detail", id: selected.id });
+            onClick={async () => {
+              if (
+                await updateRequest(selected.id, {
+                  status: "booked",
+                  selectedId: modal.proposalId,
+                })
+              )
+                setModal({ type: "detail", id: selected.id });
             }}
           >
-            Confirmar contratação de teste
+            Confirmar contratação
             <Check size={18} />
           </button>
         </Modal>
       )}
       {modal?.type === "cancel" && selected && (
         <Modal
+          error={notice}
+          busy={busy}
           title="Cancelar pedido?"
           onClose={() => setModal({ type: "detail", id: selected.id })}
         >
           <p>O pedido será encerrado e deixará de receber propostas.</p>
           <button
             className="primary full"
-            onClick={() => {
-              updateRequest(selected.id, { status: "cancelled" });
-              setModal(null);
+            onClick={async () => {
+              if (await updateRequest(selected.id, { status: "cancelled" }))
+                setModal(null);
             }}
           >
             Confirmar cancelamento
@@ -1185,7 +1225,12 @@ export default function App() {
         </Modal>
       )}
       {modal?.type === "driver" && (
-        <Modal title="Análise de motorista" onClose={() => setModal(null)}>
+        <Modal
+          error={notice}
+          busy={busy}
+          title="Análise de motorista"
+          onClose={() => setModal(null)}
+        >
           <h3>
             {state.drivers.find((person) => person.id === modal.driverId).name}
           </h3>
@@ -1197,51 +1242,44 @@ export default function App() {
           </p>
           <div className="review">
             <FileCheck2 />
-            <h3>Documentos de demonstração</h3>
+            <h3>Análise do cadastro</h3>
             <p>
-              Esta tela demonstra a análise do cadastro. Documentos reais serão
-              recebidos na próxima etapa.
+              Celular:{" "}
+              {
+                state.drivers.find((person) => person.id === modal.driverId)
+                  .phone
+              }
+            </p>
+            <p>
+              Confira o nome, o telefone e o veículo do motorista antes de
+              aprovar. O envio de documentos será adicionado em uma próxima
+              etapa.
             </p>
           </div>
           <div className="form-actions">
             <button
               className="secondary"
-              onClick={() => {
-                setState({
-                  ...state,
-                  drivers: state.drivers.map((person) =>
-                    person.id === modal.driverId
-                      ? { ...person, status: "rejected" }
-                      : person,
-                  ),
-                });
-                setModal(null);
-              }}
+              onClick={() => reviewDriver("rejected")}
             >
-              Reprovar exemplo
+              Reprovar cadastro
             </button>
             <button
               className="primary"
-              onClick={() => {
-                setState({
-                  ...state,
-                  drivers: state.drivers.map((person) =>
-                    person.id === modal.driverId
-                      ? { ...person, status: "approved" }
-                      : person,
-                  ),
-                });
-                setModal(null);
-              }}
+              onClick={() => reviewDriver("approved")}
             >
-              Aprovar exemplo
+              Aprovar cadastro
               <Check size={18} />
             </button>
           </div>
         </Modal>
       )}
       {modal?.type === "notifications" && (
-        <Modal title="Notificações de exemplo" onClose={() => setModal(null)}>
+        <Modal
+          error={notice}
+          busy={busy}
+          title="Atualizações dos fretes"
+          onClose={() => setModal(null)}
+        >
           {active
             .filter((request) => request.proposals.length)
             .map((request) => (
@@ -1264,7 +1302,12 @@ export default function App() {
         </Modal>
       )}
       {modal?.type === "help" && (
-        <Modal title="Como funciona o FreteOn" onClose={() => setModal(null)}>
+        <Modal
+          error={notice}
+          busy={busy}
+          title="Como funciona o FreteOn"
+          onClose={() => setModal(null)}
+        >
           <div className="help-step">
             <MapPin />
             <div>
@@ -1287,37 +1330,19 @@ export default function App() {
             </div>
           </div>
           <p className="info">
-            Prévia para aprovação. Os dados ficam neste navegador. Cadastro,
-            documentos, denúncias e notificações reais serão integrados na
-            próxima etapa.
+            Pedidos e propostas ficam salvos na sua conta. O painel verifica
+            atualizações a cada 15 segundos. O pagamento é combinado diretamente
+            entre cliente e motorista.
           </p>
-        </Modal>
-      )}
-      {modal?.type === "reset" && (
-        <Modal title="Restaurar demonstração?" onClose={() => setModal(null)}>
-          <p>
-            Os pedidos de teste deste navegador serão substituídos pelos
-            exemplos iniciais.
-          </p>
-          <button
-            className="primary full"
-            onClick={() => {
-              setState(structuredClone(initialState));
-              setModal(null);
-              setNotice("Demonstração restaurada.");
-            }}
-          >
-            Restaurar exemplos
-          </button>
         </Modal>
       )}
     </div>
   );
 }
 
-function ProposalForm({ request, available, onSubmit }) {
+function ProposalForm({ request, available, driverId, onSubmit }) {
   const previous = request.proposals.find(
-    (proposal) => proposal.driverId === "marcos",
+    (proposal) => proposal.driverId === driverId,
   );
   return (
     <form
@@ -1367,7 +1392,7 @@ function ProposalForm({ request, available, onSubmit }) {
         />
       </label>
       <button className="primary full" disabled={!available}>
-        {available ? "Enviar proposta de teste" : "Ative sua disponibilidade"}
+        {available ? "Enviar proposta" : "Ative sua disponibilidade"}
         <ArrowRight size={18} />
       </button>
     </form>

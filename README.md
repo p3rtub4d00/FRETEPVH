@@ -2,28 +2,24 @@
 
 Plataforma de fretes com propostas de motoristas, começando por Porto Velho, RO.
 
-## Etapa atual
+## Acessos
 
-Versão 0.1 para aprovação da interface. Cliente, Motorista e Master são áreas navegáveis de demonstração, acessíveis pelo seletor no topo. Dados fictícios e alterações ficam no navegador via localStorage. A troca de área serve exclusivamente para testar a experiência.
+| Endereço              | Uso                                                 |
+| --------------------- | --------------------------------------------------- |
+| `/`                   | Página pública com entrada de clientes e motoristas |
+| `/cliente`            | Login e painel do cliente                           |
+| `/cliente/cadastro`   | Cadastro de cliente                                 |
+| `/motorista`          | Login e painel do motorista                         |
+| `/motorista/cadastro` | Cadastro de motorista e veículo                     |
+| `/master`             | Login e painel do administrador                     |
 
-O fluxo permite solicitar frete em etapas, incluir até três fotos, enviar propostas na área Motorista, escolher uma oferta na área Cliente, iniciar e concluir o transporte e avaliar. Também inclui histórico, disponibilidade e análise simulada de motoristas.
+Cadastro com nome, celular com DDD e senha de 8 a 128 caracteres. O telefone aceita formatação e prefixo +55. Cada telefone identifica uma conta. O motorista informa o veículo e aguarda aprovação do Master. Após aprovado, ativa sua disponibilidade no painel.
 
-## Executar
-
-Requer Node.js 22 ou 24.
-
-```sh
-npm run build
-npm start
-```
-
-Acesse http://localhost:3001. O backend serve a interface compilada e `/api/health`.
-
-Para desenvolver a interface, execute `npm run dev` após instalar as dependências.
+Usuários, sessões, pedidos, fotos, propostas e avaliações são persistidos no MongoDB. As permissões são verificadas na API. O registro público aceita somente Cliente e Motorista. A sessão usa cookie HttpOnly, SameSite=Lax e Secure em produção. Senhas usam scrypt com salt individual.
 
 ## Render
 
-Configure um Web Service conectado a este repositório.
+Requer Node.js 22 ou 24. O repositório está configurado para um Web Service.
 
 | Campo             | Valor         |
 | ----------------- | ------------- |
@@ -33,18 +29,42 @@ Configure um Web Service conectado a este repositório.
 | Start Command     | npm start     |
 | Health Check Path | /api/health   |
 
-Se já existir um serviço com Root Directory `backend`, também é suportado usar Build Command `npm ci && npm run build` e Start Command `npm start`.
+Configure `MONGODB_URI` com sua conexão. Também são aceitos `MONGO_URI` e `MONGO_URL`. A aplicação exige uma conexão válida antes de iniciar. `PORT` é fornecida pelo Render.
 
-`PORT` é fornecida pelo Render. `MONGODB_URI` é opcional nesta prévia. Quando informada, o servidor verifica a conexão, mas os pedidos de demonstração continuam locais. Se a conexão falhar, a inicialização falha com mensagem sem expor a URI.
+### Primeira conta Master
 
-## Próxima etapa
+Em Environment do serviço, defina `ADMIN_PHONE` com um celular de 11 dígitos, incluindo DDD, e `ADMIN_PASSWORD` com uma senha particular de 8 a 128 caracteres. Opcionalmente defina `ADMIN_NAME`.
 
-Após aprovação visual, implementar autenticação por telefone e senha, autorização de cada perfil, modelos e persistência no MongoDB, upload privado de documentos, moderação, notificações reais, denúncias e relatórios. Pagamentos reais ficam fora do escopo inicial.
+Salve e publique novamente. Se não existir Master, a inicialização cria essa conta no MongoDB. Entre em `/master`. Use um número ainda não cadastrado como Cliente ou Motorista. Após o primeiro acesso, as variáveis de criação podem ser removidas. Alterar essas variáveis depois não troca a senha de uma conta existente.
 
-## PWA
+Nunca coloque valores reais de credenciais no GitHub.
 
-Manifesto e ícones incluídos. O service worker armazena a interface para reabertura offline após a primeira visita. A instalação depende de HTTPS e suporte do navegador. API e recursos externos não entram no cache.
+## Desenvolvimento
+
+Instale e compile com `npm run build`. Configure `backend/.env` a partir de `.env.example`, usando um banco separado para testes, e rode `npm start`. A aplicação abre em http://localhost:3001.
+
+Para desenvolver a interface com atualização automática, rode também `npm run dev`. O Vite encaminha `/api` para a porta 3001.
+
+## Fluxo para testar
+
+1. Cadastre um cliente e um motorista com celulares diferentes.
+2. Entre no Master e aprove o motorista.
+3. No painel do motorista, ative a disponibilidade.
+4. No cliente, publique um frete com data futura, endereços completos e detalhes da carga.
+5. No motorista, envie uma proposta com valor e horário.
+6. No cliente, escolha e confirme a proposta.
+7. No motorista contratado, inicie e conclua o transporte.
+8. No cliente, avalie o frete concluído.
+
+Use navegadores ou perfis separados para testar simultaneamente. As abas de um mesmo perfil compartilham a sessão. O painel consulta atualizações a cada 15 segundos. A escolha de proposta usa controle de versão do MongoDB para evitar duas contratações concorrentes no mesmo pedido.
+
+## Escopo desta etapa
+
+Pagamentos são combinados diretamente. A primeira versão oferece cadastro e aprovação simples de motoristas. Verificação de telefone, recuperação de senha, documentos, denúncias e notificações push serão adicionados em próximas etapas. Não há dados fictícios misturados aos cadastros reais.
+
+Fotos da carga são limitadas a três arquivos JPG, PNG ou WebP de 600 KB cada e ficam no documento do frete no MongoDB nesta versão inicial. O service worker guarda apenas recursos da interface e ignora a API. Operações e autenticação exigem internet.
 
 ## Restauração
 
-O conteúdo anterior está preservado na branch `restauracao/antes-freteon-2026-11-11`, no commit `e41c6d6cb2366e3fb5e104d35e5617971f9f8b68`. Antes de alterações importantes, criar uma nova branch de restauração a partir do estado atual.
+- `restauracao/antes-freteon-2026-11-11` preserva o projeto anterior à identidade FreteOn.
+- `restauracao/antes-login-2026-11-11` preserva a demonstração anterior ao cadastro e login.

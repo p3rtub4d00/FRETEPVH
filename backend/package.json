@@ -9,7 +9,10 @@
     "build": "npm ci --prefix ../frontend && npm run build --prefix ../frontend"
   },
   "dependencies": {
+    "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.7.4",
+    "helmet": "^8.3.0",
     "mongoose": "^8.19.0"
   }
 }

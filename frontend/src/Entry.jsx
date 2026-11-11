@@ -1,0 +1,379 @@
+import { useEffect, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Truck,
+  Package,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import Dashboard from "./App.jsx";
+import { api } from "./api.js";
+
+const titles = {
+  cliente: "Cliente",
+  motorista: "Motorista",
+  master: "Administrador Master",
+};
+export default function Entry() {
+  const [path, setPath] = useState(location.pathname);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  function navigate(next) {
+    history.pushState({}, "", next);
+    setPath(next);
+    setError("");
+  }
+  useEffect(() => {
+    const pop = () => {
+      setPath(location.pathname);
+      setError("");
+    };
+    window.addEventListener("popstate", pop);
+    api("/auth/me")
+      .then((data) => setUser(data.user))
+      .catch((error) => {
+        if (error.status !== 401) setError(error.message);
+      })
+      .finally(() => setLoading(false));
+    return () => window.removeEventListener("popstate", pop);
+  }, []);
+  function authenticated(account) {
+    setUser(account);
+    navigate(`/${account.role}`);
+  }
+  async function logout() {
+    await api("/auth/logout", { method: "POST", body: {} });
+    setUser(null);
+    navigate("/");
+  }
+  const area = path.split("/")[1];
+  if (loading)
+    return (
+      <div className="auth-loading" role="status">
+        Carregando FreteOn…
+      </div>
+    );
+  if (titles[area] && user?.role === area && !path.includes("/cadastro"))
+    return (
+      <Dashboard
+        key={user.id}
+        user={user}
+        onLogout={logout}
+        onExpired={() => {
+          setUser(null);
+          setError("Sua sessão expirou. Entre novamente.");
+        }}
+      />
+    );
+  return (
+    <div className="public-site">
+      <header className="public-header">
+        <a
+          href="/"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate("/");
+          }}
+        >
+          <img src="/assets/logo.png" alt="FreteOn — início" />
+        </a>
+        <span>Porto Velho, RO</span>
+        {user && (
+          <a
+            href={`/${user.role}`}
+            onClick={(event) => {
+              event.preventDefault();
+              navigate(`/${user.role}`);
+            }}
+          >
+            Meu painel
+          </a>
+        )}
+      </header>
+      {path === "/" ? (
+        <main className="public-home">
+          <div className="public-copy">
+            <span className="eyebrow">FRETES EM PORTO VELHO</span>
+            <h1>
+              Seu frete.
+              <br />
+              <em>Sua escolha.</em>
+            </h1>
+            <p>
+              Receba propostas de motoristas, compare os preços e escolha quem
+              vai transportar sua carga.
+            </p>
+            <div className="entry-cards">
+              <a
+                href="/cliente"
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate("/cliente");
+                }}
+              >
+                <Package />
+                <strong>Preciso de um frete</strong>
+                <span>Solicite e compare propostas.</span>
+                <ArrowRight />
+              </a>
+              <a
+                href="/motorista"
+                onClick={(event) => {
+                  event.preventDefault();
+                  navigate("/motorista");
+                }}
+              >
+                <Truck />
+                <strong>Sou motorista</strong>
+                <span>Encontre pedidos e envie seu preço.</span>
+                <ArrowRight />
+              </a>
+            </div>
+          </div>
+          <aside className="public-promise">
+            <Truck size={100} strokeWidth={1.2} />
+            <h2>
+              Do seu ponto A<br />
+              ao ponto B.
+            </h2>
+            <p>Retirada, entrega e propostas organizadas em um só lugar.</p>
+            <div>
+              <ShieldCheck size={20} />
+              Motoristas aprovados pela administração
+            </div>
+          </aside>
+        </main>
+      ) : titles[area] ? (
+        <AuthForm
+          key={path}
+          area={area}
+          register={path.endsWith("/cadastro") && area !== "master"}
+          user={user}
+          error={error}
+          navigate={navigate}
+          authenticated={authenticated}
+          logout={logout}
+        />
+      ) : (
+        <main className="public-home">
+          <div>
+            <h1>Página não encontrada</h1>
+            <button className="primary" onClick={() => navigate("/")}>
+              Voltar ao início
+            </button>
+          </div>
+        </main>
+      )}
+      <footer className="public-footer">
+        <span>FreteOn · Porto Velho, RO</span>
+        <span>
+          Pagamentos combinados diretamente entre cliente e motorista.
+        </span>
+      </footer>
+    </div>
+  );
+}
+
+function AuthForm({
+  area,
+  register,
+  user,
+  error: initialError,
+  navigate,
+  authenticated,
+  logout,
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(initialError);
+  const [visible, setVisible] = useState(false);
+  async function submit(event) {
+    event.preventDefault();
+    setError("");
+    const fields = Object.fromEntries(new FormData(event.currentTarget));
+    if (register && fields.password !== fields.confirmPassword) {
+      setError("As senhas precisam ser iguais.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await api(register ? "/auth/register" : "/auth/login", {
+        method: "POST",
+        body: { ...fields, role: area },
+      });
+      authenticated(result.user);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <main className="auth-layout">
+      <section className="auth-card">
+        <button className="text-button" onClick={() => navigate("/")}>
+          <ArrowLeft size={16} />
+          Voltar ao início
+        </button>
+        <span className="auth-icon">
+          {area === "motorista" ? (
+            <Truck />
+          ) : area === "master" ? (
+            <ShieldCheck />
+          ) : (
+            <Package />
+          )}
+        </span>
+        <p className="eyebrow">{titles[area]}</p>
+        <h1>{register ? "Crie sua conta" : "Bem-vindo de volta"}</h1>
+        <p className="muted">
+          {register
+            ? "Cadastre-se com seu nome, celular e senha."
+            : "Entre com seu celular e sua senha."}
+        </p>
+        {user ? (
+          <>
+            <p className="info">
+              Você está conectado como {titles[user.role]}. Acesse seu painel ou
+              saia para entrar em outra conta.
+            </p>
+            <button
+              className="primary full"
+              onClick={() => navigate(`/${user.role}`)}
+            >
+              Ir para meu painel
+            </button>
+            <button
+              className="secondary full"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await logout();
+                } catch (error) {
+                  setError(error.message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Sair desta conta
+            </button>
+          </>
+        ) : (
+          <form onSubmit={submit}>
+            <fieldset disabled={busy}>
+              {register && (
+                <label>
+                  Nome completo
+                  <input
+                    name="name"
+                    autoComplete="name"
+                    required
+                    minLength={3}
+                    maxLength={100}
+                    placeholder="Seu nome completo"
+                  />
+                </label>
+              )}
+              <label>
+                Celular com DDD
+                <input
+                  type="tel"
+                  name="phone"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  required
+                  maxLength={20}
+                  placeholder="(69) 99999-9999"
+                />
+              </label>
+              {register && area === "motorista" && (
+                <label>
+                  Veículo
+                  <input
+                    name="vehicle"
+                    required
+                    minLength={3}
+                    maxLength={100}
+                    placeholder="Ex. Fiat Strada, picape, ano 2020"
+                  />
+                </label>
+              )}
+              <label>
+                Senha
+                <div className="password-field">
+                  <input
+                    name="password"
+                    type={visible ? "text" : "password"}
+                    required
+                    minLength={8}
+                    maxLength={128}
+                    autoComplete={
+                      register ? "new-password" : "current-password"
+                    }
+                    placeholder="Pelo menos 8 caracteres"
+                  />
+                  <button
+                    type="button"
+                    aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
+                    onClick={() => setVisible(!visible)}
+                  >
+                    {visible ? <EyeOff size={19} /> : <Eye size={19} />}
+                  </button>
+                </div>
+              </label>
+              {register && (
+                <label>
+                  Confirme sua senha
+                  <input
+                    name="confirmPassword"
+                    type={visible ? "text" : "password"}
+                    required
+                    minLength={8}
+                    maxLength={128}
+                    autoComplete="new-password"
+                  />
+                </label>
+              )}
+              {register && area === "motorista" && (
+                <p className="info">
+                  Após o cadastro, aguarde a aprovação do administrador para
+                  receber pedidos e enviar propostas.
+                </p>
+              )}
+              <button className="primary full" type="submit">
+                {busy ? "Aguarde…" : register ? "Criar minha conta" : "Entrar"}
+                <ArrowRight size={18} />
+              </button>
+            </fieldset>
+          </form>
+        )}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        {!user && area !== "master" && (
+          <p className="auth-alternative">
+            {register ? "Já tem uma conta?" : "Ainda não tem conta?"}{" "}
+            <a
+              href={register ? `/${area}` : `/${area}/cadastro`}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate(register ? `/${area}` : `/${area}/cadastro`);
+              }}
+            >
+              {register ? "Entrar" : "Cadastre-se"}
+            </a>
+          </p>
+        )}
+        {area === "master" && (
+          <p className="auth-alternative">Acesso exclusivo à administração.</p>
+        )}
+      </section>
+    </main>
+  );
+}

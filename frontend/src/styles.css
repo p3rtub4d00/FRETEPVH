@@ -225,42 +225,6 @@ img {
   right: 10px;
   top: 8px;
 }
-.demo-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 9px 42px;
-  background: #fff8f1;
-  border-bottom: 1px solid #f4e7db;
-  font-size: 11px;
-  color: #885325;
-}
-.demo-bar > span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.demo-dot {
-  width: 6px;
-  height: 6px;
-  background: #d87222;
-  border-radius: 50%;
-}
-.demo-bar select {
-  padding: 5px 24px 5px 8px;
-  margin: 0;
-  width: auto;
-  border: 1px solid #e8d8c8;
-  border-radius: 5px;
-  font-size: 12px;
-  color: #684326;
-  background: transparent;
-  min-height: 32px;
-}
-.demo-bar label {
-  margin: 0;
-}
 main {
   padding: 36px 42px 16px;
   max-width: 1380px;
@@ -1013,10 +977,8 @@ textarea {
   main {
     padding: 28px;
   }
-  .topbar,
-  .demo-bar {
-    padding-left: 28px;
-    padding-right: 28px;
+  .topbar {
+    padding: 0 28px;
   }
   .hero {
     padding: 26px;
@@ -1070,13 +1032,6 @@ textarea {
     width: 34px;
     height: 34px;
     font-size: 11px;
-  }
-  .demo-bar {
-    padding: 7px 20px;
-    font-size: 10px;
-  }
-  .demo-bar select {
-    min-height: 36px;
   }
   main {
     padding: 25px 20px 90px;
@@ -1282,5 +1237,289 @@ textarea {
       opacity: 1;
       transform: translateY(0);
     }
+  }
+}
+/* Public access and account screens */
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.public-site {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f7fa;
+}
+.public-header {
+  height: 86px;
+  background: white;
+  border-bottom: 1px solid #e5eaf0;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 20px max(24px, calc((100vw - 1120px) / 2));
+}
+.public-header img {
+  width: 170px;
+  display: block;
+}
+.public-header > span {
+  color: #667489;
+  font-size: 13px;
+  margin-left: auto;
+}
+.public-header a {
+  color: #10243e;
+  text-decoration: none;
+  font-size: 13px;
+}
+.public-home {
+  width: 100%;
+  max-width: 1180px;
+  padding: 70px 30px;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 65px;
+  align-items: center;
+  flex: 1;
+}
+.public-copy h1 {
+  font-size: 64px;
+  line-height: 1.05;
+  margin: 18px 0 25px;
+}
+.public-copy h1 em {
+  font-style: normal;
+  color: #ce6517;
+}
+.public-copy > p {
+  color: #667489;
+  max-width: 450px;
+  font-size: 17px;
+}
+.entry-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 35px;
+}
+.entry-cards a {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: white;
+  border: 1px solid #dfe5ed;
+  border-radius: 14px;
+  padding: 22px;
+  color: #10243e;
+  text-decoration: none;
+}
+.entry-cards a:hover {
+  border-color: #ed8e46;
+}
+.entry-cards a > svg:first-child {
+  color: #bc6320;
+  width: 30px;
+  height: 30px;
+}
+.entry-cards strong {
+  font-size: 16px;
+}
+.entry-cards span {
+  font-size: 12px;
+  color: #667489;
+}
+.entry-cards a > svg:last-child {
+  align-self: flex-end;
+  width: 20px;
+}
+.public-promise {
+  background: #10243e;
+  border-radius: 22px;
+  padding: 45px 34px;
+  color: white;
+}
+.public-promise > svg {
+  color: #ff9c52;
+}
+.public-promise h2 {
+  font-size: 35px;
+  margin: 28px 0 20px;
+}
+.public-promise p {
+  font-size: 14px;
+  color: #c5d1de;
+}
+.public-promise > div {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  border-top: 1px solid #32475f;
+  padding-top: 22px;
+  color: #e1e8f0;
+}
+.public-footer {
+  width: 100%;
+  padding: 20px max(24px, calc((100vw - 1120px) / 2));
+  border-top: 1px solid #e5eaf0;
+  margin-top: auto;
+  flex-wrap: wrap;
+}
+.auth-layout {
+  padding: 35px 20px 50px;
+  width: 100%;
+  max-width: 520px;
+}
+.auth-card {
+  padding: 28px 32px;
+  background: white;
+  border: 1px solid #e5eaf0;
+  border-radius: 16px;
+}
+.auth-card h1 {
+  font-size: 28px;
+  letter-spacing: -0.8px;
+}
+.auth-card > .muted {
+  font-size: 13px;
+}
+.auth-icon {
+  width: 46px;
+  height: 46px;
+  background: #fff1e4;
+  color: #ae5a1b;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  margin: 15px 0 20px;
+}
+.auth-card .error {
+  margin-top: 18px;
+}
+.password-field {
+  position: relative;
+}
+.password-field input {
+  padding-right: 48px;
+}
+.password-field button {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 44px;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.auth-alternative {
+  text-align: center;
+  font-size: 13px;
+  color: #667489;
+  margin: 22px 0 0;
+}
+.auth-alternative a {
+  color: #a95414;
+  font-weight: 700;
+}
+.auth-card .secondary {
+  margin-top: 14px;
+}
+.auth-loading {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  color: #667489;
+}
+.account-bar {
+  background: #eef2f7;
+  padding: 9px 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  font-size: 12px;
+  color: #52677d;
+}
+.account-bar button {
+  min-height: 36px;
+  color: #10243e;
+  font-weight: 600;
+}
+.operation-status {
+  position: fixed;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 10px 20px;
+  background: #10243e;
+  color: white;
+  border-radius: 8px;
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  .public-header {
+    padding: 16px 20px;
+    height: 72px;
+    gap: 12px;
+  }
+  .public-header img {
+    width: 135px;
+  }
+  .public-header > span {
+    font-size: 11px;
+  }
+  .public-home {
+    display: block;
+    padding: 42px 22px;
+  }
+  .public-copy h1 {
+    font-size: 48px;
+  }
+  .public-copy > p {
+    font-size: 15px;
+  }
+  .entry-cards {
+    gap: 10px;
+    margin-top: 25px;
+  }
+  .entry-cards a {
+    padding: 18px 14px;
+  }
+  .entry-cards strong {
+    font-size: 14px;
+  }
+  .public-promise {
+    margin-top: 28px;
+    padding: 28px;
+  }
+  .public-promise > svg {
+    width: 70px;
+    height: 70px;
+  }
+  .public-promise h2 {
+    font-size: 28px;
+    margin-top: 16px;
+  }
+  .public-footer {
+    padding: 18px 22px;
+  }
+  .auth-layout {
+    padding: 23px 14px 35px;
+  }
+  .auth-card {
+    padding: 20px;
+  }
+  .auth-card h1 {
+    font-size: 26px;
+  }
+  .account-bar {
+    padding: 8px 20px;
+  }
+  .account-bar > span {
+    overflow-wrap: anywhere;
   }
 }
