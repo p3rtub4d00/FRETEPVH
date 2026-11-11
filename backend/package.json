@@ -1,17 +1,15 @@
 {
-  "name": "frete-backend",
-  "version": "1.0.0",
+  "name": "freteon-api",
+  "version": "0.1.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "build": "npm install --prefix ../frontend && npm run build --prefix ../frontend"
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "build": "npm ci --prefix ../frontend && npm run build --prefix ../frontend"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
+    "express": "^5.1.0",
+    "mongoose": "^8.19.0"
   }
 }
