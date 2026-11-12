@@ -150,3 +150,15 @@ A comissão fixa de **10%** é calculada no backend sobre o preço final da prop
 - O modal pode ser fechado e há um **aviso persistente no painel** para reabri-lo sem precisar acessar Histórico. Reaparece ao iniciar nova sessão na interface se ainda houver confirmação ou avaliação pendente.
 - Para fretes com modalidade financeira, a avaliação só pode ser registrada depois da confirmação da entrega. O sistema financeiro permanece inteiramente no modo **simulação**, sem pagamento real.
 
+
+## Aviso automático de proposta aceita no painel do motorista
+
+Quando o cliente escolhe a proposta, o frete passa ao estado `booked`, registra o `driverId` escolhido e conserva o identificador exato da proposta selecionada. A tela **Motorista** verifica novas contratações enquanto estiver aberta, a cada aproximadamente cinco segundos, e quando o usuário retorna à aba/aplicativo.
+
+- O modal abre automaticamente **somente para o motorista contratado**, nunca para quem teve a proposta recusada. Não precisa navegar até Histórico ou Propostas.
+- O modal exibe retirada, entrega, distância ou consulta no Google Maps, data/hora, veículo, necessidade de ajudante, descrição, galeria de fotos, pagamento, valor total, comissão FreteOn e líquido do motorista.
+- O botão **Iniciar transporte** inicia o frete diretamente no modal. Se a forma de pagamento for Pix FreteOn simulado, aguarda a confirmação da simulação do Pix antes de permitir iniciar.
+- Se o motorista fechar o modal sem iniciar, o alerta permanece no painel e no sino, podendo ser aberto novamente. Depois de iniciar, concluir ou cancelar, deixa de gerar alerta de **nova contratação**.
+- O aviso abre novamente em uma nova sessão de navegador se o motorista ainda não iniciou o frete; não precisa de armazenamento externo nem de dados de exemplo.
+- **Limitação atual:** o aplicativo não faz push em segundo plano quando está totalmente fechado; o aviso é exibido no painel ativo ou ao abrir a conta. A entrega de push nativo requer uma integração específica em etapa futura.
+
