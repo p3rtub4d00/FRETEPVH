@@ -94,3 +94,15 @@ Para ativar, configure a variável `GOOGLE_MAPS_API_KEY` no **Render > Environme
 - O servidor recalcula a distância quando publica o frete, sem confiar nos quilômetros enviados pelo navegador.
 - O resumo oferece link para abrir o percurso no Google Maps. O mapa embutido pode ser acrescentado depois da validação da rota.
 
+
+## Alternar contas no topo para testes
+
+Depois de entrar no primeiro perfil, aparece uma faixa **Testar como: Cliente · Motorista · Master** no topo da interface. Cada perfil tem **login real independente**: entre uma única vez em cada conta, usando seu próprio celular e senha. Depois, clique na opção correspondente para alternar instantaneamente entre os painéis **na mesma aba**. O indicador verde mostra os perfis já conectados.
+
+O seletor **não concede permissões**: uma conta de Cliente nunca recebe os poderes de Motorista ou Master. O backend exige o cookie HttpOnly correspondente ao perfil selecionado e valida a função da conta no banco de dados. As sessões têm duração de sete dias, salvo saída manual ou expiração.
+
+- O botão **Sair desta conta** encerra somente o perfil atual; os demais permanecem conectados.
+- Sessões anteriores à atualização continuam sendo reconhecidas enquanto válidas.
+- A primeira entrada em cada perfil exige login ou cadastro normal. Se ainda não tiver motorista, crie uma conta e aprove-a pelo Master para testar as propostas.
+- Para maior segurança, evite conectar Master em celulares ou computadores compartilhados. No computador de testes, encerre as três sessões ao terminar.
+
