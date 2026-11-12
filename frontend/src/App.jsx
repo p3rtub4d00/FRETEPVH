@@ -1236,7 +1236,6 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           {area === "cliente" && selected.status === "completed" &&
              selected.paymentMethod && selected.deliveryConfirmedAt &&
              selected.disputeStatus === "none" &&
-             selected.payoutStatus !== "paid_simulated" &&
              selected.canDispute === true && (
             <div className="finance-action">
               <p className="muted">Entrega confirmada. Se houver um problema antes da liquidação, informe ao Master.</p>

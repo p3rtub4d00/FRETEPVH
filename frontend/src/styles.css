@@ -2156,3 +2156,25 @@ fieldset {
   .wallet-item-heading { flex-wrap: wrap; }
   .wallet-item .primary, .wallet-item .secondary { white-space: normal; }
 }
+
+/* Cliente visualiza somente o valor final contratado, nunca as taxas internas. */
+.client-total-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin: 13px 0;
+  padding: 13px 14px;
+  background: #f0f6fd;
+  border: 1px solid #dce7f4;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #49617b;
+}
+.client-total-price strong {
+  font-size: 22px;
+  line-height: 1.3;
+  color: #142c49;
+  white-space: nowrap;
+}
