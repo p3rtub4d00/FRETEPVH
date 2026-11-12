@@ -41,6 +41,20 @@ function presentRequest(request, user) {
     result.proposals = data.proposals.filter(
       (proposal) => proposal.driverId === own(user),
     );
+  if (user.role === "cliente") {
+    // Cliente só visualiza o preço total contratado: não enviamos os dados
+    // internos de comissão, líquido do motorista ou controle de repasses.
+    result.canDispute =
+      data.status === "completed" &&
+      data.disputeStatus === "none" &&
+      data.payoutStatus !== "paid_simulated" &&
+      data.commissionStatus !== "paid";
+    for (const field of [
+      "commissionCents", "driverNetCents", "commissionRate",
+      "commissionStatus", "commissionDueAt", "commissionPaymentRequestedAt",
+      "commissionPaidAt", "payoutStatus", "payoutRequestedAt", "payoutPaidAt",
+    ]) delete result[field];
+  }
   return result;
 }
 api.get("/state", async (req, res) => {
@@ -102,7 +116,7 @@ api.get("/state", async (req, res) => {
     drivers: people,
     users,
     requests: requests.map((request) => presentRequest(request, req.user)),
-    wallet: walletSummary(requests, req.user),
+    wallet: req.user.role === "cliente" ? null : walletSummary(requests, req.user),
   });
 });
 api.patch("/availability", authorize("motorista"), async (req, res) => {

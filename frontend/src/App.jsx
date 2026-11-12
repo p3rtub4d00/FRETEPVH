@@ -28,7 +28,7 @@ import { money, statusLabels } from "./format.js";
 import { api } from "./api.js";
 import RoutePicker from "./RoutePicker.jsx";
 import RoleSwitcher from "./RoleSwitcher.jsx";
-import WalletPanel, { PaymentLabel, CommissionPreview, paymentLabels } from "./WalletPanel.jsx";
+import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
 const navigation = {
@@ -1063,10 +1063,16 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <div className="freight-payment-panel">
               <PaymentLabel method={selected.paymentMethod} />
               {selected.agreedPriceCents != null && (
-                <CommissionPreview
-                  price={selected.agreedPriceCents / 100}
-                  method={selected.paymentMethod}
-                />
+                area === "cliente" ? (
+                  <p className="client-total-price">
+                    Valor total do frete: <strong>{money(selected.agreedPriceCents / 100)}</strong>
+                  </p>
+                ) : (
+                  <CommissionPreview
+                    price={selected.agreedPriceCents / 100}
+                    method={selected.paymentMethod}
+                  />
+                )
               )}
               {selected.paymentMethod === "pix_freteon" && (
                 <p className="muted">Pix pelo FreteOn em modo simulação. Nenhum pagamento real será recebido.</p>
@@ -1231,7 +1237,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
              selected.paymentMethod && selected.deliveryConfirmedAt &&
              selected.disputeStatus === "none" &&
              selected.payoutStatus !== "paid_simulated" &&
-             selected.commissionStatus !== "paid" && (
+             selected.canDispute === true && (
             <div className="finance-action">
               <p className="muted">Entrega confirmada. Se houver um problema antes da liquidação, informe ao Master.</p>
               <button className="secondary full" disabled={busy}
@@ -1300,10 +1306,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           </p>
           <div className="finance-action">
             <PaymentLabel method={selected.paymentMethod} />
-            <CommissionPreview
-              price={selected.proposals.find((p) => p.id === modal.proposalId).price}
-              method={selected.paymentMethod}
-            />
+            <p className="client-total-price">
+              Total a pagar:{" "}
+              <strong>{money(selected.proposals.find((p) => p.id === modal.proposalId).price)}</strong>
+            </p>
             <p className="info">
               {selected.paymentMethod === "pix_freteon"
                 ? "Pagamento Pix apenas simulado após a contratação. Não haverá cobrança real."
