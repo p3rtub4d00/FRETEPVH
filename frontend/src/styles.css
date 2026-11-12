@@ -2439,3 +2439,165 @@ fieldset {
   .freight-gallery-images img { height: 92px; }
   .completion-banner .primary { width: 100%; }
 }
+
+/* Confirmação da proposta aceita: modal completo do motorista */
+.driver-booking-banner {
+  background: #eaf7f0;
+  border: 1px solid #aad9bf;
+  border-radius: 12px;
+  color: #215f45;
+  padding: 14px 17px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.driver-booking-banner > div {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  flex: 1 1 220px;
+}
+.driver-booking-banner svg {
+  flex-shrink: 0;
+}
+.driver-booking-banner strong {
+  display: block;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.driver-booking-banner small {
+  display: block;
+  margin-top: 4px;
+  color: #4d775e;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.driver-booking-banner .primary {
+  min-height: 42px;
+  font-size: 12px;
+}
+dialog:has(.driver-acceptance-content) {
+  max-width: 610px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.driver-acceptance-content {
+  display: grid;
+  gap: 15px;
+}
+.driver-acceptance-headline {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid #bde1c9;
+  border-radius: 12px;
+  background: #f1fbf4;
+  padding: 14px;
+}
+.driver-acceptance-headline > svg {
+  color: #26905a;
+  flex-shrink: 0;
+}
+.driver-acceptance-headline strong {
+  display: block;
+  font-size: 15px;
+  color: #195336;
+}
+.driver-acceptance-headline p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #47725a;
+  line-height: 1.5;
+}
+.driver-acceptance-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.driver-acceptance-heading strong {
+  font-size: 17px;
+}
+.driver-acceptance-info {
+  display: grid;
+  gap: 9px;
+  padding: 12px 14px;
+  background: #f6f9fd;
+  border: 1px solid #e1e9f2;
+  border-radius: 10px;
+}
+.driver-acceptance-info span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #425e79;
+  font-size: 12px;
+}
+.driver-acceptance-info svg {
+  color: #9b602b;
+  flex-shrink: 0;
+}
+.driver-acceptance-description strong,
+.driver-acceptance-payment h3 {
+  display: block;
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.driver-acceptance-description p {
+  margin: 0;
+  line-height: 1.55;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.driver-acceptance-payment {
+  border: 1px solid #dce7f2;
+  background: #f8fafc;
+  padding: 14px;
+  border-radius: 12px;
+}
+.driver-acceptance-payment .commission-preview {
+  margin-bottom: 0;
+}
+.driver-acceptance-actions {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #e1e8ef;
+  padding-top: 15px;
+}
+.driver-acceptance-actions .primary {
+  min-height: 49px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+.driver-acceptance-actions .info {
+  margin: 0;
+  font-size: 12px;
+}
+.driver-acceptance-content > .text-button {
+  justify-self: center;
+  font-size: 12px;
+  padding: 7px;
+  color: #607a96;
+}
+@media (max-width: 600px) {
+  .driver-booking-banner .primary {
+    width: 100%;
+  }
+  dialog:has(.driver-acceptance-content) {
+    padding: 17px;
+    max-height: 93dvh;
+  }
+  .driver-acceptance-headline {
+    padding: 12px;
+  }
+  .driver-acceptance-heading strong {
+    font-size: 15px;
+  }
+}
