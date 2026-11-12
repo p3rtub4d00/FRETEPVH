@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Dashboard from "./App.jsx";
 import { api } from "./api.js";
+import RoleSwitcher from "./RoleSwitcher.jsx";
 
 const titles = {
   cliente: "Cliente",
@@ -18,7 +19,7 @@ const titles = {
 };
 export default function Entry() {
   const [path, setPath] = useState(location.pathname);
-  const [user, setUser] = useState(null);
+  const [sessions, setSessions] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   function navigate(next) {
@@ -32,8 +33,8 @@ export default function Entry() {
       setError("");
     };
     window.addEventListener("popstate", pop);
-    api("/auth/me")
-      .then((data) => setUser(data.user))
+    api("/auth/sessions")
+      .then((data) => setSessions(data.sessions || {}))
       .catch((error) => {
         if (error.status !== 401) setError(error.message);
       })
@@ -41,15 +42,24 @@ export default function Entry() {
     return () => window.removeEventListener("popstate", pop);
   }, []);
   function authenticated(account) {
-    setUser(account);
+    setSessions((previous) => ({ ...previous, [account.role]: account }));
     navigate(`/${account.role}`);
   }
   async function logout() {
+    const role = location.pathname.split("/")[1];
     await api("/auth/logout", { method: "POST", body: {} });
-    setUser(null);
-    navigate("/");
+    setSessions((previous) => {
+      const next = { ...previous };
+      delete next[role];
+      return next;
+    });
+    navigate(`/${role}`);
+  }
+  function switchRole(role) {
+    navigate(`/${role}`);
   }
   const area = path.split("/")[1];
+  const user = sessions[area] || null;
   if (loading)
     return (
       <div className="auth-loading" role="status">
@@ -62,8 +72,14 @@ export default function Entry() {
         key={user.id}
         user={user}
         onLogout={logout}
+        sessions={sessions}
+        onSwitchRole={switchRole}
         onExpired={() => {
-          setUser(null);
+          setSessions((previous) => {
+            const next = { ...previous };
+            delete next[area];
+            return next;
+          });
           setError("Sua sessão expirou. Entre novamente.");
         }}
       />
@@ -80,17 +96,14 @@ export default function Entry() {
         >
           <img src="/assets/logo.png" alt="FreteOn — início" />
         </a>
-        <span>Porto Velho, RO</span>
-        {user && (
-          <a
-            href={`/${user.role}`}
-            onClick={(event) => {
-              event.preventDefault();
-              navigate(`/${user.role}`);
-            }}
-          >
-            Meu painel
-          </a>
+        {Object.keys(sessions).length ? (
+          <RoleSwitcher
+            activeRole={area}
+            sessions={sessions}
+            onSwitch={switchRole}
+          />
+        ) : (
+          <span>Porto Velho, RO</span>
         )}
       </header>
       {path === "/" ? (
