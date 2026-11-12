@@ -1707,3 +1707,121 @@ fieldset {
     font-size: 21px;
   }
 }
+
+/* Seletor de perfis para testes: preserva sessões independentes e seguras. */
+.role-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 0;
+}
+.role-switcher-title {
+  white-space: nowrap;
+  color: #60738c;
+  font-size: 11px;
+  font-weight: 700;
+}
+.role-switcher-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #dce4ee;
+  border-radius: 12px;
+  background: #e6edf6;
+}
+.role-switcher-buttons button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  min-height: 36px;
+  font-size: 12px;
+  color: #48617e;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background 150ms ease, color 150ms ease;
+}
+.role-switcher-buttons button.active {
+  background: #ff8a35;
+  color: #10243e;
+  box-shadow: 0 2px 7px #8b5c3526;
+}
+.role-switcher-buttons button:not(.active):hover {
+  background: white;
+  color: #10243e;
+}
+.role-status {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #a4b2c2;
+  border: 1px solid #8697ab;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.role-status.connected {
+  background: #28a76b;
+  border-color: #22945e;
+}
+.account-bar {
+  flex-wrap: wrap;
+}
+.account-bar > span {
+  font-weight: 600;
+  min-width: 140px;
+}
+.account-bar > .role-switcher {
+  flex: 1;
+}
+.account-bar > button:last-child {
+  white-space: nowrap;
+}
+.public-header > .role-switcher {
+  flex: 0 1 auto;
+}
+@media (max-width: 980px) {
+  .account-bar {
+    row-gap: 8px;
+  }
+  .account-bar > .role-switcher {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 760px) {
+  .account-bar > span {
+    font-size: 11px;
+  }
+  .account-bar > .role-switcher {
+    justify-content: flex-start;
+    width: 100%;
+  }
+  .role-switcher-buttons {
+    flex: 1;
+    justify-content: space-between;
+  }
+  .role-switcher-buttons button {
+    flex: 1;
+    padding: 7px 6px;
+    font-size: 11px;
+  }
+  .public-header:has(.role-switcher) {
+    height: auto;
+    min-height: 72px;
+    flex-wrap: wrap;
+  }
+  .public-header > .role-switcher {
+    flex: 1 0 100%;
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 360px) {
+  .role-switcher-title { font-size: 10px; }
+  .role-switcher-buttons button { gap: 4px; font-size: 10px; }
+  .role-switcher-buttons svg { width: 13px; height: 13px; }
+}
