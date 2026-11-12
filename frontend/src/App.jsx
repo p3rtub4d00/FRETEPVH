@@ -29,6 +29,7 @@ import { api } from "./api.js";
 import RoutePicker from "./RoutePicker.jsx";
 import RoleSwitcher from "./RoleSwitcher.jsx";
 import ProfilePhotoEditor, { Avatar } from "./ProfilePhotoEditor.jsx";
+import { pendingDriverBookings } from "./driverBooking.js";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
@@ -426,6 +427,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   const mounted = useRef(true);
   const inFlight = useRef(false);
   const seenCompletions = useRef(new Set());
+  const seenAcceptedBookings = useRef(new Set());
   const modalRef = useRef(null);
   useEffect(() => { modalRef.current = modal; }, [modal]);
   function showError(error) {
@@ -450,6 +452,16 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           seenCompletions.current.add(toReview.id);
           setModal({ type: "completion", id: toReview.id });
         }
+      } else if (area === "motorista" && !modalRef.current) {
+        // A seleção do cliente já fica salva no MongoDB. Nunca abra para
+        // motoristas que apenas enviaram propostas não escolhidas.
+        const booked = pendingDriverBookings(data.requests, user.id).find(
+          (request) => !seenAcceptedBookings.current.has(request.id),
+        );
+        if (booked) {
+          seenAcceptedBookings.current.add(booked.id);
+          setModal({ type: "driverBooking", id: booked.id });
+        }
       }
     }
   }
@@ -458,7 +470,13 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     refresh().catch(showError);
     const interval = setInterval(() => {
       if (!document.hidden && !inFlight.current) refresh().catch(showError);
-    }, 15000);
+    }, area === "motorista" ? 5000 : 15000);
+    // Ao voltar ao aplicativo no celular, cheque imediatamente novas contratações.
+    const checkOnReturn = () => {
+      if (!document.hidden && !inFlight.current) refresh().catch(showError);
+    };
+    window.addEventListener("focus", checkOnReturn);
+    document.addEventListener("visibilitychange", checkOnReturn);
     const handler = (event) => {
       event.preventDefault();
       setInstall(event);
@@ -467,6 +485,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     return () => {
       mounted.current = false;
       clearInterval(interval);
+      window.removeEventListener("focus", checkOnReturn);
+      document.removeEventListener("visibilitychange", checkOnReturn);
       window.removeEventListener("beforeinstallprompt", handler);
     };
   }, []);
@@ -534,6 +554,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   const completed = state.requests.filter(
     (request) => request.status === "completed",
   );
+  const bookingsPending = area === "motorista"
+    ? pendingDriverBookings(state.requests, user.id)
+    : [];
   const completionPending = area === "cliente"
     ? state.requests.filter((request) =>
         request.status === "completed" &&
@@ -709,7 +732,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               onClick={() => setModal({ type: "notifications" })}
             >
               <Bell size={20} />
-              {totalProposals > 0 && <span className="notification-dot" />}
+              {(area === "motorista" ? bookingsPending.length > 0 : totalProposals > 0) && (
+                <span className="notification-dot" />
+              )}
             </button>
             <Avatar account={state.user} />
           </div>
@@ -739,6 +764,23 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <div className="wallet-alert" role="alert">
               <span>Você possui comissão vencida há mais de 72 horas. Novas propostas estão temporariamente suspensas.</span>
               <button className="secondary" onClick={() => setPage("carteira")}>Ver minha carteira</button>
+            </div>
+          )}
+          {bookingsPending.length > 0 && (
+            <div className="driver-booking-banner" role="status">
+              <div>
+                <CheckCircle2 size={21} />
+                <span>
+                  <strong>{bookingsPending.length === 1
+                    ? "Sua proposta foi aceita! Você tem um frete contratado."
+                    : `Você tem ${bookingsPending.length} fretes contratados.`}</strong>
+                  <small>Veja os detalhes completos e inicie o transporte pelo painel.</small>
+                </span>
+              </div>
+              <button className="primary" onClick={() =>
+                setModal({ type: "driverBooking", id: bookingsPending[0].id })}>
+                Ver contratação
+              </button>
             </div>
           )}
           {completionPending.length > 0 && (
@@ -1122,6 +1164,110 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           onClose={() => setModal(null)}
         />
       )}
+      {modal?.type === "driverBooking" && selected && area === "motorista" &&
+        selected.driverId === user.id && (
+        <Modal
+          title="Sua proposta foi aceita!"
+          error={notice}
+          busy={busy}
+          onClose={() => setModal(null)}
+        >
+          <div className="driver-acceptance-content">
+            <div className="driver-acceptance-headline">
+              <CheckCircle2 size={35} />
+              <div>
+                <strong>Frete contratado com sucesso</strong>
+                <p>O cliente escolheu você para realizar este transporte.</p>
+              </div>
+            </div>
+            <div className="driver-acceptance-heading">
+              <strong>{selected.title}</strong>
+              <span className="status booked">{statusLabels[selected.status]}</span>
+            </div>
+            <Route request={selected} />
+            <RouteDistance request={selected} busy={busy}
+              onCalculate={() => calculateMissingDistance(selected.id)} />
+            <div className="driver-acceptance-info">
+              <span><Clock3 size={16} />
+                {selected.date ? new Date(`${selected.date}T12:00:00`).toLocaleDateString("pt-BR") : "Data não definida"}
+                {" · "}
+                {selected.proposals.find((proposal) => proposal.id === selected.selectedId)?.time || selected.time}
+              </span>
+              <span><Truck size={16} /> {selected.vehicle}</span>
+              <span><Package size={16} />
+                {selected.helper ? "Cliente solicitou ajudante" : "Sem ajudante solicitado"}
+              </span>
+            </div>
+            <div className="driver-acceptance-description">
+              <strong>Descrição da carga</strong>
+              <p>{selected.description}</p>
+            </div>
+            <div className="freight-gallery">
+              <h3>Fotos da carga ({selected.photos?.length || 0})</h3>
+              {selected.photos?.length ? (
+                <div className="freight-gallery-images">
+                  {selected.photos.map((photo, index) => (
+                    <button type="button" key={index} onClick={() =>
+                      setModal({ type: "photo", id: selected.id, index, returnTo: "driverBooking" })}>
+                      <img src={photo} alt={`Ampliar foto ${index + 1} da carga`} loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              ) : <p className="muted">O cliente não anexou fotos.</p>}
+            </div>
+            <div className="driver-acceptance-payment">
+              <h3>Pagamento combinado</h3>
+              <PaymentLabel method={selected.paymentMethod} />
+              {selected.agreedPriceCents != null ? (
+                <CommissionPreview
+                  price={selected.agreedPriceCents / 100}
+                  method={selected.paymentMethod}
+                />
+              ) : (
+                <p className="client-total-price">
+                  Preço aceito:{" "}
+                  <strong>{money(selected.proposals.find((proposal) =>
+                    proposal.id === selected.selectedId)?.price || 0)}</strong>
+                </p>
+              )}
+            </div>
+            {selected.status === "booked" && (
+              <div className="driver-acceptance-actions">
+                {selected.paymentMethod === "pix_freteon" &&
+                  selected.paymentStatus !== "simulated_paid" && (
+                  <p className="info">
+                    Aguardando o cliente confirmar o Pix de teste.
+                    Você poderá iniciar o transporte após essa simulação.
+                  </p>
+                )}
+                <button className="primary full"
+                  disabled={busy ||
+                    (selected.paymentMethod === "pix_freteon" &&
+                     selected.paymentStatus !== "simulated_paid")}
+                  onClick={async () => {
+                    if (await updateRequest(selected.id, { status: "transit" })) {
+                      setModal(null);
+                      setNotice("Transporte iniciado! Os detalhes permanecem em Meus fretes.");
+                    }
+                  }}>
+                  <Truck size={18} /> Iniciar transporte
+                </button>
+              </div>
+            )}
+            {selected.status !== "booked" && (
+              <p className="info">A situação desta contratação mudou. Consulte os detalhes do frete.</p>
+            )}
+            <button type="button" className="text-button"
+              onClick={() => setModal({ type: "detail", id: selected.id })}>
+              Ver detalhes tradicionais
+            </button>
+            <button type="button" className="text-button"
+              onClick={() => setModal(null)}>
+              Fechar por enquanto
+            </button>
+          </div>
+        </Modal>
+      )}
       {modal?.type === "completion" && selected && (
         <Modal
           title={selected.deliveryConfirmedAt || !selected.paymentMethod
@@ -1438,11 +1584,11 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         </Modal>
       )}
       {modal?.type === "photo" && selected && (
-        <Modal title="Foto da carga" onClose={() => setModal({ type: "detail", id: selected.id })}>
+        <Modal title="Foto da carga" onClose={() => setModal({ type: modal.returnTo || "detail", id: selected.id })}>
           <img className="freight-photo-expanded"
             src={selected.photos?.[modal.index]} alt={`Foto ${modal.index + 1} da carga`} />
           <button className="secondary full" onClick={() =>
-            setModal({ type: "detail", id: selected.id })}>Voltar aos detalhes</button>
+            setModal({ type: modal.returnTo || "detail", id: selected.id })}>Voltar aos detalhes</button>
         </Modal>
       )}
       {modal?.type === "confirm" && selected && (
@@ -1589,25 +1735,39 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           title="Atualizações dos fretes"
           onClose={() => setModal(null)}
         >
-          {active
-            .filter((request) => request.proposals.length)
-            .map((request) => (
-              <button
-                className="notification-row"
-                key={request.id}
-                onClick={() => setModal({ type: "detail", id: request.id })}
-              >
-                <Bell size={20} />
-                <span>
-                  <strong>{request.title}</strong>
-                  <small>
-                    {request.proposals.length} proposta(s) recebida(s)
-                  </small>
-                </span>
-                <ChevronRight size={16} />
-              </button>
-            ))}
-          {!totalProposals && <p>Sem novas propostas.</p>}
+          {area === "motorista" ? (
+            <>
+              {bookingsPending.map((request) => (
+                <button className="notification-row" key={request.id}
+                  onClick={() => setModal({ type: "driverBooking", id: request.id })}>
+                  <CheckCircle2 size={22} color="#268559" />
+                  <span>
+                    <strong>Proposta aceita: {request.title}</strong>
+                    <small>Cliente confirmou sua contratação. Toque para visualizar o frete completo.</small>
+                  </span>
+                  <ChevronRight size={16} />
+                </button>
+              ))}
+              {!bookingsPending.length && <p>Você não possui novos fretes contratados.</p>}
+            </>
+          ) : (
+            <>
+              {active
+                .filter((request) => request.proposals.length)
+                .map((request) => (
+                  <button className="notification-row" key={request.id}
+                    onClick={() => setModal({ type: "detail", id: request.id })}>
+                    <Bell size={20} />
+                    <span>
+                      <strong>{request.title}</strong>
+                      <small>{request.proposals.length} proposta(s) recebida(s)</small>
+                    </span>
+                    <ChevronRight size={16} />
+                  </button>
+                ))}
+              {!totalProposals && <p>Sem novas propostas.</p>}
+            </>
+          )}
         </Modal>
       )}
       {modal?.type === "help" && (
@@ -1640,7 +1800,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           </div>
           <p className="info">
             Pedidos, propostas e pagamentos simulados ficam registrados na conta.
-            O painel verifica atualizações a cada 15 segundos. Dinheiro e cartão
+            Para motoristas com o painel aberto, contratações novas são verificadas
+            aproximadamente a cada 5 segundos. Dinheiro e cartão
             são recebidos pelo motorista; Pix pelo FreteOn ainda é simulado.
           </p>
         </Modal>
