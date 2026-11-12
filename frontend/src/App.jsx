@@ -443,7 +443,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           !seenCompletions.current.has(request.id) &&
           ((request.paymentMethod && !request.deliveryConfirmedAt &&
               request.disputeStatus === "none") ||
-            (!request.rating && (!request.paymentMethod || request.deliveryConfirmedAt)))
+            (!request.rating && request.disputeStatus !== "open" &&
+              (!request.paymentMethod || request.deliveryConfirmedAt)))
         );
         if (toReview) {
           seenCompletions.current.add(toReview.id);
@@ -538,7 +539,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         request.status === "completed" &&
         ((request.paymentMethod && !request.deliveryConfirmedAt &&
           request.disputeStatus === "none") ||
-         (!request.rating && (!request.paymentMethod || request.deliveryConfirmedAt)))
+         (!request.rating && request.disputeStatus !== "open" &&
+              (!request.paymentMethod || request.deliveryConfirmedAt)))
       )
     : [];
   const selected = modal?.id
@@ -1120,6 +1122,88 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           onClose={() => setModal(null)}
         />
       )}
+      {modal?.type === "completion" && selected && (
+        <Modal
+          title={selected.deliveryConfirmedAt || !selected.paymentMethod
+            ? "Avalie seu frete" : "Seu frete foi concluído!"}
+          error={notice}
+          busy={busy}
+          onClose={() => setModal(null)}
+        >
+          <div className="completion-modal-content">
+            <div className="completion-modal-headline">
+              <CheckCircle2 size={35} />
+              <div>
+                <strong>{selected.title}</strong>
+                <p className="muted">O motorista marcou este transporte como concluído.</p>
+              </div>
+            </div>
+            <Route request={selected} />
+            {selected.agreedPriceCents != null && (
+              <p className="client-total-price">Valor total do frete:{" "}
+                <strong>{money(selected.agreedPriceCents / 100)}</strong>
+              </p>
+            )}
+            <div className="completion-driver">
+              <Avatar account={state.drivers.find((driver) => driver.id === selected.driverId)} />
+              <div>
+                <small>Motorista</small>
+                <strong>{state.drivers.find((driver) => driver.id === selected.driverId)?.name || "Motorista contratado"}</strong>
+              </div>
+            </div>
+            {selected.paymentMethod && !selected.deliveryConfirmedAt &&
+              selected.disputeStatus === "none" && (
+              <div className="completion-actions">
+                <h3>Confirme a entrega</h3>
+                <p>
+                  {selected.paymentMethod === "pix_freteon"
+                    ? "Confirme que recebeu sua carga corretamente. O pagamento continua em modo simulação."
+                    : "Confirme somente se recebeu a carga e efetuou o pagamento combinado diretamente ao motorista."}
+                </p>
+                <button className="primary full" disabled={busy}
+                  onClick={() => walletAction(selected.id, "confirm_delivery")}>
+                  <Check size={18} /> Confirmar entrega e continuar
+                </button>
+                <button className="secondary full" disabled={busy}
+                  onClick={() => setModal({ type: "issue", id: selected.id })}>
+                  Informar um problema
+                </button>
+              </div>
+            )}
+            {(selected.deliveryConfirmedAt || !selected.paymentMethod) &&
+              !selected.rating && selected.disputeStatus !== "open" && (
+              <div className="completion-actions">
+                <h3>Como foi o serviço?</h3>
+                <p>Escolha de 1 a 5 estrelas para avaliar o motorista.</p>
+                <div className="completion-stars">
+                  {[1, 2, 3, 4, 5].map((score) => (
+                    <button key={score} type="button" disabled={busy}
+                      aria-label={`Avaliar com ${score} estrela${score === 1 ? "" : "s"}`}
+                      onClick={async () => {
+                        if (await updateRequest(selected.id, { rating: score })) {
+                          setModal(null);
+                          setNotice("Frete finalizado. Obrigado por avaliar o motorista!");
+                        }
+                      }}>
+                      <Star size={25} />
+                      <span>{score}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {selected.rating && (
+              <p className="info">Sua avaliação foi registrada: {selected.rating} de 5 estrelas.</p>
+            )}
+            {selected.disputeStatus === "open" && (
+              <p className="info">A entrega está em análise pela administração.</p>
+            )}
+            <button type="button" className="text-button" onClick={() => setModal(null)}>
+              {selected.rating ? "Fechar" : "Fazer isso depois"}
+            </button>
+          </div>
+        </Modal>
+      )}
       {modal?.type === "detail" && selected && (
         <Modal
           error={notice}
@@ -1319,7 +1403,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 onClick={() => setModal({ type: "issue", id: selected.id })}>Abrir contestação</button>
             </div>
           )}
-          {area === "cliente" && selected.status === "completed" && (
+          {area === "cliente" && selected.status === "completed" &&
+            (selected.deliveryConfirmedAt || !selected.paymentMethod) && (
             <div className="rating">
               <h3>
                 {selected.rating
