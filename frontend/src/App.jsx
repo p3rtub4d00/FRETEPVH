@@ -676,6 +676,12 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </p>
           )}
 
+          {area === "motorista" && state.wallet?.blocked && (
+            <div className="wallet-alert" role="alert">
+              <span>Você possui comissão vencida há mais de 72 horas. Novas propostas estão temporariamente suspensas.</span>
+              <button className="secondary" onClick={() => setPage("carteira")}>Ver minha carteira</button>
+            </div>
+          )}
           {notice && (
             <div className="notice" role="status">
               <span>{notice}</span>
@@ -820,7 +826,19 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               </div>
             </div>
           )}
-          {area === "master" && ["inicio", "motoristas"].includes(page) ? (
+          {((area === "motorista" && page === "carteira") ||
+             (area === "master" && page === "financeiro")) ? (
+            <WalletPanel
+              role={area}
+              user={state.user}
+              wallet={state.wallet}
+              requests={state.requests}
+              drivers={state.drivers}
+              busy={busy}
+              onAction={walletAction}
+              onSavePreferences={savePaymentPreferences}
+            />
+          ) : area === "master" && ["inicio", "motoristas"].includes(page) ? (
             <section>
               <div className="section-heading">
                 <h2>
@@ -1041,6 +1059,26 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             {statusLabels[selected.status]}
           </span>
           <Route request={selected} />
+          {selected.paymentMethod && (
+            <div className="freight-payment-panel">
+              <PaymentLabel method={selected.paymentMethod} />
+              {selected.agreedPriceCents != null && (
+                <CommissionPreview
+                  price={selected.agreedPriceCents / 100}
+                  method={selected.paymentMethod}
+                />
+              )}
+              {selected.paymentMethod === "pix_freteon" && (
+                <p className="muted">Pix pelo FreteOn em modo simulação. Nenhum pagamento real será recebido.</p>
+              )}
+              {selected.paymentMethod === "card_driver" && (
+                <p className="muted">O cliente pagará na maquininha do motorista. A taxa bancária deve estar considerada no preço da proposta.</p>
+              )}
+              {selected.paymentMethod === "cash_driver" && (
+                <p className="muted">Pagamento em dinheiro diretamente ao motorista ao final do serviço.</p>
+              )}
+            </div>
+          )}
           {selected.distanceMeters != null && (
             <p className="route-in-review">
               <MapPin size={15} />{" "}
@@ -1063,7 +1101,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               key={selected.id}
               request={selected}
               available={
-                state.available && state.user.status === "approved" && !busy
+                state.available && state.user.status === "approved" &&
+                !state.wallet?.blocked &&
+                (selected.paymentMethod !== "card_driver" || state.user.acceptsCard) &&
+                !busy
               }
               driverId={user.id}
               onSubmit={(proposal) =>
@@ -1159,6 +1200,33 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   : "Concluir frete"}
               </button>
             )}
+          {area === "cliente" && selected.paymentMethod === "pix_freteon" &&
+             selected.status === "booked" && selected.paymentStatus === "awaiting" && (
+            <div className="finance-action">
+              <p className="info">Frete contratado. Simule o Pix para liberar o início do transporte. Não existe pagamento real nesta versão.</p>
+              <button className="primary full" disabled={busy}
+                onClick={() => walletAction(selected.id, "simulate_pix_payment")}>
+                Simular pagamento Pix de {money(selected.agreedPriceCents / 100)}
+              </button>
+            </div>
+          )}
+          {area === "cliente" && selected.status === "completed" &&
+            selected.paymentMethod && !selected.deliveryConfirmedAt &&
+            selected.disputeStatus === "none" && (
+            <div className="finance-action">
+              <h3>Confirmação da entrega e do pagamento</h3>
+              <p>O motorista marcou este frete como concluído. Confirme somente após verificar a entrega
+              {selected.paymentMethod !== "pix_freteon" ? " e efetuar o pagamento diretamente ao motorista." : "."}</p>
+              <button className="primary full" disabled={busy}
+                onClick={() => walletAction(selected.id, "confirm_delivery")}>
+                Confirmar entrega {selected.paymentMethod === "pix_freteon" ? "(simulação)" : "e pagamento"}
+              </button>
+              <button className="secondary full" disabled={busy}
+                onClick={() => setModal({ type: "issue", id: selected.id })}>
+                Informar problema na entrega
+              </button>
+            </div>
+          )}
           {area === "cliente" && selected.status === "completed" && (
             <div className="rating">
               <h3>
@@ -1219,10 +1287,22 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </strong>
             .
           </p>
-          <p className="info">
-            Combine o pagamento diretamente com o motorista. O FreteOn registra
-            sua contratação.
-          </p>
+          <div className="finance-action">
+            <PaymentLabel method={selected.paymentMethod} />
+            <CommissionPreview
+              price={selected.proposals.find((p) => p.id === modal.proposalId).price}
+              method={selected.paymentMethod}
+            />
+            <p className="info">
+              {selected.paymentMethod === "pix_freteon"
+                ? "Pagamento Pix apenas simulado após a contratação. Não haverá cobrança real."
+                : selected.paymentMethod === "card_driver"
+                  ? "Pague diretamente na maquininha do motorista. O preço total informado na proposta deve incluir os custos da transação."
+                  : selected.paymentMethod === "cash_driver"
+                    ? "Pague em dinheiro diretamente ao motorista na entrega."
+                    : "Forma de pagamento não registrada neste pedido antigo."}
+            </p>
+          </div>
           <button
             className="primary full"
             onClick={async () => {
@@ -1238,6 +1318,15 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             Confirmar contratação
             <Check size={18} />
           </button>
+        </Modal>
+      )}
+      {modal?.type === "issue" && selected && (
+        <Modal title="Informar problema com o frete" error={notice} busy={busy}
+          onClose={() => setModal({ type: "detail", id: selected.id })}>
+          <IssueForm busy={busy} onSubmit={async (reason) => {
+            if (await walletAction(selected.id, "report_issue", { reason }))
+              setModal({ type: "detail", id: selected.id });
+          }} />
         </Modal>
       )}
       {modal?.type === "cancel" && selected && (
@@ -1365,9 +1454,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </div>
           </div>
           <p className="info">
-            Pedidos e propostas ficam salvos na sua conta. O painel verifica
-            atualizações a cada 15 segundos. O pagamento é combinado diretamente
-            entre cliente e motorista.
+            Pedidos, propostas e pagamentos simulados ficam registrados na conta.
+            O painel verifica atualizações a cada 15 segundos. Dinheiro e cartão
+            são recebidos pelo motorista; Pix pelo FreteOn ainda é simulado.
           </p>
         </Modal>
       )}
@@ -1375,10 +1464,32 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   );
 }
 
+function IssueForm({ onSubmit, busy }) {
+  const [reason, setReason] = useState("");
+  return (
+    <form onSubmit={(event) => {
+      event.preventDefault();
+      onSubmit(reason.trim());
+    }}>
+      <p>Descreva o problema para o Master analisar. Enquanto a contestação estiver aberta,
+      não será feita a liberação ou cobrança automática referente a este frete.</p>
+      <label>O que aconteceu?
+        <textarea value={reason} required minLength={10} maxLength={500}
+          onChange={(event) => setReason(event.target.value)}
+          placeholder="Descreva a situação da entrega ou pagamento..." />
+      </label>
+      <button type="submit" className="primary full" disabled={busy || reason.trim().length < 10}>
+        Enviar contestação
+      </button>
+    </form>
+  );
+}
+
 function ProposalForm({ request, available, driverId, onSubmit }) {
   const previous = request.proposals.find(
     (proposal) => proposal.driverId === driverId,
   );
+  const [proposedPrice, setProposedPrice] = useState(String(previous?.price || ""));
   return (
     <form
       onSubmit={(event) => {
@@ -1392,6 +1503,17 @@ function ProposalForm({ request, available, driverId, onSubmit }) {
       }}
     >
       <h3>{previous ? "Atualizar minha proposta" : "Enviar proposta"}</h3>
+      <div className="payment-choice-notice">
+        <strong>Pagamento escolhido pelo cliente</strong>
+        <PaymentLabel method={request.paymentMethod} />
+        <p>{request.paymentMethod === "card_driver"
+          ? "Você recebe na sua maquininha e repassa 10% ao FreteOn em até 72h após a confirmação do pagamento."
+          : request.paymentMethod === "cash_driver"
+          ? "Você recebe em dinheiro e repassa 10% ao FreteOn em até 72h após a confirmação do pagamento."
+          : request.paymentMethod === "pix_freteon"
+          ? "Pix pelo FreteOn (simulação). Após a entrega, solicite seu repasse manual pela carteira."
+          : "Pedido anterior sem forma de pagamento definida."}</p>
+      </div>
       <div className="form-grid">
         <label>
           Seu preço (R$)
@@ -1402,7 +1524,8 @@ function ProposalForm({ request, available, driverId, onSubmit }) {
             min="1"
             max="100000"
             step="0.01"
-            defaultValue={previous?.price}
+            value={proposedPrice}
+            onChange={(event) => setProposedPrice(event.target.value)}
             placeholder="0,00"
           />
         </label>
@@ -1426,8 +1549,9 @@ function ProposalForm({ request, available, driverId, onSubmit }) {
           placeholder="Ajudante, proteção da carga e outras informações"
         />
       </label>
+      <CommissionPreview price={proposedPrice} method={request.paymentMethod} />
       <button className="primary full" disabled={!available}>
-        {available ? "Enviar proposta" : "Ative sua disponibilidade"}
+        {available ? "Enviar proposta" : "Verifique sua disponibilidade, carteira e meios de pagamento"}
         <ArrowRight size={18} />
       </button>
     </form>
