@@ -1523,3 +1523,187 @@ fieldset {
     overflow-wrap: anywhere;
   }
 }
+
+/* Trajeto inteligente — escopo exclusivo do formulário de solicitação */
+.route-picker .route-intro {
+  margin: 4px 0 18px;
+}
+.address-picker {
+  position: relative;
+  margin: 18px 0;
+}
+.address-picker label {
+  margin: 0 0 9px;
+}
+.address-input-wrap {
+  position: relative;
+}
+.address-input-wrap input {
+  margin: 0;
+  padding: 14px 38px 14px 42px;
+  min-height: 53px;
+}
+.address-input-wrap > svg:first-child {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+.pickup-pin {
+  color: #27885d;
+}
+.dropoff-pin {
+  color: #cc702c;
+}
+.address-input-wrap .picker-spinner {
+  position: absolute;
+  right: 13px;
+  top: 19px;
+}
+.address-suggestions {
+  display: grid;
+  position: relative;
+  z-index: 3;
+  margin-top: 5px;
+  border: 1px solid #d8e1ec;
+  border-radius: 11px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 10px 30px #10243e16;
+  max-height: 225px;
+  overflow-y: auto;
+}
+.address-suggestions button {
+  display: flex;
+  text-align: left;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px;
+  border-bottom: 1px solid #ecf0f4;
+  font-size: 12px;
+  min-height: 45px;
+}
+.address-suggestions button:last-child {
+  border-bottom: 0;
+}
+.address-suggestions button:hover,
+.address-suggestions button:focus-visible {
+  background: #fff5ed;
+}
+.address-suggestions button svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #bf722f;
+}
+.address-suggestions button span {
+  line-height: 1.5;
+}
+.gps-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #a75c23;
+  font-size: 12px;
+  min-height: 40px;
+  padding: 7px 2px;
+  text-align: left;
+}
+.gps-action:hover {
+  color: #7d3d12;
+}
+.picker-confirmed {
+  display: block;
+  color: #26734c;
+  font-size: 11px;
+  padding: 5px 0;
+}
+.picker-notice {
+  color: #9c5421;
+  font-size: 12px;
+  margin: 3px 0;
+}
+.picker-spinner {
+  animation: picker-spin 1s linear infinite;
+}
+@keyframes picker-spin {
+  to { transform: rotate(360deg); }
+}
+.route-estimate {
+  margin-top: 24px;
+  background: #f5f8fc;
+  border: 1px solid #dce5f0;
+  border-radius: 13px;
+  padding: 18px;
+}
+.route-estimate-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.route-estimate-head svg {
+  color: #6a829e;
+}
+.route-estimate-values {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 18px 0 7px;
+}
+.route-estimate-values > div {
+  display: grid;
+  gap: 5px;
+}
+.route-estimate-values span,
+.route-estimate-hint,
+.route-map-info {
+  color: #697d94;
+  font-size: 12px;
+}
+.route-estimate-values strong {
+  color: #10243e;
+  font-size: 23px;
+  letter-spacing: -0.6px;
+}
+.route-estimate-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+.route-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #a95418;
+  font-size: 12px;
+  font-weight: 700;
+  min-height: 40px;
+  margin-top: 8px;
+  text-decoration: none;
+}
+.route-map-link:hover {
+  text-decoration: underline;
+}
+.route-map-info {
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+.route-in-review {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #436180;
+  font-size: 12px;
+  font-weight: 600;
+}
+@media (max-width: 480px) {
+  .route-estimate {
+    padding: 14px;
+  }
+  .route-estimate-values strong {
+    font-size: 21px;
+  }
+}
