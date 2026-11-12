@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { rateLimit } from "express-rate-limit";
 import { randomUUID } from "node:crypto";
 import mongoose from "mongoose";
 import { Account, Freight, publicUser } from "./models.js";
@@ -195,7 +196,13 @@ api.post("/requests", authorize("cliente"), async (req, res) => {
   });
   res.status(201).json({ request: presentRequest(request, req.user) });
 });
-api.post("/requests/:id/calculate-route", async (req, res) => {
+api.post("/requests/:id/calculate-route", rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Muitas consultas de rota. Tente novamente mais tarde." },
+}), async (req, res) => {
   validId(req.params.id);
   const request = await Freight.findById(req.params.id);
   if (!request || !canRead(request, req.user))
