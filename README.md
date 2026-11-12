@@ -86,7 +86,7 @@ A etapa **Trajeto** pode sugerir endereços em Porto Velho, utilizar a localiza�
 
 Para ativar, configure a variável `GOOGLE_MAPS_API_KEY` no **Render > Environment** usando uma chave de API da Google Maps Platform com faturamento ativado e as APIs **Places API (New)**, **Routes API** e **Geocoding API** habilitadas. Restrinja a chave às APIs necessárias, monitore custos e aplique cotas. A chave deve ficar **apenas no servidor**, nunca no Vite/React. Consulte o fornecedor para as restrições de segurança compatíveis com requisições de servidor.
 
-- Sugestões usam Places Autocomplete (New), priorizando Porto Velho; selecionar uma sugestão resolve endereço e coordenadas.
+- Sugestões usam Places Autocomplete (New), priorizando Porto Velho; selecionar uma sugestão resolve endereço e coordenadas. Com a chave configurada, o sistema também tenta calcular a rota usando endereços completos digitados manualmente.
 - A opção **Usar minha localização** depende de HTTPS, permissão do usuário e Geocoding API para apresentar o endereço.
 - Estimativas usam Routes API para trajetos de carro. O tempo é aproximado e não constitui previsão de trânsito em tempo real.
 - Sem chave, o formulário mantém os endereços manuais e permite publicar, mas **não inventa km ou tempo**. Endereços que não tenham sido selecionados nas sugestões também podem ficar sem estimativa.
@@ -140,3 +140,13 @@ A comissão fixa de **10%** é calculada no backend sobre o preço final da prop
 8. Para testar suspensão de 72 horas, ajuste **apenas em ambiente de teste** a data `commissionDueAt` de um pedido pendente para o passado no MongoDB. O backend bloqueará novas propostas e liberará automaticamente após o Master registrar a comissão como quitada.
 
 **Antes de ligar pagamentos reais**, será necessário contratar um provedor de pagamento compatível, verificar obrigações legais/tributárias, formalizar termos de cancelamento e contestação e implementar confirmações bancárias verificadas no servidor. Não basta remover a palavra "simulação" da interface.
+
+## Fotos de perfil, imagens do frete e confirmação automática da entrega
+
+- Cliente e motorista podem cadastrar, trocar ou remover a foto em **Meu perfil**. A imagem JPG/PNG/WebP é compactada no navegador (máximo de 400 px por lado) e validada no servidor antes de ser salva no MongoDB. A foto aparece no avatar e, para motoristas, na proposta apresentada ao cliente.
+- As fotos anexadas ao pedido aparecem como **miniatura no card** do frete e na galeria dos detalhes para cliente e motorista. É possível tocar em uma foto para ampliá-la. Pedidos sem fotos exibem uma mensagem informativa; nenhum arquivo é inventado.
+- A distância e a duração são calculadas pelas ruas via Routes API quando `GOOGLE_MAPS_API_KEY` estiver configurada. Endereços digitados manualmente também são aceitos. Para fretes antigos sem cálculo, use **Calcular km** nos detalhes. Se a chave não estiver configurada, o sistema mostra **Distância ainda não calculada** e oferece **Consultar trajeto no Google Maps**, sem inventar números.
+- Depois que o motorista marca o frete como **Concluído**, o cliente recebe um **modal automático** ao abrir o painel ou na próxima atualização com a página aberta (cerca de 15 segundos). Nele pode confirmar a entrega, informar problema ou avaliar o motorista de 1 a 5 estrelas. Após confirmar a entrega, o mesmo modal passa a oferecer a avaliação.
+- O modal pode ser fechado e há um **aviso persistente no painel** para reabri-lo sem precisar acessar Histórico. Reaparece ao iniciar nova sessão na interface se ainda houver confirmação ou avaliação pendente.
+- Para fretes com modalidade financeira, a avaliação só pode ser registrada depois da confirmação da entrega. O sistema financeiro permanece inteiramente no modo **simulação**, sem pagamento real.
+
