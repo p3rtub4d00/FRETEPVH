@@ -68,3 +68,14 @@ Fotos da carga são limitadas a três arquivos JPG, PNG ou WebP de 600 KB cada e
 
 - `restauracao/antes-freteon-2026-11-11` preserva o projeto anterior à identidade FreteOn.
 - `restauracao/antes-login-2026-11-11` preserva a demonstração anterior ao cadastro e login.
+
+## Diagnóstico de conexão e acesso Master
+
+1. Em **MongoDB Atlas > Database > Connect > Drivers**, copie a string de conexão do cluster **correto** e substitua os campos de usuário e senha. Não utilize o endereço de exemplo, caracteres `<`/`>` nem aspas extras. Codifique caracteres especiais na senha conforme o formato de URI.
+2. No **Render > serviço FreteOn > Environment**, defina `MONGODB_URI` com a string completa. As variáveis `MONGO_URI`, `MONGO_URL` e `MONGODB_URL` também são aceitas, mas evite manter múltiplas URIs conflitantes.
+3. **`ENOTFOUND` ou `querySrv`:** o DNS não encontrou o host do cluster; geralmente é um endereço incorreto ou indisponibilidade de resolução SRV. Isso não é um erro de login do Master. Confirme o domínio do cluster com a conexão copiada do Atlas. Se necessário, use a conexão **Standard Connection String (`mongodb://`) gerada pelo próprio Atlas**, com todos os hosts/parâmetros exigidos — nunca invente endereços.
+4. **Falha de autenticação:** confira o usuário do banco em **Database Access**; ele é diferente do login da conta Atlas. **Timeout de conexão:** examine o cluster e as regras de **Network Access**. Não é necessário liberar IPs indiscriminadamente para corrigir um erro de DNS.
+5. Confira o status de `/api/health`: retorna HTTP 200 quando o banco está conectado e 503 quando está indisponível. O startup escreve no log o estágio do problema sem expor a senha nem a URI.
+6. Para o primeiro Master, defina `ADMIN_PHONE` (celular com DDD, 11 dígitos, sem `+55` obrigatório) e `ADMIN_PASSWORD` (8–128 caracteres). Acesse `/master` e use **o celular, não um e-mail**. Uma conta Master existente mantém a senha já salva no banco; mudar essas variáveis **não redefine senha** e não cria uma segunda conta Master.
+
+**Segurança:** nunca envie a URI ou as senhas completas em mensagens, capturas públicas ou commits. Para análise de um erro, compartilhe apenas o código (por exemplo, `ENOTFOUND`) e o estágio mostrado no log.

@@ -105,13 +105,20 @@ app.use((error, req, res, next) => {
   });
 });
 
-const uri =
+const configuredUri =
   process.env.MONGODB_URI ||
   process.env.MONGO_URI ||
   process.env.MONGO_URL ||
   process.env.MONGODB_URL;
+const uri = typeof configuredUri === "string" ? configuredUri.trim() : "";
 if (!uri) {
   console.error("Configure MONGODB_URI no Render para iniciar o FreteOn.");
+  process.exit(1);
+}
+if (!/^mongodb(?:\+srv)?:\/\//i.test(uri)) {
+  console.error(
+    "MONGODB_URI inválida: use a string de conexão mongodb:// ou mongodb+srv:// fornecida pelo MongoDB Atlas, sem aspas.",
+  );
   process.exit(1);
 }
 let startupStage = "conexão MongoDB";
@@ -123,20 +130,26 @@ try {
   await bootstrapAdmin();
   console.log("MongoDB conectado.");
  } catch (error) {
+  // Nunca grave a URI ou a mensagem bruta do driver nos logs: podem conter credenciais.
   const detail = String(error.message || "");
-  const diagnostics = [
-    ["querySrv", "Falha na consulta DNS SRV. Confira o endereço do cluster na MONGODB_URI."],
-    ["queryTxt", "Falha na consulta DNS TXT do cluster MongoDB."],
-    ["Authentication failed", "Autenticação MongoDB recusada. Confira usuário e senha do banco."],
-    ["bad auth", "Autenticação MongoDB recusada. Confira usuário e senha do banco."],
-    ["Invalid scheme", "MONGODB_URI deve começar com mongodb:// ou mongodb+srv://."],
-    ["IP", "Conexão ao cluster recusada. Confira Network Access no MongoDB Atlas."],
-    ["ADMIN_PHONE", "ADMIN_PHONE já está cadastrado em outro perfil."],
-    ["senha", "Confira o tamanho de ADMIN_PASSWORD (8 a 128 caracteres)."],
-    ["celular", "Confira ADMIN_PHONE (DDD e 11 dígitos)."]
+  const rawCode = String(error.code || error.cause?.code || error.reason?.code || "");
+  const categories = [
+    [/ENOTFOUND|ENODATA|ESERVFAIL|querySrv|queryTxt/i,
+      "DNS do cluster MongoDB não encontrado. Copie novamente a URI em Atlas > Connect; confirme o nome do host. Se o DNS SRV falhar, use a string padrão mongodb:// fornecida pelo Atlas."],
+    [/Authentication failed|bad auth|AuthenticationFailed/i,
+      "Autenticação recusada. Confira usuário, senha e caracteres especiais codificados na URI."],
+    [/Invalid scheme|Invalid connection string|MongoParseError/i,
+      "MONGODB_URI inválida. Use mongodb:// ou mongodb+srv:// e não inclua aspas."],
+    [/ETIMEDOUT|ECONNREFUSED|Server selection timed out|ReplicaSetNoPrimary/i,
+      "O cluster não respondeu. Confira o status do Atlas e as regras de Network Access."],
+    [/ADMIN_PHONE/i, "ADMIN_PHONE já está cadastrado em outro perfil."],
+    [/senha/i, "Confira o tamanho de ADMIN_PASSWORD (8 a 128 caracteres)."],
+    [/celular/i, "Confira ADMIN_PHONE (DDD e 11 dígitos)."],
   ];
-  const diagnostic = diagnostics.find(([pattern]) => detail.includes(pattern))?.[1] || "Confira a conexão do cluster e as permissões do usuário do banco.";
-  const errorCode = /^[A-Z0-9_]+$/.test(String(error.code)) ? error.code : "não informado";
+  const diagnostic =
+    categories.find(([pattern]) => pattern.test(`${rawCode} ${detail} ${error.name}`))?.[1] ||
+    "Confira a configuração do cluster e as permissões do usuário do banco.";
+  const errorCode = /^[A-Z0-9_]+$/.test(rawCode) ? rawCode : "não informado";
   console.error(`Falha em ${startupStage}. Tipo: ${error.name}. Código: ${errorCode}. ${diagnostic}`);
   process.exit(1);
 }

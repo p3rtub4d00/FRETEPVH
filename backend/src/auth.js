@@ -133,12 +133,18 @@ auth.post("/logout", async (req, res) => {
   res.clearCookie(cookieName, cookieOptions).json({ ok: true });
 });
 export async function bootstrapAdmin() {
-  if (
-    !process.env.ADMIN_PHONE ||
-    !process.env.ADMIN_PASSWORD ||
-    (await Account.exists({ role: "master" }))
-  )
+  if (await Account.exists({ role: "master" })) {
+    console.log(
+      "Conta Master encontrada. ADMIN_PHONE e ADMIN_PASSWORD não alteram uma conta já existente.",
+    );
     return;
+  }
+  if (!process.env.ADMIN_PHONE || !process.env.ADMIN_PASSWORD) {
+    console.warn(
+      "Conta Master ausente: configure ADMIN_PHONE e ADMIN_PASSWORD no Render para criar o primeiro administrador.",
+    );
+    return;
+  }
   const phone = phoneNumber(process.env.ADMIN_PHONE);
   if (await Account.exists({ phone }))
     throw new Error(
