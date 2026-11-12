@@ -185,12 +185,15 @@ export default function RoutePicker({ data, onChange }) {
   const fromLng = originPoint?.longitude;
   const toLat = destinationPoint?.latitude;
   const toLng = destinationPoint?.longitude;
+  const originText = data.origin.trim();
+  const destinationText = data.destination.trim();
 
   useEffect(() => {
     if (
       !mapsEnabled ||
-      fromLat === undefined || fromLng === undefined ||
-      toLat === undefined || toLng === undefined
+      originText.length < 6 ||
+      destinationText.length < 6 ||
+      originText.toLowerCase() === destinationText.toLowerCase()
     ) {
       setEstimate(null);
       setCalculating(false);
@@ -201,28 +204,36 @@ export default function RoutePicker({ data, onChange }) {
     setEstimate(null);
     setCalculating(true);
     setRouteError("");
-    api("/maps/route", {
-      method: "POST",
-      body: {
-        origin: { latitude: fromLat, longitude: fromLng },
-        destination: { latitude: toLat, longitude: toLng },
-      },
-    })
-      .then((route) => {
-        if (cancelled) return;
-        setEstimate(route);
-        onChange({ routeEstimate: route });
+    const timer = setTimeout(() => {
+      api("/maps/route", {
+        method: "POST",
+        body: {
+          origin: originPoint || originText,
+          destination: destinationPoint || destinationText,
+        },
       })
-      .catch(() => {
-        if (cancelled) return;
-        setRouteError("Não foi possível calcular a rota neste momento.");
-        onChange({ routeEstimate: null });
-      })
-      .finally(() => {
-        if (!cancelled) setCalculating(false);
-      });
-    return () => { cancelled = true; };
-  }, [mapsEnabled, fromLat, fromLng, toLat, toLng]);
+        .then((route) => {
+          if (cancelled) return;
+          setEstimate(route);
+          onChange({ routeEstimate: route });
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setRouteError("Não foi possível calcular a distância. Confira os endereços ou consulte a rota no Google Maps.");
+          onChange({ routeEstimate: null });
+        })
+        .finally(() => {
+          if (!cancelled) setCalculating(false);
+        });
+    }, 750);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    mapsEnabled, fromLat, fromLng, toLat, toLng,
+    originText, destinationText,
+  ]);
 
   function updateField(field, text, point) {
     setEstimate(null);
@@ -294,9 +305,14 @@ export default function RoutePicker({ data, onChange }) {
         ) : (
           <p className="route-estimate-hint">
             {mapsEnabled
-              ? "Selecione os endereços sugeridos para calcular km e duração."
-              : "A estimativa estará disponível após configurar a integração de mapas."}
+              ? "Informe endereços completos para calcular km e duração pelas ruas."
+              : "O cálculo automático exige configurar a API de mapas."}
           </p>
+        )}
+        {originText.length >= 5 && destinationText.length >= 5 && !estimate && (
+          <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="route-map-link">
+            <MapPin size={15} /> Consultar rota no Google Maps <ExternalLink size={14} />
+          </a>
         )}
       </section>
       {mapsEnabled === false && (
