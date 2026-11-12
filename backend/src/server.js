@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { auth, bootstrapAdmin } from "./auth.js";
 import { api } from "./api.js";
+import { maps } from "./maps.js";
 import { Account, Session, Freight } from "./models.js";
 
 const app = express();
@@ -31,6 +32,8 @@ app.use(
   }),
 );
 app.use(cookieParser());
+// As consultas de mapas não dependem do MongoDB; a sessão e os fretes continuam protegidos.
+app.use("/api/maps", maps);
 app.get("/api/health", (req, res) =>
   res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({
     status: mongoose.connection.readyState === 1 ? "ok" : "unavailable",

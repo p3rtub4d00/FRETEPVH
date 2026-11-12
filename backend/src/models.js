@@ -53,6 +53,8 @@ const freightSchema = new mongoose.Schema(
     description: { type: String, required: true },
     vehicle: { type: String, required: true },
     helper: { type: Boolean, default: false },
+    distanceMeters: { type: Number, default: null, min: 0 },
+    durationMinutes: { type: Number, default: null, min: 1 },
     date: { type: String, required: true },
     time: { type: String, required: true },
     photos: { type: [String], default: [] },

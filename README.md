@@ -79,3 +79,18 @@ Fotos da carga são limitadas a três arquivos JPG, PNG ou WebP de 600 KB cada e
 6. Para o primeiro Master, defina `ADMIN_PHONE` (celular com DDD, 11 dígitos, sem `+55` obrigatório) e `ADMIN_PASSWORD` (8–128 caracteres). Acesse `/master` e use **o celular, não um e-mail**. Uma conta Master existente mantém a senha já salva no banco; mudar essas variáveis **não redefine senha** e não cria uma segunda conta Master.
 
 **Segurança:** nunca envie a URI ou as senhas completas em mensagens, capturas públicas ou commits. Para análise de um erro, compartilhe apenas o código (por exemplo, `ENOTFOUND`) e o estágio mostrado no log.
+
+## Trajeto com endereços inteligentes, GPS e quilometragem
+
+A etapa **Trajeto** pode sugerir endereços em Porto Velho, utilizar a localização do cliente (com permissão do navegador) e mostrar **distância por ruas** e **tempo aproximado** antes de publicar o pedido. Os motoristas veem a estimativa salva no pedido. Ela não representa um preço calculado: o valor do frete continua sendo definido em propostas.
+
+Para ativar, configure a variável `GOOGLE_MAPS_API_KEY` no **Render > Environment** usando uma chave de API da Google Maps Platform com faturamento ativado e as APIs **Places API (New)**, **Routes API** e **Geocoding API** habilitadas. Restrinja a chave às APIs necessárias, monitore custos e aplique cotas. A chave deve ficar **apenas no servidor**, nunca no Vite/React. Consulte o fornecedor para as restrições de segurança compatíveis com requisições de servidor.
+
+- Sugestões usam Places Autocomplete (New), priorizando Porto Velho; selecionar uma sugestão resolve endereço e coordenadas.
+- A opção **Usar minha localização** depende de HTTPS, permissão do usuário e Geocoding API para apresentar o endereço.
+- Estimativas usam Routes API para trajetos de carro. O tempo é aproximado e não constitui previsão de trânsito em tempo real.
+- Sem chave, o formulário mantém os endereços manuais e permite publicar, mas **não inventa km ou tempo**. Endereços que não tenham sido selecionados nas sugestões também podem ficar sem estimativa.
+- A API de mapas tem controle de frequência e não exige sessão nem conexão MongoDB. O login e a publicação do frete continuam exigindo MongoDB funcionando.
+- O servidor recalcula a distância quando publica o frete, sem confiar nos quilômetros enviados pelo navegador.
+- O resumo oferece link para abrir o percurso no Google Maps. O mapa embutido pode ser acrescentado depois da validação da rota.
+

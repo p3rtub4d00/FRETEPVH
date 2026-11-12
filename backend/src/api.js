@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import mongoose from "mongoose";
 import { Account, Freight, publicUser } from "./models.js";
 import { authenticate, authorize, fail, text } from "./auth.js";
+import { calculateRoadRoute } from "./maps.js";
 
 export const api = Router();
 api.use(authenticate);
@@ -139,10 +140,28 @@ api.post("/requests", authorize("cliente"), async (req, res) => {
     )
   )
     fail(400, "Envie até 3 fotos JPG, PNG ou WebP de até 600 KB cada.");
+  // Recalcular no servidor: a quilometragem informada pelo navegador não é confiável.
+  let roadEstimate = {};
+  if (
+    process.env.GOOGLE_MAPS_API_KEY &&
+    data.originPoint &&
+    data.destinationPoint
+  ) {
+    try {
+      roadEstimate = await calculateRoadRoute(
+        data.originPoint,
+        data.destinationPoint,
+      );
+    } catch {
+      // Um problema temporário no mapa não deve impedir a publicação do frete.
+      console.warn("Não foi possível obter a estimativa de rota deste frete.");
+    }
+  }
   const request = await Freight.create({
     ...fields,
     photos,
     helper: data.helper === true,
+    ...roadEstimate,
     clientId: own(req.user),
   });
   res.status(201).json({ request: presentRequest(request, req.user) });
