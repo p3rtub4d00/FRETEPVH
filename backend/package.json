@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.js",
     "dev": "node --watch --env-file-if-exists=.env src/server.js",
-    "build": "npm ci --prefix ../frontend && npm run build --prefix ../frontend"
+    "build": "npm ci --prefix ../frontend && npm run build --prefix ../frontend",
+    "test": "node --test"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",
