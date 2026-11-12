@@ -1,5 +1,9 @@
 export async function api(path, options = {}) {
   let response;
+  const role = window.location.pathname.split("/")[1];
+  const roleHeader = ["cliente", "motorista", "master"].includes(role)
+    ? { "X-FreteOn-Role": role }
+    : {};
   try {
     response = await fetch(`/api${path}`, {
       ...options,
@@ -8,6 +12,7 @@ export async function api(path, options = {}) {
       headers: {
         "Content-Type": "application/json",
         "X-FreteOn-Request": "1",
+        ...roleHeader,
         ...options.headers,
       },
       body:
