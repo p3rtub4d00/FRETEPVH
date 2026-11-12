@@ -291,6 +291,8 @@ api.patch("/requests/:id", async (req, res) => {
     }
     else if (
       request.status === "completed" &&
+      (!request.paymentMethod || Boolean(request.deliveryConfirmedAt)) &&
+      request.disputeStatus !== "open" &&
       request.rating === null &&
       Number.isInteger(req.body.rating) &&
       req.body.rating >= 1 &&
