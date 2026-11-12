@@ -4,9 +4,11 @@ import mongoose from "mongoose";
 import { Account, Freight, publicUser } from "./models.js";
 import { authenticate, authorize, fail, text } from "./auth.js";
 import { calculateRoadRoute } from "./maps.js";
+import { finance, PAYMENT_METHODS, bookFinancials, overdueDriver, walletSummary } from "./finance.js";
 
 export const api = Router();
 api.use(authenticate);
+api.use(finance);
 const own = (user) => String(user._id);
 function validId(id) {
   if (!mongoose.isValidObjectId(id)) fail(404, "Registro não encontrado.");
@@ -86,6 +88,7 @@ api.get("/state", async (req, res) => {
     result.rating = summary?.rating
       ? summary.rating.toFixed(1).replace(".", ",")
       : "Novo";
+    if (req.user.role === "master") result.pixKey = driver.pixKey || "";
     if (req.user.role !== "master" && result.id !== userId) delete result.phone;
     return result;
   });
@@ -99,6 +102,7 @@ api.get("/state", async (req, res) => {
     drivers: people,
     users,
     requests: requests.map((request) => presentRequest(request, req.user)),
+    wallet: walletSummary(requests, req.user),
   });
 });
 api.patch("/availability", authorize("motorista"), async (req, res) => {
@@ -111,6 +115,8 @@ api.patch("/availability", authorize("motorista"), async (req, res) => {
 });
 api.post("/requests", authorize("cliente"), async (req, res) => {
   const data = req.body;
+  if (!PAYMENT_METHODS.includes(data.paymentMethod))
+    fail(400, "Escolha Pix pelo FreteOn, cartão ou dinheiro antes de publicar.");
   const fields = {
     title: text(data.title, 3, 70, "Carga"),
     origin: text(data.origin, 5, 180, "Retirada"),
@@ -161,6 +167,7 @@ api.post("/requests", authorize("cliente"), async (req, res) => {
     ...fields,
     photos,
     helper: data.helper === true,
+    paymentMethod: data.paymentMethod,
     ...roadEstimate,
     clientId: own(req.user),
   });
@@ -171,6 +178,8 @@ api.post(
   authorize("motorista"),
   async (req, res) => {
     driverApproved(req.user);
+    if (await overdueDriver(own(req.user)))
+      fail(403, "Novas propostas suspensas: quite as comissões vencidas na carteira.");
     if (!req.user.available)
       fail(403, "Ative sua disponibilidade para enviar propostas.");
     validId(req.params.id);
@@ -185,6 +194,8 @@ api.post(
     if (!request) fail(404, "Frete não encontrado.");
     if (request.status !== "open")
       fail(409, "Este frete não aceita mais propostas.");
+    if (request.paymentMethod === "card_driver" && !req.user.acceptsCard)
+      fail(403, "Ative a opção de cartão em Minha carteira antes de propor este frete.");
     const previous = request.proposals.find(
       (proposal) => proposal.driverId === own(req.user),
     );
@@ -214,14 +225,18 @@ api.patch("/requests/:id", async (req, res) => {
         (item) => item.id === req.body.selectedId,
       );
       if (!proposal) fail(400, "Proposta não encontrada.");
-      if (
-        !(await Account.exists({
-          _id: proposal.driverId,
-          role: "motorista",
-          status: "approved",
-        }))
-      )
+      const selectedDriver = await Account.findOne({
+        _id: proposal.driverId,
+        role: "motorista",
+        status: "approved",
+      });
+      if (!selectedDriver)
         fail(409, "Este motorista não está aprovado. Escolha outra proposta.");
+      if (request.paymentMethod === "card_driver" && !selectedDriver.acceptsCard)
+        fail(409, "Este motorista não aceita cartão na maquininha.");
+      if (await overdueDriver(String(selectedDriver._id)))
+        fail(409, "Este motorista está temporariamente impedido de aceitar novos fretes.");
+      bookFinancials(request, proposal);
       request.status = "booked";
       request.selectedId = proposal.id;
       request.driverId = proposal.driverId;
@@ -243,12 +258,15 @@ api.patch("/requests/:id", async (req, res) => {
     req.user.role === "motorista" &&
     request.driverId === own(req.user)
   ) {
-    if (
-      (request.status === "booked" && req.body.status === "transit") ||
-      (request.status === "transit" && req.body.status === "completed")
-    )
-      request.status = req.body.status;
-    else fail(409, "Essa alteração não está disponível para este frete.");
+    if (request.status === "booked" && req.body.status === "transit") {
+      if (request.paymentMethod === "pix_freteon" &&
+          request.paymentStatus !== "simulated_paid")
+        fail(409, "Aguarde o cliente simular o Pix antes de iniciar o transporte.");
+      request.status = "transit";
+    } else if (request.status === "transit" && req.body.status === "completed") {
+      request.status = "completed";
+      request.completedAt = new Date();
+    } else fail(409, "Essa alteração não está disponível para este frete.");
   } else fail(403, "Você não pode alterar este frete.");
   await request.save();
   res.json({ request: presentRequest(request, req.user) });
