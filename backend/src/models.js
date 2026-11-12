@@ -17,6 +17,8 @@ const userSchema = new mongoose.Schema(
       default: "pending",
     },
     available: { type: Boolean, default: false },
+    acceptsCard: { type: Boolean, default: false },
+    pixKey: { type: String, default: "", maxlength: 150 },
   },
   { timestamps: true },
 );
@@ -55,6 +57,44 @@ const freightSchema = new mongoose.Schema(
     helper: { type: Boolean, default: false },
     distanceMeters: { type: Number, default: null, min: 0 },
     durationMinutes: { type: Number, default: null, min: 1 },
+    paymentMethod: {
+      type: String,
+      enum: ["pix_freteon", "card_driver", "cash_driver", null],
+      default: null, // Pedidos anteriores não geram comissão retroativa.
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["none", "awaiting", "simulated_paid", "received_driver", "refunded_simulated"],
+      default: "none",
+    },
+    agreedPriceCents: { type: Number, default: null, min: 0 },
+    commissionCents: { type: Number, default: 0, min: 0 },
+    driverNetCents: { type: Number, default: 0, min: 0 },
+    commissionRate: { type: Number, default: 10 },
+    commissionStatus: {
+      type: String,
+      enum: ["none", "pending", "paid", "waived"],
+      default: "none",
+    },
+    commissionDueAt: { type: Date, default: null },
+    commissionPaymentRequestedAt: { type: Date, default: null },
+    commissionPaidAt: { type: Date, default: null },
+    payoutStatus: {
+      type: String,
+      enum: ["none", "available", "requested", "paid_simulated"],
+      default: "none",
+    },
+    payoutRequestedAt: { type: Date, default: null },
+    payoutPaidAt: { type: Date, default: null },
+    completedAt: { type: Date, default: null },
+    deliveryConfirmedAt: { type: Date, default: null },
+    disputeStatus: {
+      type: String,
+      enum: ["none", "open", "resolved_approved", "resolved_cancelled"],
+      default: "none",
+    },
+    disputeReason: { type: String, default: "", maxlength: 500 },
+    disputedAt: { type: Date, default: null },
     date: { type: String, required: true },
     time: { type: String, required: true },
     photos: { type: [String], default: [] },
@@ -84,6 +124,7 @@ export function publicUser(user) {
     vehicle: user.vehicle,
     status: user.status,
     available: user.available,
+    acceptsCard: Boolean(user.acceptsCard),
     initials: user.name
       .split(" ")
       .filter(Boolean)
