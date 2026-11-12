@@ -160,10 +160,10 @@ finance.post("/requests/:id/finance", async (req, res) => {
     request.payoutStatus = "paid_simulated";
     request.payoutPaidAt = new Date();
   } else if (action === "resolve_dispute_accept_master" && isMaster) {
-    if (request.disputeStatus !== "open" || request.deliveryConfirmedAt)
-      fail(409, "Esta contestação precisa de análise manual.");
+    if (request.disputeStatus !== "open")
+      fail(409, "Não existe contestação pendente.");
     request.disputeStatus = "resolved_approved";
-    confirmDelivery(request);
+    if (!request.deliveryConfirmedAt) confirmDelivery(request);
   } else if (action === "resolve_dispute_cancel_master" && isMaster) {
     if (request.disputeStatus !== "open" ||
         request.payoutStatus === "paid_simulated" ||
