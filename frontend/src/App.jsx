@@ -1227,6 +1227,17 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               </button>
             </div>
           )}
+          {area === "cliente" && selected.status === "completed" &&
+             selected.paymentMethod && selected.deliveryConfirmedAt &&
+             selected.disputeStatus === "none" &&
+             selected.payoutStatus !== "paid_simulated" &&
+             selected.commissionStatus !== "paid" && (
+            <div className="finance-action">
+              <p className="muted">Entrega confirmada. Se houver um problema antes da liquidação, informe ao Master.</p>
+              <button className="secondary full" disabled={busy}
+                onClick={() => setModal({ type: "issue", id: selected.id })}>Abrir contestação</button>
+            </div>
+          )}
           {area === "cliente" && selected.status === "completed" && (
             <div className="rating">
               <h3>

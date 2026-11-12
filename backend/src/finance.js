@@ -163,7 +163,12 @@ finance.post("/requests/:id/finance", async (req, res) => {
     if (request.disputeStatus !== "open")
       fail(409, "Não existe contestação pendente.");
     request.disputeStatus = "resolved_approved";
-    if (!request.deliveryConfirmedAt) confirmDelivery(request);
+    if (!request.deliveryConfirmedAt) {
+      confirmDelivery(request);
+    } else if (request.commissionStatus === "pending") {
+      // A comissão contestada só volta a vencer 72h após a resolução.
+      request.commissionDueAt = new Date(Date.now() + COMMISSION_WINDOW_MS);
+    }
   } else if (action === "resolve_dispute_cancel_master" && isMaster) {
     if (request.disputeStatus !== "open" ||
         request.payoutStatus === "paid_simulated" ||
@@ -173,8 +178,9 @@ finance.post("/requests/:id/finance", async (req, res) => {
     request.commissionStatus = "waived";
     request.commissionDueAt = null;
     request.payoutStatus = "none";
-    if (request.paymentMethod === "pix_freteon")
-      request.paymentStatus = "refunded_simulated";
+    request.paymentStatus = request.paymentMethod === "pix_freteon"
+      ? "refunded_simulated"
+      : "none";
   } else {
     fail(403, "Ação financeira não autorizada ou inválida.");
   }
