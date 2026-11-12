@@ -28,6 +28,7 @@ import { money, statusLabels } from "./format.js";
 import { api } from "./api.js";
 import RoutePicker from "./RoutePicker.jsx";
 import RoleSwitcher from "./RoleSwitcher.jsx";
+import ProfilePhotoEditor, { Avatar } from "./ProfilePhotoEditor.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
@@ -72,6 +73,28 @@ function Route({ request }) {
           {request.destination}
         </p>
       </div>
+    </div>
+  );
+}
+function RouteDistance({ request, onCalculate, busy }) {
+  const mapUrl = "https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=" +
+    encodeURIComponent(request.origin) + "&destination=" + encodeURIComponent(request.destination);
+  return (
+    <div className="freight-distance">
+      {request.distanceMeters != null ? (
+        <span>
+          <MapPin size={16} />
+          {(request.distanceMeters / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km pelas ruas
+          {request.durationMinutes != null && <> · {request.durationMinutes} min estimados</>}
+        </span>
+      ) : (
+        <span><MapPin size={16} /> Distância ainda não calculada</span>
+      )}
+      <a href={mapUrl} target="_blank" rel="noopener noreferrer">Consultar trajeto no Google Maps</a>
+      {request.distanceMeters == null && onCalculate && (
+        <button type="button" className="text-button" disabled={busy}
+          onClick={onCalculate}>Calcular km</button>
+      )}
     </div>
   );
 }
@@ -402,6 +425,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   const [loaded, setLoaded] = useState(false);
   const mounted = useRef(true);
   const inFlight = useRef(false);
+  const seenCompletions = useRef(new Set());
+  const modalRef = useRef(null);
+  useEffect(() => { modalRef.current = modal; }, [modal]);
   function showError(error) {
     if (error.status === 401) onExpired();
     else setNotice(error.message);
@@ -411,6 +437,19 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     if (mounted.current) {
       setState(data);
       setLoaded(true);
+      if (area === "cliente" && !modalRef.current) {
+        const toReview = data.requests.find((request) =>
+          request.status === "completed" &&
+          !seenCompletions.current.has(request.id) &&
+          ((request.paymentMethod && !request.deliveryConfirmedAt &&
+              request.disputeStatus === "none") ||
+            (!request.rating && (!request.paymentMethod || request.deliveryConfirmedAt)))
+        );
+        if (toReview) {
+          seenCompletions.current.add(toReview.id);
+          setModal({ type: "completion", id: toReview.id });
+        }
+      }
     }
   }
   useEffect(() => {
@@ -463,6 +502,14 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
       setNotice("Registro financeiro atualizado (somente simulação).");
     });
   }
+  function saveProfilePhoto(photo) {
+    return mutate("/profile/photo", "PATCH", { photo },
+      () => setNotice(photo ? "Foto de perfil atualizada." : "Foto removida."));
+  }
+  function calculateMissingDistance(id) {
+    return mutate(`/requests/${id}/calculate-route`, "POST", {},
+      () => setNotice("Distância calculada e salva."));
+  }
   function savePaymentPreferences(preferences) {
     return mutate("/payment-preferences", "PATCH", preferences, () => {
       setNotice("Preferências de pagamento salvas.");
@@ -486,6 +533,14 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   const completed = state.requests.filter(
     (request) => request.status === "completed",
   );
+  const completionPending = area === "cliente"
+    ? state.requests.filter((request) =>
+        request.status === "completed" &&
+        ((request.paymentMethod && !request.deliveryConfirmedAt &&
+          request.disputeStatus === "none") ||
+         (!request.rating && (!request.paymentMethod || request.deliveryConfirmedAt)))
+      )
+    : [];
   const selected = modal?.id
     ? state.requests.find((request) => request.id === modal.id)
     : null;
@@ -535,6 +590,13 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           {request.id} · {request.vehicle}
         </small>
         <Route request={request} />
+        {request.photos?.length > 0 && (
+          <button type="button" className="freight-card-photo" onClick={() =>
+            setModal({ type: "detail", id: request.id })}>
+            <img src={request.photos[0]} alt={`Foto da carga: ${request.title}`} loading="lazy" />
+            <span><Camera size={16} /> Ver {request.photos.length} foto(s) da carga</span>
+          </button>
+        )}
         {request.paymentMethod && <PaymentLabel method={request.paymentMethod} />}
         <div className="card-meta">
           <span>
@@ -548,13 +610,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             · {request.time}
           </span>
           <span>{request.helper ? "Com ajudante" : "Sem ajudante"}</span>
-          {request.distanceMeters != null && (
-            <span>
-              <MapPin size={15} />
-              {(request.distanceMeters / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km · {request.durationMinutes} min estimados
-            </span>
-          )}
         </div>
+        <RouteDistance request={request} />
         <button
           className="card-link"
           onClick={() => setModal({ type: "detail", id: request.id })}
@@ -652,7 +709,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <Bell size={20} />
               {totalProposals > 0 && <span className="notification-dot" />}
             </button>
-            <span className="avatar">{state.user.initials}</span>
+            <Avatar account={state.user} />
           </div>
         </header>
         <div className="account-bar">
@@ -680,6 +737,19 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <div className="wallet-alert" role="alert">
               <span>Você possui comissão vencida há mais de 72 horas. Novas propostas estão temporariamente suspensas.</span>
               <button className="secondary" onClick={() => setPage("carteira")}>Ver minha carteira</button>
+            </div>
+          )}
+          {completionPending.length > 0 && (
+            <div className="completion-banner" role="status">
+              <div>
+                <CheckCircle2 size={19} />
+                <span><strong>{completionPending.length} frete(s) aguardando sua atenção</strong>
+                <small>Confirme a entrega e avalie o motorista sem entrar no Histórico.</small></span>
+              </div>
+              <button className="primary" onClick={() =>
+                setModal({ type: "completion", id: completionPending[0].id })}>
+                Ver frete e finalizar
+              </button>
             </div>
           )}
           {notice && (
@@ -851,7 +921,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <div className="panel">
                 {(page === "inicio" ? pending : state.drivers).map((person) => (
                   <div className="person-row" key={person.id}>
-                    <span className="avatar">{person.initials}</span>
+                    <Avatar account={person} />
                     <div>
                       <strong>{person.name}</strong>
                       <p>
@@ -905,7 +975,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </section>
           ) : page === "perfil" ? (
             <section className="panel profile">
-              <span className="avatar large">{state.user.initials}</span>
+              {["cliente", "motorista"].includes(area) ? (
+                <ProfilePhotoEditor account={state.user} busy={busy} onSave={saveProfilePhoto} />
+              ) : <Avatar account={state.user} large />}
               <h2>{state.user.name}</h2>
               <p>{state.user.phone} · Porto Velho, RO</p>
               {area === "motorista" && (
@@ -943,7 +1015,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <h2>Usuários cadastrados</h2>
               {state.users.map((person) => (
                 <div key={person.id} className="person-row">
-                  <span className="avatar">{person.initials}</span>
+                  <Avatar account={person} />
                   <div>
                     <strong>{person.name}</strong>
                     <p>
@@ -1085,22 +1157,26 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               )}
             </div>
           )}
-          {selected.distanceMeters != null && (
-            <p className="route-in-review">
-              <MapPin size={15} />{" "}
-              {(selected.distanceMeters / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km pelas ruas · {selected.durationMinutes} min estimados
-            </p>
-          )}
+          <RouteDistance request={selected} busy={busy}
+            onCalculate={() => calculateMissingDistance(selected.id)} />
           <p>{selected.description}</p>
           <p className="muted">
             {selected.vehicle} ·{" "}
             {selected.helper ? "Com ajudante" : "Sem ajudante"} ·{" "}
             {selected.time}
           </p>
-          <div className="photos">
-            {selected.photos.map((photo, i) => (
-              <img key={i} src={photo} alt={`Foto ${i + 1} da carga`} />
-            ))}
+          <div className="freight-gallery">
+            <h3>Fotos da carga ({selected.photos?.length || 0})</h3>
+            {selected.photos?.length ? (
+              <div className="freight-gallery-images">
+                {selected.photos.map((photo, i) => (
+                  <button type="button" key={i} onClick={() =>
+                    setModal({ type: "photo", id: selected.id, index: i })}>
+                    <img src={photo} alt={`Abrir foto ${i + 1} da carga`} loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            ) : <p className="muted">O cliente não anexou fotos a este frete.</p>}
           </div>
           {area === "motorista" && selected.status === "open" ? (
             <ProposalForm
@@ -1145,7 +1221,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   return (
                     <div className="proposal" key={proposal.id}>
                       <div className="proposal-heading">
-                        <span className="avatar">{person.initials}</span>
+                        <Avatar account={person} />
                         <div>
                           <strong>{person.name}</strong>
                           <small>
@@ -1274,6 +1350,14 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 Cancelar pedido
               </button>
             )}
+        </Modal>
+      )}
+      {modal?.type === "photo" && selected && (
+        <Modal title="Foto da carga" onClose={() => setModal({ type: "detail", id: selected.id })}>
+          <img className="freight-photo-expanded"
+            src={selected.photos?.[modal.index]} alt={`Foto ${modal.index + 1} da carga`} />
+          <button className="secondary full" onClick={() =>
+            setModal({ type: "detail", id: selected.id })}>Voltar aos detalhes</button>
         </Modal>
       )}
       {modal?.type === "confirm" && selected && (
