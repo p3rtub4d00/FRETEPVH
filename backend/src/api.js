@@ -119,6 +119,18 @@ api.get("/state", async (req, res) => {
     wallet: req.user.role === "cliente" ? null : walletSummary(requests, req.user),
   });
 });
+api.patch("/profile/photo", authorize("cliente", "motorista"), async (req, res) => {
+  const photo = req.body?.photo;
+  if (photo !== "" && (
+    typeof photo !== "string" ||
+    !/^data:image\/(?:jpeg|png|webp);base64,[a-zA-Z0-9+/]+=*$/.test(photo) ||
+    photo.length > 320000
+  ))
+    fail(400, "Envie uma foto JPG, PNG ou WebP com até 240 KB.");
+  req.user.profilePhoto = photo;
+  await req.user.save();
+  res.json({ user: publicUser(req.user) });
+});
 api.patch("/availability", authorize("motorista"), async (req, res) => {
   driverApproved(req.user);
   if (typeof req.body.available !== "boolean")
@@ -162,15 +174,11 @@ api.post("/requests", authorize("cliente"), async (req, res) => {
     fail(400, "Envie até 3 fotos JPG, PNG ou WebP de até 600 KB cada.");
   // Recalcular no servidor: a quilometragem informada pelo navegador não é confiável.
   let roadEstimate = {};
-  if (
-    process.env.GOOGLE_MAPS_API_KEY &&
-    data.originPoint &&
-    data.destinationPoint
-  ) {
+  if (process.env.GOOGLE_MAPS_API_KEY) {
     try {
       roadEstimate = await calculateRoadRoute(
-        data.originPoint,
-        data.destinationPoint,
+        data.originPoint || fields.origin,
+        data.destinationPoint || fields.destination,
       );
     } catch {
       // Um problema temporário no mapa não deve impedir a publicação do frete.
@@ -186,6 +194,21 @@ api.post("/requests", authorize("cliente"), async (req, res) => {
     clientId: own(req.user),
   });
   res.status(201).json({ request: presentRequest(request, req.user) });
+});
+api.post("/requests/:id/calculate-route", async (req, res) => {
+  validId(req.params.id);
+  const request = await Freight.findById(req.params.id);
+  if (!request || !canRead(request, req.user))
+    fail(404, "Frete não encontrado.");
+  if (request.distanceMeters != null && request.durationMinutes != null)
+    return res.json({ distanceMeters: request.distanceMeters, durationMinutes: request.durationMinutes });
+  if (!process.env.GOOGLE_MAPS_API_KEY)
+    fail(503, "O cálculo de quilômetros exige configurar GOOGLE_MAPS_API_KEY no Render. Enquanto isso, consulte a rota pelo Google Maps.");
+  const route = await calculateRoadRoute(request.origin, request.destination);
+  request.distanceMeters = route.distanceMeters;
+  request.durationMinutes = route.durationMinutes;
+  await request.save();
+  res.json(route);
 });
 api.post(
   "/requests/:id/proposals",

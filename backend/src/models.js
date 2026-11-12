@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema(
     available: { type: Boolean, default: false },
     acceptsCard: { type: Boolean, default: false },
     pixKey: { type: String, default: "", maxlength: 150 },
+    profilePhoto: { type: String, default: "" },
   },
   { timestamps: true },
 );
@@ -125,6 +126,7 @@ export function publicUser(user) {
     status: user.status,
     available: user.available,
     acceptsCard: Boolean(user.acceptsCard),
+    profilePhoto: user.profilePhoto || "",
     initials: user.name
       .split(" ")
       .filter(Boolean)

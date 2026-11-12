@@ -76,9 +76,19 @@ async function google(url, options = {}) {
   }
 }
 
+function routeWaypoint(value) {
+  if (typeof value === "string") {
+    const address = value.trim();
+    if (address.length < 5 || address.length > 180)
+      throw failure("Informe um endereço completo para calcular a distância.");
+    return { address };
+  }
+  return { location: { latLng: validCoordinates(value) } };
+}
+
 export async function calculateRoadRoute(origin, destination) {
-  const from = validCoordinates(origin);
-  const to = validCoordinates(destination);
+  const from = routeWaypoint(origin);
+  const to = routeWaypoint(destination);
   const result = await google("https://routes.googleapis.com/directions/v2:computeRoutes", {
     method: "POST",
     headers: {
@@ -86,8 +96,8 @@ export async function calculateRoadRoute(origin, destination) {
       "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",
     },
     body: JSON.stringify({
-      origin: { location: { latLng: from } },
-      destination: { location: { latLng: to } },
+      origin: from,
+      destination: to,
       travelMode: "DRIVE",
       routingPreference: "TRAFFIC_UNAWARE",
       languageCode: "pt-BR",
