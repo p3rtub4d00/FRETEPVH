@@ -2178,3 +2178,264 @@ fieldset {
   color: #142c49;
   white-space: nowrap;
 }
+
+/* Fotos do frete e perfil — celular primeiro */
+.avatar {
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.avatar-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+.profile-photo-editor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.profile-photo-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1 1 220px;
+}
+.profile-photo-actions .secondary,
+.profile-photo-actions .text-button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.profile-photo-actions small {
+  color: #6b7f95;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.profile-photo-input {
+  display: none;
+}
+.freight-card-photo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 74px;
+  text-align: left;
+  margin: 12px 0;
+  padding: 7px;
+  border: 1px solid #dce6f0;
+  background: #f6f9fc;
+  border-radius: 10px;
+}
+.freight-card-photo > img {
+  width: 83px;
+  height: 70px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.freight-card-photo > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #2e5378;
+  font-weight: 700;
+  font-size: 12px;
+}
+.freight-gallery {
+  margin: 17px 0;
+}
+.freight-gallery h3 {
+  font-size: 14px;
+  margin: 0 0 11px;
+}
+.freight-gallery > .muted {
+  font-size: 12px;
+}
+.freight-gallery-images {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 9px;
+}
+.freight-gallery-images button {
+  display: block;
+  min-width: 0;
+  border: 1px solid #dce4ed;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #eff4f9;
+}
+.freight-gallery-images img {
+  display: block;
+  height: 110px;
+  width: 100%;
+  object-fit: cover;
+}
+.freight-photo-expanded {
+  display: block;
+  max-height: 60vh;
+  width: 100%;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: #f2f5f8;
+}
+.freight-distance {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 10px 0;
+  margin: 6px 0 8px;
+  border-top: 1px solid #edf1f6;
+  color: #526b85;
+  font-size: 12px;
+}
+.freight-distance span,
+.freight-distance a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.freight-distance a,
+.freight-distance .text-button {
+  color: #a75b24;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.completion-banner {
+  background: #f2f9f4;
+  border: 1px solid #a4d5b4;
+  color: #28583b;
+  border-radius: 12px;
+  padding: 13px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 19px;
+}
+.completion-banner > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 1 220px;
+}
+.completion-banner strong {
+  display: block;
+  font-size: 13px;
+}
+.completion-banner small {
+  display: block;
+  color: #526d5c;
+  line-height: 1.5;
+  margin-top: 3px;
+}
+.completion-banner .primary {
+  min-height: 42px;
+  font-size: 12px;
+}
+.completion-modal-content {
+  display: grid;
+  gap: 14px;
+}
+.completion-modal-headline {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.completion-modal-headline > svg {
+  color: #248d54;
+  flex-shrink: 0;
+}
+.completion-modal-headline strong {
+  font-size: 17px;
+}
+.completion-modal-headline .muted {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.completion-driver {
+  border: 1px solid #dfe7ef;
+  border-radius: 11px;
+  background: #f7f9fc;
+  padding: 13px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.completion-driver div {
+  display: grid;
+  gap: 3px;
+}
+.completion-driver small {
+  color: #687b90;
+  font-size: 11px;
+}
+.completion-driver strong {
+  color: #16344f;
+  font-size: 14px;
+}
+.completion-actions {
+  border-top: 1px solid #e0e7ef;
+  padding-top: 15px;
+  display: grid;
+  gap: 10px;
+}
+.completion-actions h3 {
+  font-size: 17px;
+  margin: 0;
+}
+.completion-actions p {
+  color: #62748a;
+  font-size: 12px;
+  margin: 0;
+}
+.completion-actions .primary,
+.completion-actions .secondary {
+  min-height: 45px;
+}
+.completion-stars {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+.completion-stars button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 64px;
+  flex: 1;
+  border: 1px solid #ead1af;
+  border-radius: 10px;
+  color: #b66b23;
+  background: #fff8ed;
+  font-weight: 700;
+  font-size: 12px;
+}
+.completion-stars button:hover,
+.completion-stars button:focus-visible {
+  background: #ffedd0;
+  border-color: #da9441;
+}
+.completion-modal-content > .text-button {
+  justify-self: center;
+  color: #57718e;
+  font-size: 12px;
+  padding: 10px;
+}
+@media (max-width: 480px) {
+  .profile-photo-editor { flex-direction: column; align-items: flex-start; }
+  .profile-photo-actions { flex-basis: auto; width: 100%; }
+  .freight-gallery-images img { height: 92px; }
+  .completion-banner .primary { width: 100%; }
+}
