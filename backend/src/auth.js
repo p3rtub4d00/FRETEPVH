@@ -10,7 +10,9 @@ import { rateLimit } from "express-rate-limit";
 import { Account, Session, publicUser } from "./models.js";
 
 const scrypt = promisify(scryptCallback);
-const cookieName = "freteon_session";
+const cookieName = "freteon_session"; // Compatibilidade com sessões anteriores.
+const roles = ["cliente", "motorista", "master"];
+const roleCookieName = (role) => `freteon_session_${role}`;
 const cookieOptions = {
   httpOnly: true,
   sameSite: "lax",
@@ -57,9 +59,38 @@ async function verifyPassword(password, stored) {
   return key.length === expected.length && timingSafeEqual(key, expected);
 }
 const digest = (token) => createHash("sha256").update(token).digest("hex");
+const validToken = (token) => typeof token === "string" && /^[a-f0-9]{64}$/.test(token);
+const requestedRole = (req) => {
+  const role = req.get("X-FreteOn-Role");
+  if (!roles.includes(role)) fail(400, "Selecione Cliente, Motorista ou Master.");
+  return role;
+};
+
+async function findSessionUser(token) {
+  if (!validToken(token)) return null;
+  const session = await Session.findOne({
+    tokenHash: digest(token),
+    expiresAt: { $gt: new Date() },
+  });
+  if (!session) return null;
+  return Account.findById(session.userId);
+}
+
+async function sessionForRole(req, role) {
+  // Cada perfil exige sua própria sessão real, autenticada no servidor.
+  const active = await findSessionUser(req.cookies[roleCookieName(role)]);
+  if (active?.role === role) return active;
+  // Permite migrar uma sessão antiga sem exigir novo login.
+  const previous = await findSessionUser(req.cookies[cookieName]);
+  return previous?.role === role ? previous : null;
+}
+
 async function issueSession(req, res, user) {
-  if (req.cookies[cookieName])
-    await Session.deleteOne({ tokenHash: digest(req.cookies[cookieName]) });
+  const name = roleCookieName(user.role);
+  const oldToken = req.cookies[name];
+  if (validToken(oldToken)) {
+    await Session.deleteOne({ tokenHash: digest(oldToken) });
+  }
   const token = randomBytes(32).toString("hex");
   const maxAge = 7 * 24 * 60 * 60 * 1000;
   await Session.create({
@@ -67,20 +98,14 @@ async function issueSession(req, res, user) {
     userId: user._id,
     expiresAt: new Date(Date.now() + maxAge),
   });
-  res.cookie(cookieName, token, { ...cookieOptions, maxAge });
+  res.cookie(name, token, { ...cookieOptions, maxAge });
   return publicUser(user);
 }
+
 export async function authenticate(req, res, next) {
-  const token = req.cookies[cookieName];
-  if (!token || !/^[a-f0-9]{64}$/.test(token))
-    fail(401, "Entre na sua conta para continuar.");
-  const session = await Session.findOne({
-    tokenHash: digest(token),
-    expiresAt: { $gt: new Date() },
-  });
-  if (!session) fail(401, "Sua sessão expirou. Entre novamente.");
-  req.user = await Account.findById(session.userId);
-  if (!req.user) fail(401, "Conta não encontrada. Entre novamente.");
+  const role = requestedRole(req);
+  req.user = await sessionForRole(req, role);
+  if (!req.user) fail(401, "Entre na sua conta para continuar.");
   next();
 }
 export function authorize(...roles) {
@@ -120,17 +145,37 @@ auth.post("/login", limit, async (req, res) => {
   const stored = user?.passwordHash || `${"0".repeat(32)}:${"0".repeat(128)}`;
   if (!(await verifyPassword(req.body.password, stored)) || !user)
     fail(401, "Telefone ou senha incorretos.");
-  if (req.body.role && user.role !== req.body.role)
+  if (!roles.includes(req.body.role) || user.role !== req.body.role)
     fail(403, "Use a página de entrada correspondente ao seu perfil.");
   res.json({ user: await issueSession(req, res, user) });
+});
+auth.get("/sessions", async (req, res) => {
+  const sessions = {};
+  for (const role of roles) {
+    const account = await sessionForRole(req, role);
+    if (account) sessions[role] = publicUser(account);
+  }
+  res.json({ sessions });
 });
 auth.get("/me", authenticate, (req, res) =>
   res.json({ user: publicUser(req.user) }),
 );
 auth.post("/logout", async (req, res) => {
-  if (req.cookies[cookieName])
-    await Session.deleteOne({ tokenHash: digest(req.cookies[cookieName]) });
-  res.clearCookie(cookieName, cookieOptions).json({ ok: true });
+  const role = requestedRole(req);
+  const name = roleCookieName(role);
+  const token = req.cookies[name];
+  if (validToken(token)) {
+    await Session.deleteOne({ tokenHash: digest(token) });
+  }
+  res.clearCookie(name, cookieOptions);
+  // Apague a sessão antiga somente quando ela pertencer ao perfil que saiu.
+  const legacyToken = req.cookies[cookieName];
+  const legacyUser = await findSessionUser(legacyToken);
+  if (legacyUser?.role === role) {
+    await Session.deleteOne({ tokenHash: digest(legacyToken) });
+    res.clearCookie(cookieName, cookieOptions);
+  }
+  res.json({ ok: true });
 });
 export async function bootstrapAdmin() {
   if (await Account.exists({ role: "master" })) {
