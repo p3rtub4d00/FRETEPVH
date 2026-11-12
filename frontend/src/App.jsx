@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { money, statusLabels } from "./format.js";
 import { api } from "./api.js";
+import RoutePicker from "./RoutePicker.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
 const navigation = {
@@ -119,6 +120,9 @@ function RequestForm({ onCreate, onClose, requestError }) {
     title: "",
     origin: "",
     destination: "",
+    originPoint: null,
+    destinationPoint: null,
+    routeEstimate: null,
     description: "",
     vehicle: "Picape",
     helper: false,
@@ -205,36 +209,12 @@ function RequestForm({ onCreate, onClose, requestError }) {
       </div>
       <form onSubmit={submit}>
         {step === 0 && (
-          <>
-            <p className="muted">
-              Informe os endereços completos em Porto Velho.
-            </p>
-            <label>
-              Endereço de retirada
-              <input
-                autoFocus
-                name="origin"
-                value={data.origin}
-                onChange={update}
-                required
-                minLength={5}
-                maxLength={180}
-                placeholder="Rua, número e bairro"
-              />
-            </label>
-            <label>
-              Endereço de entrega
-              <input
-                name="destination"
-                value={data.destination}
-                onChange={update}
-                required
-                minLength={5}
-                maxLength={180}
-                placeholder="Rua, número e bairro"
-              />
-            </label>
-          </>
+          <RoutePicker
+            data={data}
+            onChange={(patch) =>
+              setData((previous) => ({ ...previous, ...patch }))
+            }
+          />
         )}
         {step === 1 && (
           <>
@@ -345,6 +325,11 @@ function RequestForm({ onCreate, onClose, requestError }) {
               <p>
                 {data.vehicle} · {data.helper ? "Com ajudante" : "Sem ajudante"}
               </p>
+              {data.routeEstimate && (
+                <p className="route-in-review">
+                  {(data.routeEstimate.distanceMeters / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km pelas ruas · {data.routeEstimate.durationMinutes} min estimados
+                </p>
+              )}
               <small>
                 Os motoristas enviam seus preços. Você escolhe a proposta.
               </small>
@@ -530,6 +515,12 @@ export default function App({ user, onLogout, onExpired }) {
             · {request.time}
           </span>
           <span>{request.helper ? "Com ajudante" : "Sem ajudante"}</span>
+          {request.distanceMeters != null && (
+            <span>
+              <MapPin size={15} />
+              {(request.distanceMeters / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km · {request.durationMinutes} min estimados
+            </span>
+          )}
         </div>
         <button
           className="card-link"
@@ -1012,6 +1003,12 @@ export default function App({ user, onLogout, onExpired }) {
             {statusLabels[selected.status]}
           </span>
           <Route request={selected} />
+          {selected.distanceMeters != null && (
+            <p className="route-in-review">
+              <MapPin size={15} />{" "}
+              {(selected.distanceMeters / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km pelas ruas · {selected.durationMinutes} min estimados
+            </p>
+          )}
           <p>{selected.description}</p>
           <p className="muted">
             {selected.vehicle} ·{" "}
