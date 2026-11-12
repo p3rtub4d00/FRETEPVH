@@ -27,6 +27,7 @@ import {
 import { money, statusLabels } from "./format.js";
 import { api } from "./api.js";
 import RoutePicker from "./RoutePicker.jsx";
+import RoleSwitcher from "./RoleSwitcher.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
 const navigation = {
@@ -362,7 +363,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
   );
 }
 
-export default function App({ user, onLogout, onExpired }) {
+export default function App({ user, onLogout, onExpired, sessions, onSwitchRole }) {
   const area = user.role;
   const [state, setState] = useState({
     requests: [],
@@ -626,7 +627,12 @@ export default function App({ user, onLogout, onExpired }) {
           <span>
             {state.user.name} · {areas[area]}
           </span>
-          <button onClick={logout}>Sair da conta</button>
+          <RoleSwitcher
+            activeRole={area}
+            sessions={sessions}
+            onSwitch={onSwitchRole}
+          />
+          <button onClick={logout}>Sair desta conta</button>
         </div>
         <main>
           {!loaded && <p role="status">Carregando seus dados…</p>}
