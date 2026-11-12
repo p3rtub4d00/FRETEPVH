@@ -60,7 +60,7 @@ Use navegadores ou perfis separados para testar simultaneamente. As abas de um m
 
 ## Escopo desta etapa
 
-Pagamentos são combinados diretamente. A primeira versão oferece cadastro e aprovação simples de motoristas. Verificação de telefone, recuperação de senha, documentos, denúncias e notificações push serão adicionados em próximas etapas. Não há dados fictícios misturados aos cadastros reais.
+A plataforma opera com pagamentos e comissões em **modo simulação**: não há cobrança, saldo real, geração de Pix ou transferências bancárias nesta versão. A primeira versão oferece cadastro e aprovação simples de motoristas. Verificação de telefone, recuperação de senha, documentos, denúncias e notificações push serão adicionados em próximas etapas. Não há dados fictícios misturados aos cadastros reais.
 
 Fotos da carga são limitadas a três arquivos JPG, PNG ou WebP de 600 KB cada e ficam no documento do frete no MongoDB nesta versão inicial. O service worker guarda apenas recursos da interface e ignora a API. Operações e autenticação exigem internet.
 
@@ -106,3 +106,37 @@ O seletor **não concede permissões**: uma conta de Cliente nunca recebe os pod
 - A primeira entrada em cada perfil exige login ou cadastro normal. Se ainda não tiver motorista, crie uma conta e aprove-a pelo Master para testar as propostas.
 - Para maior segurança, evite conectar Master em celulares ou computadores compartilhados. No computador de testes, encerre as três sessões ao terminar.
 
+
+## Financeiro FreteOn — modo integral de simulação
+
+> **ATENÇÃO:** esta versão não recebe pagamentos reais, não gera cobranças reais e não realiza Pix. Todas as ações são registros fictícios de teste, inclusive os botões "Confirmar quitação" e "Confirmar repasse".
+
+### Formas de pagamento na solicitação de frete
+
+O cliente deve escolher **Dinheiro ao motorista**, **Cartão na maquininha do motorista** ou **Pix pelo FreteOn (simulado)** na etapa Agendamento. O método fica fixo para aquele pedido, visível para os motoristas antes de enviar propostas e também nos detalhes.
+
+O motorista precisa ativar **Aceito cartão na minha própria maquininha** na página **Minha carteira** antes de poder propor fretes em cartão. Para dinheiro/cartão, o cliente paga diretamente ao motorista fora do FreteOn; as taxas da maquininha são consideradas pelo motorista ao propor o preço. Para Pix pelo FreteOn, o cliente apenas confirma uma **simulação fictícia de pagamento** depois de contratar a proposta e antes do motorista iniciar o serviço.
+
+### Comissão e prazo de 72h
+
+A comissão fixa de **10%** é calculada no backend sobre o preço final da proposta escolhida, com valores armazenados em centavos para evitar erros de arredondamento.
+
+- Dinheiro e cartão: após o motorista concluir e o cliente confirmar a entrega e o recebimento, nasce uma comissão **pendente** com vencimento exatamente **72h depois da confirmação**. O motorista pode informar no painel que enviou a comissão *apenas em simulação*; o Master deve registrar a quitação manual simulada.
+- Passadas as 72h sem quitação e sem contestação aberta, o motorista fica **impedido de enviar novas propostas** ou ser escolhido para novos fretes. Ele permanece apto a acessar o painel/carteira e terminar fretes já contratados.
+- Pix simulado pelo FreteOn: após conclusão e confirmação da entrega, surge um saldo líquido **disponível** para o motorista solicitar um repasse. É necessário cadastrar uma chave Pix na carteira. Depois do pedido, o Master marca **repasse manual realizado (simulado)**. Nenhum valor é realmente enviado.
+- O Master vê valores pendentes, comissões vencidas, solicitações de repasse, a chave Pix do motorista e a situação de cada pedido.
+- Caso o cliente abra contestação depois da conclusão, o financeiro do frete fica suspenso enquanto o Master avalia. O Master pode reconhecer a entrega ou dispensar os valores simulados. **Nenhuma reversão de um pagamento verdadeiro acontece nesta versão.**
+- Pedidos criados antes desta implementação **não recebem comissão retroativa** e continuam funcionando sem método de pagamento financeiro.
+
+### Teste ponta a ponta
+
+1. Entre como motorista. Em **Minha carteira**, salve a chave Pix de teste e habilite cartão caso queira oferecer fretes de cartão.
+2. Entre como cliente, crie um frete e selecione a modalidade de pagamento no Agendamento.
+3. Envie a proposta pelo motorista, conferindo o resumo de comissão de 10% e o método de pagamento em destaque.
+4. Escolha a proposta pelo cliente. Se escolheu **Pix pelo FreteOn**, clique **Simular pagamento Pix**; o motorista não consegue iniciar antes disso.
+5. O motorista inicia e conclui o frete. O cliente confirma entrega e, para dinheiro/cartão, pagamento direto ao motorista.
+6. Para dinheiro/cartão, o motorista vê a comissão pendente e seu vencimento. Clique **Informar comissão enviada (simulação)**; no Master > **Financeiro**, clique **Confirmar quitação**.
+7. Para Pix simulado, o motorista solicita o saldo líquido em **Minha carteira**; no Master > **Financeiro**, clique **Confirmar repasse manual (simulação)**.
+8. Para testar suspensão de 72 horas, ajuste **apenas em ambiente de teste** a data `commissionDueAt` de um pedido pendente para o passado no MongoDB. O backend bloqueará novas propostas e liberará automaticamente após o Master registrar a comissão como quitada.
+
+**Antes de ligar pagamentos reais**, será necessário contratar um provedor de pagamento compatível, verificar obrigações legais/tributárias, formalizar termos de cancelamento e contestação e implementar confirmações bancárias verificadas no servidor. Não basta remover a palavra "simulação" da interface.
