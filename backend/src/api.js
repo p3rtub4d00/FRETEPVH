@@ -243,8 +243,15 @@ api.patch("/requests/:id", async (req, res) => {
     } else if (
       req.body.status === "cancelled" &&
       ["open", "booked"].includes(request.status)
-    )
+    ) {
       request.status = "cancelled";
+      // Reverte o Pix fictício na simulação, sem qualquer transferência real.
+      if (request.paymentMethod === "pix_freteon" &&
+          request.paymentStatus === "simulated_paid")
+        request.paymentStatus = "refunded_simulated";
+      request.payoutStatus = "none";
+      request.commissionStatus = "none";
+    }
     else if (
       request.status === "completed" &&
       request.rating === null &&
