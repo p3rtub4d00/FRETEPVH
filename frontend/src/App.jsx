@@ -28,6 +28,7 @@ import { money, statusLabels } from "./format.js";
 import { api } from "./api.js";
 import RoutePicker from "./RoutePicker.jsx";
 import RoleSwitcher from "./RoleSwitcher.jsx";
+import WalletPanel, { PaymentLabel, CommissionPreview, paymentLabels } from "./WalletPanel.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
 const navigation = {
@@ -41,12 +42,14 @@ const navigation = {
     ["inicio", "Pedidos", Home],
     ["propostas", "Propostas", Package],
     ["historico", "Histórico", History],
+    ["carteira", "Minha carteira", FileCheck2],
     ["perfil", "Meu perfil", Users],
   ],
   master: [
     ["inicio", "Visão geral", LayoutDashboard],
     ["motoristas", "Motoristas", Truck],
     ["fretes", "Fretes", Package],
+    ["financeiro", "Financeiro", FileCheck2],
     ["usuarios", "Usuários", Users],
     ["denuncias", "Denúncias", Flag],
   ],
@@ -124,6 +127,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
     originPoint: null,
     destinationPoint: null,
     routeEstimate: null,
+    paymentMethod: "",
     description: "",
     vehicle: "Picape",
     helper: false,
@@ -320,9 +324,25 @@ function RequestForm({ onCreate, onClose, requestError }) {
                 />
               </label>
             </div>
+            <div className="payment-selection">
+              <h3>Como deseja pagar pelo frete?</h3>
+              <p className="muted">Escolha antes de publicar. Os motoristas verão a modalidade antes de enviar propostas.</p>
+              {[
+                ["cash_driver", "Dinheiro ao motorista", "Pague diretamente ao motorista ao final do serviço."],
+                ["card_driver", "Cartão na maquininha", "O motorista precisa aceitar cartão; ele informa um preço que considere a taxa da maquininha."],
+                ["pix_freteon", "Pix pelo FreteOn", "Por enquanto é apenas uma simulação. Nenhum Pix real será cobrado."],
+              ].map(([value, label, help]) => (
+                <label key={value} className={`payment-choice ${data.paymentMethod === value ? "selected" : ""}`}>
+                  <input type="radio" name="paymentMethod" value={value} required
+                    checked={data.paymentMethod === value} onChange={update} />
+                  <span><strong>{label}</strong><small>{help}</small></span>
+                </label>
+              ))}
+            </div>
             <div className="review">
               <h3>{data.title}</h3>
               <Route request={data} />
+              {data.paymentMethod && <PaymentLabel method={data.paymentMethod} />}
               <p>
                 {data.vehicle} · {data.helper ? "Com ajudante" : "Sem ajudante"}
               </p>
@@ -370,6 +390,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     drivers: [],
     users: [],
     available: false,
+    wallet: { simulated: true },
     user,
   });
   const [page, setPage] = useState("inicio");
@@ -435,6 +456,16 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
       setModal(null);
       setPage("fretes");
       setNotice("Pedido publicado. Aguarde as propostas dos motoristas.");
+    });
+  }
+  function walletAction(id, action, extras = {}) {
+    return mutate(`/requests/${id}/finance`, "POST", { action, ...extras }, () => {
+      setNotice("Registro financeiro atualizado (somente simulação).");
+    });
+  }
+  function savePaymentPreferences(preferences) {
+    return mutate("/payment-preferences", "PATCH", preferences, () => {
+      setNotice("Preferências de pagamento salvas.");
     });
   }
   function reviewDriver(status) {
@@ -504,6 +535,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           {request.id} · {request.vehicle}
         </small>
         <Route request={request} />
+        {request.paymentMethod && <PaymentLabel method={request.paymentMethod} />}
         <div className="card-meta">
           <span>
             <Clock3 size={15} />
