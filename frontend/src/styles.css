@@ -3739,3 +3739,34 @@ dialog.push-invite-dialog::backdrop {
     to { opacity: 1; transform: translateY(0); }
   }
 }
+
+/* Corrige toque nativo em file inputs no Android e iOS (PWA e Safari).
+   O input ocupa a própria superfície do botão; não depende de htmlFor
+   apontando para um elemento recortado com clip-path. */
+.media-source-button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.media-source-button .media-native-file-input {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  cursor: pointer;
+  z-index: 2;
+  font-size: 16px;
+  display: block;
+  clip: auto !important;
+  clip-path: none !important;
+}
+.media-source-button:focus-within {
+  outline: 3px solid #f48a35;
+  outline-offset: 2px;
+}
+.media-source-button.disabled .media-native-file-input {
+  cursor: not-allowed;
+}
