@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { Camera, ImagePlus, Trash2 } from "lucide-react";
 import { optimizePhoto } from "./imageProcessing.js";
 
@@ -24,16 +24,17 @@ export function Avatar({ account, large = false }) {
 }
 
 export default function ProfilePhotoEditor({ account, busy, onSave }) {
-  const cameraId = useId();
-  const galleryId = useId();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   async function selectPhoto(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || processing || busy) return;
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file || processing || busy) {
+      input.value = "";
+      return;
+    }
     setProcessing(true);
     setError("");
     setMessage("");
@@ -45,6 +46,7 @@ export default function ProfilePhotoEditor({ account, busy, onSave }) {
     } catch (err) {
       setError(err.message || "Não foi possível enviar a foto.");
     } finally {
+      input.value = "";
       setProcessing(false);
     }
   }
@@ -68,32 +70,19 @@ export default function ProfilePhotoEditor({ account, busy, onSave }) {
       <Avatar account={account} large />
       <div className="profile-photo-actions">
         <div className="photo-source-actions">
-          <input
-            id={cameraId}
-            className="visually-hidden-media-input"
-            type="file"
-            accept="image/*"
-            capture="user"
-            onChange={selectPhoto}
-            disabled={disabled}
-            aria-label="Tirar foto para o perfil"
-          />
           <label className={`secondary media-source-button${disabled ? " disabled" : ""}`}
-            htmlFor={cameraId} aria-disabled={disabled}>
+            aria-disabled={disabled}>
+            <input className="media-native-file-input" type="file"
+              accept="image/*,.heic,.heif" capture="user"
+              onChange={selectPhoto} disabled={disabled}
+              aria-label="Tirar foto para o perfil" />
             <Camera size={17} /> Tirar foto
           </label>
-
-          <input
-            id={galleryId}
-            className="visually-hidden-media-input"
-            type="file"
-            accept="image/*"
-            onChange={selectPhoto}
-            disabled={disabled}
-            aria-label="Escolher foto do aparelho"
-          />
           <label className={`secondary media-source-button${disabled ? " disabled" : ""}`}
-            htmlFor={galleryId} aria-disabled={disabled}>
+            aria-disabled={disabled}>
+            <input className="media-native-file-input" type="file"
+              accept="image/*,.heic,.heif" onChange={selectPhoto}
+              disabled={disabled} aria-label="Escolher foto do aparelho" />
             <ImagePlus size={17} /> Escolher da galeria
           </label>
         </div>

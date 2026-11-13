@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { Camera, ImagePlus, ImageOff, Trash2 } from "lucide-react";
 import { optimizePhoto, photoCountAllowed } from "./imageProcessing.js";
 
@@ -26,19 +26,21 @@ export default function FreightPhotoPicker({
   onBusyChange,
   maxPhotos = 3,
 }) {
-  const cameraId = useId();
-  const galleryId = useId();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const disabled = busy || processing || photos.length >= maxPhotos;
 
   async function receive(event) {
-    const selected = Array.from(event.target.files || []);
-    event.target.value = "";
-    if (!selected.length || busy || processing) return;
+    const input = event.currentTarget;
+    const selected = Array.from(input.files || []);
+    if (!selected.length || busy || processing) {
+      input.value = "";
+      return;
+    }
     if (!photoCountAllowed(photos.length, selected.length, maxPhotos)) {
       setError(`O limite é de ${maxPhotos} fotos. Remova uma imagem ou escolha menos arquivos.`);
+      input.value = "";
       return;
     }
     setProcessing(true);
@@ -58,6 +60,7 @@ export default function FreightPhotoPicker({
     } catch (err) {
       setError(err.message || "Não foi possível abrir ou salvar as fotos.");
     } finally {
+      input.value = "";
       setProcessing(false);
       onBusyChange?.(false);
     }
@@ -72,18 +75,20 @@ export default function FreightPhotoPicker({
       <p className="muted">Tire uma foto agora ou escolha imagens salvas no seu celular.
         Fotos grandes são reduzidas automaticamente para carregar com mais facilidade.</p>
       <div className="photo-source-actions">
-        <input id={cameraId} className="visually-hidden-media-input" type="file"
-          accept="image/*" capture="environment" disabled={disabled}
-          onChange={receive} aria-label="Abrir câmera para fotografar a carga" />
-        <label htmlFor={cameraId} aria-disabled={disabled}
+        <label aria-disabled={disabled}
           className={`secondary media-source-button${disabled ? " disabled" : ""}`}>
+          <input className="media-native-file-input" type="file"
+            accept="image/*,.heic,.heif" capture="environment"
+            disabled={disabled} onChange={receive}
+            aria-label="Abrir câmera para fotografar a carga" />
           <Camera size={17} /> Tirar foto
         </label>
-        <input id={galleryId} className="visually-hidden-media-input" type="file"
-          accept="image/*" multiple disabled={disabled}
-          onChange={receive} aria-label="Escolher fotos da galeria" />
-        <label htmlFor={galleryId} aria-disabled={disabled}
+        <label aria-disabled={disabled}
           className={`secondary media-source-button${disabled ? " disabled" : ""}`}>
+          <input className="media-native-file-input" type="file"
+            accept="image/*,.heic,.heif" multiple
+            disabled={disabled} onChange={receive}
+            aria-label="Escolher fotos da galeria" />
           <ImagePlus size={17} /> Escolher do aparelho
         </label>
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "./api.js";
 import { optimizePhoto } from "./imageProcessing.js";
 import { Camera, ImagePlus, ShieldCheck, Lock, FileCheck2, Clock3, XCircle, AlertTriangle, Eye, EyeOff } from "lucide-react";
@@ -18,14 +18,15 @@ const statuses = {
 const prettyDate = (date) => date ? new Date(date).toLocaleDateString("pt-BR", { timeZone: "America/Porto_Velho" }) : "—";
 
 function DocUpload({ kind, exists, disabled, onUpload }) {
-  const camera = useId();
-  const gallery = useId();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   async function upload(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || disabled || loading) return;
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file || disabled || loading) {
+      input.value = "";
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -35,6 +36,7 @@ function DocUpload({ kind, exists, disabled, onUpload }) {
     } catch (err) {
       setError(err.message || "Imagem não enviada. Tente outra foto.");
     } finally {
+      input.value = "";
       setLoading(false);
     }
   }
@@ -48,15 +50,19 @@ function DocUpload({ kind, exists, disabled, onUpload }) {
         </div>
       </div>
       <div className="photo-source-actions">
-        <input id={camera} type="file" className="visually-hidden-media-input"
-          accept="image/*" capture={kind === "selfie" ? "user" : "environment"}
-          onChange={upload} disabled={disabled || loading}/>
-        <label htmlFor={camera} className={"secondary media-source-button" + (disabled || loading ? " disabled" : "")}>
+        <label className={"secondary media-source-button" + (disabled || loading ? " disabled" : "")}>
+          <input type="file" className="media-native-file-input"
+            accept="image/*,.heic,.heif"
+            capture={kind === "selfie" ? "user" : "environment"}
+            onChange={upload} disabled={disabled || loading}
+            aria-label={`Fotografar ${labels[kind]}`}/>
           <Camera size={16} /> Tirar foto
         </label>
-        <input id={gallery} type="file" className="visually-hidden-media-input"
-          accept="image/*" onChange={upload} disabled={disabled || loading}/>
-        <label htmlFor={gallery} className={"secondary media-source-button" + (disabled || loading ? " disabled" : "")}>
+        <label className={"secondary media-source-button" + (disabled || loading ? " disabled" : "")}>
+          <input type="file" className="media-native-file-input"
+            accept="image/*,.heic,.heif"
+            onChange={upload} disabled={disabled || loading}
+            aria-label={`Escolher ${labels[kind]} do aparelho`}/>
           <ImagePlus size={16} /> Escolher arquivo
         </label>
       </div>
