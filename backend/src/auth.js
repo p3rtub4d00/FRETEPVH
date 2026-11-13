@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { Account, Session, PushSubscription, publicUser } from "./models.js";
+import { pushLogoutFilter } from "./pushLogout.js";
 import { LEGAL_VERSION } from "./legalVersion.js";
 
 const scrypt = promisify(scryptCallback);
@@ -229,15 +230,8 @@ auth.post("/logout", async (req, res) => {
   // Revogar somente o navegador que encerrou a sessão. A versão antiga
   // apagava assinaturas de TODOS os aparelhos do motorista, interrompendo push
   // no dispositivo de trabalho ao sair da conta em outro celular.
-  const pushEndpoint = req.body?.pushEndpoint;
-  if (loggedOut?.role === role && typeof pushEndpoint === "string" &&
-      pushEndpoint.length >= 30 && pushEndpoint.length <= 2200 &&
-      /^https:\/\//.test(pushEndpoint)) {
-    await PushSubscription.deleteOne({
-      userId: String(loggedOut._id),
-      endpointHash: digest(pushEndpoint),
-    });
-  }
+  const filter = pushLogoutFilter(loggedOut, role, req.body?.pushEndpoint);
+  if (filter) await PushSubscription.deleteOne(filter);
   res.clearCookie(name, cookieOptions);
   // Apague a sessão antiga somente quando ela pertencer ao perfil que saiu.
   const legacyToken = req.cookies[cookieName];
