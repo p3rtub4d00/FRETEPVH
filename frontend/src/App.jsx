@@ -841,21 +841,6 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 Solicitar frete
               </button>
             )}
-            {area === "motorista" && (
-              <button
-                disabled={!state.user.verified}
-                title={!state.user.verified ? "Envie e aprove seus documentos antes de ficar disponível." : ""}
-                className={`availability ${state.available ? "online" : ""}`}
-                onClick={() =>
-                  mutate("/availability", "PATCH", {
-                    available: !state.available,
-                  })
-                }
-              >
-                <span />
-                {state.available ? "Disponível para fretes" : "Indisponível"}
-              </button>
-            )}
           </div>
           {page === "inicio" && area === "cliente" && (
             <section className="hero">
@@ -1142,12 +1127,6 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                     </button>
                   ))}
                 </div>
-              )}
-              {area === "motorista" && !state.available && (
-                <p className="info">
-                  Você está indisponível. Ative sua disponibilidade para enviar
-                  propostas.
-                </p>
               )}
               <div className="cards">{requests.map(requestCard)}</div>
               {!requests.length && (
@@ -1449,7 +1428,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               key={selected.id}
               request={selected}
               available={
-                state.available && state.user.verified &&
+                state.user.verified &&
                 !state.wallet?.blocked &&
                 (selected.paymentMethod !== "card_driver" || state.user.acceptsCard) &&
                 !busy
@@ -1924,7 +1903,7 @@ function ProposalForm({ request, available, driverId, onSubmit }) {
       </label>
       <CommissionPreview price={proposedPrice} method={request.paymentMethod} />
       <button className="primary full" disabled={!available}>
-        {available ? "Enviar proposta" : "Verifique sua disponibilidade, carteira e meios de pagamento"}
+        {available ? "Enviar proposta" : "Verifique seus documentos, carteira e meios de pagamento"}
         <ArrowRight size={18} />
       </button>
     </form>

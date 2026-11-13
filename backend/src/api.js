@@ -147,7 +147,7 @@ api.get("/state", async (req, res) => {
       : [];
   res.json({
     user: publicUser(req.user),
-    available: Boolean(req.user.available) && (req.user.role !== "motorista" || isVerifiedDriver(req.user)),
+    available: req.user.role === "motorista" ? isVerifiedDriver(req.user) : Boolean(req.user.available),
     drivers: people,
     users,
     requests: requests.map((request) => presentRequest(request, req.user)),
@@ -166,13 +166,13 @@ api.patch("/profile/photo", authorize("cliente", "motorista"), async (req, res) 
   await req.user.save();
   res.json({ user: publicUser(req.user) });
 });
-api.patch("/availability", authorize("motorista"), async (req, res) => {
-  driverApproved(req.user);
-  if (typeof req.body.available !== "boolean")
-    fail(400, "Disponibilidade inválida.");
-  req.user.available = req.body.available;
-  await req.user.save();
-  res.json({ user: publicUser(req.user) });
+// Compatibilidade com versões antigas do PWA: a disponibilidade manual
+// foi encerrada. O estado agora depende exclusivamente da elegibilidade.
+api.patch("/availability", authorize("motorista"), (req, res) => {
+  res.json({
+    user: publicUser(req.user),
+    message: "O FreteOn agora disponibiliza os fretes automaticamente a motoristas verificados.",
+  });
 });
 api.post("/requests", authorize("cliente"), rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -224,7 +224,7 @@ api.post("/requests", authorize("cliente"), rateLimit({
     clientId: own(req.user),
   });
   const visibleDrivers = await Account.find({
-    role: "motorista", status: "approved", available: true,
+    role: "motorista", status: "approved",
   }).limit(300);
   const verifiedIds = visibleDrivers.filter(isVerifiedDriver).map((person) => String(person._id));
   notifyInBackground(verifiedIds, {
@@ -294,8 +294,6 @@ api.post(
     driverApproved(req.user);
     if (await overdueDriver(own(req.user)))
       fail(403, "Novas propostas suspensas: quite as comissões vencidas na carteira.");
-    if (!req.user.available)
-      fail(403, "Ative sua disponibilidade para enviar propostas.");
     validId(req.params.id);
     if (
       typeof req.body.price !== "number" ||

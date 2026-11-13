@@ -206,7 +206,7 @@ export function publicUser(user) {
     role: user.role,
     vehicle: user.vehicle,
     status: user.status,
-    available: Boolean(user.available) && (user.role !== "motorista" || isVerifiedDriver(user)),
+    available: user.role === "motorista" ? isVerifiedDriver(user) : Boolean(user.available),
     acceptsCard: Boolean(user.acceptsCard),
     verified: isVerifiedDriver(user),
     verificationStatus: verificationStatus(user),

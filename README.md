@@ -315,3 +315,13 @@ O cadastro documental do motorista usa a validação compartilhada em `frontend/
 - A atualização de cache `freteon-shell-v8` ajuda os PWAs instalados a receber o formulário atualizado.
 - Testes de regressão: `backend/test/driverDetails.test.js`, junto à suíte completa de backend.
 
+
+## Disponibilidade automática dos motoristas (13/11/2026)
+
+- Removemos a chave manual "Disponível/Indisponível" do painel de Motorista e o aviso de indisponibilidade.
+- Todo motorista com a verificação documental **aprovada e vigente** pode visualizar os chamados abertos e enviar propostas, respeitando bloqueio financeiro e meio de pagamento aceito.
+- Um valor `available: false` salvo no banco em versões antigas não bloqueia mais propostas, tela, API nem notificações.
+- A lista de destinatários de novos fretes não filtra mais por `available: true`, e as assinaturas push continuam opt-in conforme permissão do aparelho.
+- A rota antiga `PATCH /api/availability` permanece apenas como compatibilidade, sem mudar a elegibilidade. A carteira e os controles de aprovação documental mantêm suas regras.
+- O cache PWA é renovado para substituir a interface antiga nos aparelhos instalados.
+
