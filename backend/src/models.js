@@ -1,5 +1,32 @@
 import mongoose from "mongoose";
 
+const documentSchema = new mongoose.Schema(
+  {
+    kind: { type: String, required: true, enum: ["cnh", "crlv", "selfie"] },
+    fileId: { type: mongoose.Schema.Types.ObjectId, required: true },
+    uploadedAt: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
+const verificationSchema = new mongoose.Schema(
+  {
+    status: {
+      type: String, enum: ["unsubmitted", "pending", "approved", "rejected"],
+      default: "unsubmitted",
+    },
+    plate: { type: String, default: "", maxlength: 7 },
+    cnhExpiresAt: { type: Date, default: null },
+    crlvYear: { type: Number, default: null },
+    rntrc: { type: String, default: "", maxlength: 20 },
+    rntrcApplies: { type: Boolean, default: false },
+    documents: { type: [documentSchema], default: [] },
+    rejectionReason: { type: String, default: "", maxlength: 500 },
+    reviewedAt: { type: Date, default: null },
+    reviewedBy: { type: String, default: "" },
+  },
+  { _id: false },
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, maxlength: 100 },
@@ -20,6 +47,7 @@ const userSchema = new mongoose.Schema(
     acceptsCard: { type: Boolean, default: false },
     pixKey: { type: String, default: "", maxlength: 150 },
     profilePhoto: { type: String, default: "" },
+    verification: { type: verificationSchema, default: () => ({}) },
     termsVersion: { type: String, default: "" },
     termsAcceptedAt: { type: Date, default: null },
     privacyNoticeVersion: { type: String, default: "" },
@@ -146,6 +174,29 @@ export const PushSubscription = mongoose.model("PushSubscription", pushSubscript
 export const Account = mongoose.model("Account", userSchema);
 export const Session = mongoose.model("Session", sessionSchema);
 export const Freight = mongoose.model("Freight", freightSchema);
+export function verificationStatus(user, now = new Date()) {
+  if (user.role !== "motorista") return "not_applicable";
+  const v = user.verification;
+  if (!v || !v.status || v.status === "unsubmitted") return "unsubmitted";
+  if (v.status === "approved" &&
+    (v.cnhExpiresAt == null || new Date(v.cnhExpiresAt) < now ||
+     v.crlvYear == null || v.crlvYear < now.getFullYear()))
+    return "expired";
+  return v.status;
+}
+
+export function isVerifiedDriver(user, now = new Date()) {
+  if (user.role !== "motorista" || user.status !== "approved" ||
+      verificationStatus(user, now) !== "approved") return false;
+  const v = user.verification;
+  return Boolean(
+    ["cnh", "crlv", "selfie"].every((kind) =>
+      v.documents?.some((document) => document.kind === kind && document.fileId)) &&
+    /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(v.plate || "") &&
+    (!v.rntrcApplies || /^[0-9]{8,12}$/.test(v.rntrc || "")),
+  );
+}
+
 export function publicUser(user) {
   return {
     id: String(user._id),
@@ -156,6 +207,8 @@ export function publicUser(user) {
     status: user.status,
     available: user.available,
     acceptsCard: Boolean(user.acceptsCard),
+    verified: isVerifiedDriver(user),
+    verificationStatus: verificationStatus(user),
     profilePhoto: user.profilePhoto || "",
     termsVersion: user.termsVersion || "",
     termsAcceptedAt: user.termsAcceptedAt || null,
