@@ -170,7 +170,13 @@ export async function notifyAccounts(userIds, message) {
       console.warn("Envio push não concluído:", error?.name || "Erro");
     }
   }));
-  return { attempted: subscriptions.length, ok: accepted, expired, failures };
+  return {
+    attempted: subscriptions.length,
+    ok: accepted,
+    expired,
+    failures,
+    noSubscriptions: subscriptions.length === 0,
+  };
 }
 
 export function notifyInBackground(userIds, message) {
@@ -182,6 +188,7 @@ export function notifyInBackground(userIds, message) {
       attempted: result.attempted,
       acceptedByGateway: result.ok,
       expired: result.expired || 0,
+      noSubscriptions: Boolean(result.noSubscriptions),
       failures: result.failures || {},
       unavailable: Boolean(result.unavailable),
     });

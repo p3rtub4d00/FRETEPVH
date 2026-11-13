@@ -192,7 +192,7 @@ export default function PushNotificationsPanel({
     setNotice("");
     try {
       await api("/push/test", { method: "POST", body: {} });
-      setNotice("Notificação de teste enviada ao serviço push. Confira o aviso no celular.");
+      setNotice("O serviço push aceitou a notificação de teste. Confira se ela apareceu no celular. Se não apareceu, revise as permissões do aparelho.");
     } catch (e) {
       setError(e.message || "Não foi possível testar o envio.");
     } finally {

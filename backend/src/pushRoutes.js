@@ -70,5 +70,5 @@ pushRouter.post("/push/test", roles, limit, async (req, res) => {
   });
   if (result.ok === 0)
     return res.status(502).json({ error: "Serviço push não confirmou a entrega. Verifique as permissões e tente novamente." });
-  res.json({ ok: true, deliveredTo: result.ok });
+  res.json({ ok: true, acceptedByPushService: result.ok });
 });

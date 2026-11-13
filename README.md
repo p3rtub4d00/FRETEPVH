@@ -325,3 +325,14 @@ O cadastro documental do motorista usa a validação compartilhada em `frontend/
 - A rota antiga `PATCH /api/availability` permanece apenas como compatibilidade, sem mudar a elegibilidade. A carteira e os controles de aprovação documental mantêm suas regras.
 - O cache PWA é renovado para substituir a interface antiga nos aparelhos instalados.
 
+
+## Auditoria de notificações push após aceite de proposta (13/11/2026)
+
+A contratação grava a proposta escolhida no banco, depois dispara o push para **somente o motorista contratado**. O histórico e a tela de contratação no painel permanecem independentes da entrega do push.
+
+Foi corrigido um problema de sessões: o logout removia **todas** as inscrições push da conta, incluindo outros celulares. Agora o frontend informa o endpoint do aparelho atual e o servidor revoga **somente aquela inscrição** vinculada à conta que saiu. Os demais dispositivos mantêm as inscrições. Em aparelho compartilhado, a inscrição Web Push pertence a uma conta por vez; testar Cliente e Motorista no mesmo navegador pode transferir a inscrição para o perfil usado por último. Para testar a entrega entre usuários distintos, use dispositivos ou perfis de navegador separados.
+
+O servidor agora emite diagnóstico anônimo nos logs do Render (evento `booking`, `attempted`, `acceptedByGateway`, `noSubscriptions`, `expired` e códigos HTTP agrupados). Não registra nome, telefone, endereço, chaves ou endpoint. **Aceitação pelo provedor push não garante entrega no dispositivo** — depende da permissão, do sistema operacional e do app instalado. O teste do perfil informa essa diferença corretamente.
+
+A derivação de chaves AES128GCM, conforme RFC 8291/8188, já usava as separações NUL + 0x01 corretas. A auditoria reforçou documentação e diagnósticos sem alterar desnecessariamente o formato criptográfico validado nos testes. Recomenda-se reativar os avisos em Meu perfil → Notificações do aparelho se os dispositivos tiverem sido desconectados antes desta correção.
+
