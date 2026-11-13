@@ -35,6 +35,23 @@ function time(value) {
     fail(400, "Informe um horário válido.");
   return value;
 }
+/**
+ * Fotos em formato JPEG/PNG/WebP, otimizadas no navegador. Mantemos suporte
+ * às imagens válidas dos pedidos anteriores; nunca aceitamos URLs externas
+ * nem conteúdo arbitrário em src de fotos.
+ */
+export function validateFreightPhotos(photos, max = 3) {
+  if (
+    !Array.isArray(photos) ||
+    photos.length > max ||
+    photos.some((photo) =>
+      typeof photo !== "string" ||
+      !/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(photo) ||
+      photo.length > 810000
+    )
+  ) fail(400, "Envie até 3 fotos JPG, PNG ou WebP. Reduza a imagem ou use a câmera do aplicativo.");
+  return photos;
+}
 function canRead(request, user) {
   return (
     user.role === "master" ||
@@ -173,18 +190,7 @@ api.post("/requests", authorize("cliente"), async (req, res) => {
     new Date(`${fields.date}T${fields.time}:00-04:00`) <= new Date()
   )
     fail(400, "Escolha uma data e um horário futuros de Porto Velho.");
-  const photos = data.photos || [];
-  if (
-    !Array.isArray(photos) ||
-    photos.length > 3 ||
-    photos.some(
-      (photo) =>
-        typeof photo !== "string" ||
-        !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(photo) ||
-        photo.length > 810000,
-    )
-  )
-    fail(400, "Envie até 3 fotos JPG, PNG ou WebP de até 600 KB cada.");
+  const photos = validateFreightPhotos(data.photos || []);
   // Recalcular no servidor: a quilometragem informada pelo navegador não é confiável.
   let roadEstimate = {};
   if (process.env.GOOGLE_MAPS_API_KEY) {
@@ -208,6 +214,37 @@ api.post("/requests", authorize("cliente"), async (req, res) => {
   });
   res.status(201).json({ request: presentRequest(request, req.user) });
 });
+// Anexar imagens a pedidos já publicados, sem recriar a contratação.
+api.post("/requests/:id/photos", authorize("cliente"), async (req, res) => {
+  validId(req.params.id);
+  const request = await Freight.findById(req.params.id);
+  if (!request || request.clientId !== own(req.user))
+    fail(404, "Frete não encontrado.");
+  if (!["open", "booked"].includes(request.status))
+    fail(409, "Só é possível anexar fotos antes de iniciar o transporte.");
+  const additional = validateFreightPhotos(req.body.photos);
+  if (additional.length === 0)
+    fail(400, "Escolha pelo menos uma foto.");
+  request.photos = validateFreightPhotos([...request.photos, ...additional]);
+  await request.save();
+  res.json({ request: presentRequest(request, req.user) });
+});
+
+api.delete("/requests/:id/photos/:index", authorize("cliente"), async (req, res) => {
+  validId(req.params.id);
+  const request = await Freight.findById(req.params.id);
+  if (!request || request.clientId !== own(req.user))
+    fail(404, "Frete não encontrado.");
+  if (!["open", "booked"].includes(request.status))
+    fail(409, "Só é possível alterar fotos antes de iniciar o transporte.");
+  const index = Number(req.params.index);
+  if (!Number.isInteger(index) || index < 0 || index >= request.photos.length)
+    fail(404, "Foto não encontrada.");
+  request.photos.splice(index, 1);
+  await request.save();
+  res.json({ request: presentRequest(request, req.user) });
+});
+
 api.post("/requests/:id/calculate-route", rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
