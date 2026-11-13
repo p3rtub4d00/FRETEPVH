@@ -282,3 +282,8 @@ Regras de elegibilidade e dispensa: `frontend/src/pushInvitationRules.js`, teste
 
 **Verificação antes da publicação:** `npm test --prefix backend` inclui processamento sintético de câmera no navegador com FileReader e validação dos resultados para carga e documentos. `npm run build` também compila frontend e roda testes. **Importante:** teste real em iPhone e Android ainda é necessário para confirmar permissões, captura e persistência no aparelho do usuário; compilação e testes automatizados não simulam o fluxo físico da câmera.
 
+
+## Perfil simplificado: avatar central com edição ao tocar (13/11/2026)
+
+O botão **Solicitar frete** aparece somente nas telas de Início e Meus fretes do Cliente, não mais no perfil nem no histórico. No perfil de Cliente ou Motorista, a foto é maior e centralizada, com um selo discreto de câmera. Tocar na foto revela os controles **Tirar foto**, **Galeria** e, caso exista foto, **Remover foto**, sobrepostos à imagem. Os seletores nativos que corrigimos para Android e iPhone foram preservados; mensagens de carregamento e erro continuam disponíveis. O cache do PWA foi renovado para distribuir o layout atualizado a quem instalou o aplicativo.
+
