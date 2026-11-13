@@ -271,3 +271,14 @@ Em iPhone/iPad, notificações Web Push dependem do aplicativo adicionado à Tel
 
 Regras de elegibilidade e dispensa: `frontend/src/pushInvitationRules.js`, testes: `backend/test/pushInvitation.test.js`.
 
+
+## Correção geral de câmera e galeria — perfil, frete e documentos (13/11/2026)
+
+**Causa comum encontrada no código:** a versão anterior usava `URL.createObjectURL(file)` e carregava `blob:` numa tag `Image`, mas o servidor restringia `Content-Security-Policy: img-src` a `'self' data:`. Em navegadores móveis essa combinação pode bloquear o processamento **antes do upload**. A política foi atualizada para incluir `blob:`, e agora o processamento prefere `FileReader.readAsDataURL`, que funciona com o `data:` já autorizado.
+
+**Seletores de arquivo:** os botões "Tirar foto" e "Escolher da galeria/aparelho" passam a conter o elemento `input[type=file]` cobrindo diretamente a área tocada (opacidade 0), em vez de depender de `htmlFor` para campos visualmente recortados; isso facilita o acionamento nativo em Safari/iOS e Android/PWA. A seleção do arquivo é mantida até terminar a compressão/envio, e só então o campo é limpo.
+
+**Processamento:** aceita JPG, PNG, WebP, HEIC/HEIF e AVIF quando suportados pelo navegador, incluindo fotos originais de até 25 MB; converte para JPEG com resolução e limites individuais adequados a perfil (até 220.000 caracteres), carga (até 410.000) e documentos (até 820.000). Se o aparelho não suportar decodificar um HEIC/HEIF, apresenta mensagem orientando a tentar JPG ou outra captura. A validação final permanece no backend; documentos CNH/CRLV/selfie continuam privados em GridFS, sem exposição na API pública.
+
+**Verificação antes da publicação:** `npm test --prefix backend` inclui processamento sintético de câmera no navegador com FileReader e validação dos resultados para carga e documentos. `npm run build` também compila frontend e roda testes. **Importante:** teste real em iPhone e Android ainda é necessário para confirmar permissões, captura e persistência no aparelho do usuário; compilação e testes automatizados não simulam o fluxo físico da câmera.
+
