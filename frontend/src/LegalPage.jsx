@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, ArrowRight, FileText, LockKeyhole, ShieldCheck } from "lucide-react";
 import { api } from "./api.js";
 
-export const LEGAL_VERSION = "2026-11-13.2";
+export const LEGAL_VERSION = "2026-11-13.3";
 export const legalPaths = ["/termos", "/privacidade"];
 
 const terms = [
@@ -50,7 +50,8 @@ const terms = [
     paragraphs: [
       "O cliente publica sua necessidade, os motoristas apresentam propostas e o cliente escolhe uma delas. Com a aceitação, cliente e transportador celebram diretamente o ajuste relativo à execução do serviço.",
       "O preço contratado deve refletir o serviço anunciado. Qualquer acréscimo por ajudantes, deslocamento, escadas, pedágios, estacionamento, espera ou outra condição não prevista depende de informação prévia e aceitação expressa, observadas as normas aplicáveis.",
-      "Estimativas de distância, duração e rota são referenciais e podem variar conforme trânsito, acesso, condições da via e disponibilidade dos serviços de mapa."
+      "Estimativas de distância, duração e rota são referenciais e podem variar conforme trânsito, acesso, condições da via e disponibilidade dos serviços de mapa.",
+      "Propostas anteriores à contratação utilizam serviços e informações estruturados, sem compartilhamento de telefone, WhatsApp, links ou outras tentativas de direcionar a negociação para fora do FreteOn. Após o cliente selecionar o motorista, a plataforma libera um chat privado entre as partes para alinhamentos operacionais. Tentar desviar o frete, fraudar comissões ou contornar estes controles constitui descumprimento destes Termos e pode ser objeto de denúncia, análise humana e medidas proporcionais, respeitados os direitos aplicáveis."
     ]
   },
   {
@@ -174,7 +175,8 @@ const privacy = [
     paragraphs: [
       "Conta: nome, telefone, função na plataforma, senha protegida por hash, data de cadastro, aceite dos Termos e ciência da Política, fotografia de perfil caso enviada, informações do veículo e situação de aprovação do motorista.",
       "Verificação de motoristas: fotografias da CNH, do CRLV e selfie, placa, validade da habilitação, exercício do documento veicular, RNTRC informado quando aplicável, data e resultado da revisão e eventual motivo de correção. Não há reconhecimento facial automatizado nesta etapa; as imagens são analisadas manualmente pela administração.",
-      "Fretes: endereço de coleta e entrega, título, descrição, fotos dos objetos, veículo solicitado, data, horário, estimativa de rota quando disponível, propostas, valores, modalidade de pagamento, aceite, status da entrega, avaliação e registros de contestação.",
+      "Fretes: endereço de coleta e entrega, título, descrição, fotos dos objetos, serviços incluídos na proposta, data, horário, estimativa de rota quando disponível, propostas, valores, modalidade de pagamento, aceite, status da entrega, avaliação e registros de contestação.",
+      "Comunicações e moderação: depois da contratação, mensagens de texto entre cliente e motorista são armazenadas para execução do frete, suporte e prevenção de fraude. Denúncias, motivos de cancelamento e o histórico operacional associado podem ser tratados na análise de ocorrências, sem punição automática por simples registro.",
       "Carteira: chave Pix informada voluntariamente pelo motorista, valores simulados de comissão, solicitações de repasse, quitação fictícia e datas de movimentação no sistema. O FreteOn atualmente não solicita dados completos de cartão bancário nem processa Pix real.",
       "Dados técnicos: cookies de sessão, identificadores, registros de acesso e eventos necessários à segurança, prevenção a abuso e operação. Localização GPS é acessada apenas se o usuário optar por fornecê-la e o navegador autorizar."
     ]
@@ -191,7 +193,8 @@ const privacy = [
     paragraphs: [
       "Motoristas aprovados poderão visualizar dados do pedido necessários para avaliar o frete, tais como endereços, descrição, horário e fotos da carga. Quando o cliente escolhe o motorista, as partes passam a compartilhar informações necessárias à execução. O cliente poderá visualizar informações do motorista, veículo, foto do perfil, propostas, preço e avaliação.",
       "Os documentos de CNH, CRLV e selfie são armazenados em área privada do banco, separada das fotos públicas dos fretes, e somente podem ser consultados pelo próprio motorista ou administração autenticada. Clientes e outros motoristas não recebem cópias desses documentos.",
-      "Os usuários se comprometem a não reutilizar dados, fotografias ou contatos obtidos na plataforma para marketing não autorizado, assédio, divulgação pública ou qualquer finalidade estranha ao serviço."
+      "Os usuários se comprometem a não reutilizar dados, fotografias ou contatos obtidos na plataforma para marketing não autorizado, assédio, divulgação pública ou qualquer finalidade estranha ao serviço.",
+      "O chat é acessível apenas ao cliente e ao motorista escolhido após a contratação. Para uma denúncia concreta, o administrador autenticado poderá consultar até as últimas 100 mensagens daquele frete para análise manual. O acesso à moderação é limitado ao contexto da denúncia, não constitui monitoramento público das conversas."
     ]
   },
   {

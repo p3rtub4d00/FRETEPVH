@@ -336,3 +336,13 @@ O servidor agora emite diagnóstico anônimo nos logs do Render (evento `booking
 
 A derivação de chaves AES128GCM, conforme RFC 8291/8188, já usava as separações NUL + 0x01 corretas. A auditoria reforçou documentação e diagnósticos sem alterar desnecessariamente o formato criptográfico validado nos testes. Recomenda-se reativar os avisos em Meu perfil → Notificações do aparelho se os dispositivos tiverem sido desconectados antes desta correção.
 
+
+## Chat protegido e propostas estruturadas (13/11/2026)
+
+- **Antes da contratação:** proposta do motorista contém preço, horário e opções padronizadas de serviço (ajudante, mantas, desmontagem, escadas, carregamento e amarração); o antigo campo de observações livres foi removido. Descrições antigas com contato externo são mascaradas enquanto o frete está aberto.
+- **Depois da contratação:** somente cliente titular e motorista efetivamente escolhido consultam e enviam mensagens do frete. Há limite de mensagens por intervalo, limite de 500 caracteres por mensagem, validação contra telefone, WhatsApp, links e convites para negociar fora. Nenhuma mensagem aparece na API pública de fretes.
+- **Denúncia:** cliente ou motorista envolvido pode relatar tentativas de negociação externa, condutas inadequadas ou outras ocorrências. O Master analisa os registros na aba Denúncias. O histórico de mensagens só pode ser consultado pela administração para fretes com denúncia cadastrada. Não há punição automática.
+- **Cancelamento após contratar:** cria sinalização para análise, preservando o direito de cancelar. O cliente informa motivo no aplicativo atualizado; versões antigas ainda podem cancelar sem motivo e terão a ocorrência registrada.
+- **LGPD:** Termos e Privacidade detalham as novas categorias de dados e controles. A versão `2026-11-13.3` pede nova confirmação por Cliente e Motorista. A retenção e eliminação obedecem à Política e às obrigações legais; não são publicados contatos e credenciais.
+- **Compatibilidade:** pedidos/propostas antigos permanecem; novos serviços estruturados são validados no backend. O cadastro de motoristas, verificação, comissão e carteira seguem inalterados.
+
