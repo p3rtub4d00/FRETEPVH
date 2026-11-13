@@ -14,6 +14,13 @@ export function todayInPortoVelho(now = new Date()) {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+export function displayCnhDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return todayInPortoVelho(date);
+}
+
 export function normalizeCnhDate(value) {
   const raw = String(value ?? "").trim();
   // Navegadores enviam yyyy-mm-dd; aceita também dd/mm/yyyy de clientes antigos.
