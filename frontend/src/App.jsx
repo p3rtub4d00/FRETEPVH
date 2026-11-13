@@ -30,6 +30,7 @@ import { api } from "./api.js";
 import RoutePicker from "./RoutePicker.jsx";
 import RoleSwitcher from "./RoleSwitcher.jsx";
 import ProfilePhotoEditor, { Avatar } from "./ProfilePhotoEditor.jsx";
+import ProfileDetailsEditor from "./ProfileDetailsEditor.jsx";
 import FreightPhotoPicker, { FreightPhotoImage } from "./FreightPhotoPicker.jsx";
 import { pendingDriverBookings } from "./driverBooking.js";
 import PrivacyMaster from "./PrivacyMaster.jsx";
@@ -1032,8 +1033,14 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               {["cliente", "motorista"].includes(area) ? (
                 <ProfilePhotoEditor account={state.user} busy={busy} onSave={saveProfilePhoto} />
               ) : <Avatar account={state.user} large />}
-              <h2>{state.user.name}</h2>
-              <p>{state.user.phone} · Porto Velho, RO</p>
+              {["cliente", "motorista"].includes(area) ? (
+                <ProfileDetailsEditor account={state.user} busy={busy} onSaved={refresh} />
+              ) : (
+                <>
+                  <h2>{state.user.name}</h2>
+                  <p>{state.user.phone} · Porto Velho, RO</p>
+                </>
+              )}
               {area === "motorista" && (
                 <>
                   <div className="profile-item">
@@ -1068,10 +1075,6 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   <PushNotificationsPanel role={area} accountId={user.id}/>
                 </details>
               )}
-              <div className="profile-legal-links">
-                <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
-                <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
-              </div>
               <button className="secondary" onClick={logout}>
                 Sair da conta
               </button>
