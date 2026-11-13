@@ -3,6 +3,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Bell,
+  BellRing,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -32,6 +33,7 @@ import ProfilePhotoEditor, { Avatar } from "./ProfilePhotoEditor.jsx";
 import FreightPhotoPicker, { FreightPhotoImage } from "./FreightPhotoPicker.jsx";
 import { pendingDriverBookings } from "./driverBooking.js";
 import PrivacyMaster from "./PrivacyMaster.jsx";
+import PushNotificationsPanel from "./PushNotificationsPanel.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
@@ -40,6 +42,7 @@ const navigation = {
     ["inicio", "Início", Home],
     ["fretes", "Meus fretes", Package],
     ["historico", "Histórico", History],
+    ["avisos", "Avisos push", BellRing],
     ["perfil", "Meu perfil", Users],
   ],
   motorista: [
@@ -47,6 +50,7 @@ const navigation = {
     ["propostas", "Propostas", Package],
     ["historico", "Histórico", History],
     ["carteira", "Minha carteira", FileCheck2],
+    ["avisos", "Avisos push", BellRing],
     ["perfil", "Meu perfil", Users],
   ],
   master: [
@@ -438,6 +442,12 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     };
     window.addEventListener("focus", checkOnReturn);
     document.addEventListener("visibilitychange", checkOnReturn);
+    const serviceWorkerAlert = (event) => {
+      if (event.data?.type === "FRETEON_PUSH_EVENT" &&
+          (!event.data?.role || event.data.role === area) && !inFlight.current)
+        refresh().catch(showError);
+    };
+    navigator.serviceWorker?.addEventListener("message", serviceWorkerAlert);
     const handler = (event) => {
       event.preventDefault();
       setInstall(event);
@@ -448,6 +458,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
       clearInterval(interval);
       window.removeEventListener("focus", checkOnReturn);
       document.removeEventListener("visibilitychange", checkOnReturn);
+      navigator.serviceWorker?.removeEventListener("message", serviceWorkerAlert);
       window.removeEventListener("beforeinstallprompt", handler);
     };
   }, []);
@@ -721,6 +732,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         </div>
         <main>
           {!loaded && <p role="status">Carregando seus dados…</p>}
+          {loaded && area !== "master" && page === "inicio" && (
+            <PushNotificationsPanel role={area} compact />
+          )}
           {area === "motorista" && state.user.status !== "approved" && (
             <p className="info" role="status">
               {state.user.status === "rejected"
@@ -909,7 +923,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               </div>
             </div>
           )}
-          {((area === "motorista" && page === "carteira") ||
+          {page === "avisos" && area !== "master" ? (
+            <PushNotificationsPanel role={area} />
+          ) : ((area === "motorista" && page === "carteira") ||
              (area === "master" && page === "financeiro")) ? (
             <WalletPanel
               role={area}
