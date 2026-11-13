@@ -822,14 +822,20 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   : navigation[area].find((item) => item[0] === page)?.[1]}
               </h1>
               <p className="subtitle">
-                {area === "cliente"
-                  ? "Encontre o motorista certo para o seu frete."
-                  : area === "motorista"
-                    ? "Escolha os pedidos e envie o seu melhor preço."
-                    : "Acompanhe a operação em Porto Velho."}
+                {page === "perfil"
+                  ? area === "cliente"
+                    ? "Gerencie sua foto, seus dados e preferências."
+                    : area === "motorista"
+                      ? "Atualize seu perfil e sua documentação."
+                      : "Gerencie os dados da sua conta."
+                  : area === "cliente"
+                    ? "Encontre o motorista certo para o seu frete."
+                    : area === "motorista"
+                      ? "Escolha os pedidos e envie o seu melhor preço."
+                      : "Acompanhe a operação em Porto Velho."}
               </p>
             </div>
-            {area === "cliente" && (
+            {area === "cliente" && ["inicio", "fretes"].includes(page) && (
               <button
                 className="primary"
                 onClick={() => setModal({ type: "create" })}
