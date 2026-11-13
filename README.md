@@ -258,3 +258,16 @@ A partir desta versão, o FreteOn exige **verificação documental aprovada e vi
 
 A Política de Privacidade e os Termos foram atualizados para a versão `2026-11-13.2`, informando a finalidade e o acesso restrito aos documentos. Novos aceites são registrados no perfil para as contas existentes.
 
+
+## Notificações push: convite automático sem card nem item no menu
+
+A tela inicial de Cliente e Motorista não apresenta mais o card `Não perca os avisos do FreteOn` nem a antiga opção `Avisos push` no menu de navegação inferior/lateral. O sino de notificações dos próprios fretes permanece, pois tem função distinta.
+
+Quando uma conta de Cliente ou Motorista entra na página inicial e o dispositivo oferece Web Push, a aplicação verifica se já há inscrição push ativa para **aquele usuário específico**. Caso não exista e a permissão não tenha sido negada, mostra um **modal automático** informando sobre os avisos. O botão **Ativar notificações** chama `Notification.requestPermission()` diretamente no toque do usuário; a caixa de permissão nativa não pode ser forçada no carregamento da página. Se o usuário escolher **Agora não**, o aviso fica dispensado nesse navegador por sete dias para aquela conta. Permissão negada ou já ativada não gera novo convite.
+
+A ativação continua voluntária. A página **Meu perfil → Notificações do aparelho** contém uma seção recolhida que permite habilitar, testar ou desativar push posteriormente, sem ocupar espaço na home. O botão de acesso aos fretes e o sistema de avaliações permanecem inalterados. Quando o PWA também oferece a tela de incentivo à instalação, esta tem prioridade; o convite de push aguarda o fechamento das outras caixas de diálogo.
+
+Em iPhone/iPad, notificações Web Push dependem do aplicativo adicionado à Tela de Início e aberto pelo ícone, além da permissão explícita. Outros navegadores/versões sem suporte não recebem modal. A verificação de suporte é feita pelo navegador, e a plataforma não promete entrega garantida com sistema operacional em modo de economia de bateria ou sem internet.
+
+Regras de elegibilidade e dispensa: `frontend/src/pushInvitationRules.js`, testes: `backend/test/pushInvitation.test.js`.
+
