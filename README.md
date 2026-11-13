@@ -304,3 +304,14 @@ A seleção de picape, utilitário ou caminhão foi removida do formulário do C
 
 Na API de criação, `vehicle` deixou de ser obrigatório e novos documentos `Freight` recebem `vehicle: ""` por padrão. Os fretes antigos mantêm a categoria cadastrada; a interface mostra "Aberto a todos os veículos" apenas para novos pedidos sem tipo definido. A escolha e capacidade do veículo permanecem sob responsabilidade do motorista e a modalidade de pagamento precisa ser compatível com sua carteira. Não há exclusão de dados nem alteração em contratos antigos.
 
+
+## Correção da validação de placa, CNH e CRLV (13/11/2026)
+
+O cadastro documental do motorista usa a validação compartilhada em `frontend/src/driverDocumentFields.js`, aplicada tanto na interface quanto no servidor.
+
+- Placas **ABC1234**, **ABC-1234** e **ABC1D23** (Mercosul) são aceitas, inclusive com letras minúsculas ou espaços; antes do salvamento removem-se os separadores e usa-se caixa alta.
+- A validade da CNH é tratada como **data do documento no fuso America/Porto_Velho**. Antes, o ISO em UTC podia mostrar o dia seguinte quando o motorista reabria o perfil. A exibição agora usa o calendário local, e o vencimento informado permanece até o fim do dia local.
+- Datas impossíveis, CNHs vencidas e exercício do CRLV fora do ano atual/seguinte apresentam avisos específicos embaixo do campo correspondente. A verificação documental e aprovação pelo Master permanecem obrigatórias.
+- A atualização de cache `freteon-shell-v8` ajuda os PWAs instalados a receber o formulário atualizado.
+- Testes de regressão: `backend/test/driverDetails.test.js`, junto à suíte completa de backend.
+
