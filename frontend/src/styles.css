@@ -3219,3 +3219,102 @@ dialog.install-invite-dialog::backdrop {
   .freight-photo-picker { padding: 12px; }
   .freight-gallery-images .media-photo-fallback { height: 92px; }
 }
+
+/* Etapa 1 — Push: ativação explícita, compatível com PWA no celular. */
+.push-panel {
+  display: grid;
+  gap: 14px;
+  padding: 19px;
+  background: #fff;
+  border: 1px solid #dce6f0;
+  border-radius: 14px;
+  margin-bottom: 22px;
+}
+.push-panel.compact {
+  background: #f4f9ff;
+  border-color: #d8e6f7;
+  padding: 15px;
+}
+.push-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.push-panel-symbol {
+  flex-shrink: 0;
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #9c5e27;
+  background: #ffecd9;
+}
+.push-panel-heading h2 {
+  font-size: 16px;
+  line-height: 1.3;
+  margin: 1px 0 5px;
+}
+.push-panel-heading p {
+  color: #5d7188;
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0;
+}
+.push-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid #e8c79f;
+  background: #fff7e9;
+  color: #83562b;
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0;
+}
+.push-warning svg {
+  flex-shrink: 0;
+}
+.push-panel-status {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  align-items: center;
+  color: #5e718a;
+  font-size: 12px;
+}
+.push-panel-status strong {
+  color: #244c38;
+}
+.push-panel-status svg {
+  color: #258550;
+}
+.push-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.push-panel-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 12px;
+  white-space: normal;
+}
+.push-help {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #647990;
+  margin: 0;
+}
+@media (max-width: 570px) {
+  .push-panel { padding: 14px; }
+  .push-panel-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .push-panel-actions button { width: 100%; }
+}
