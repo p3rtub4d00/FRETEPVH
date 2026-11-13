@@ -162,3 +162,17 @@ Quando o cliente escolhe a proposta, o frete passa ao estado `booked`, registra 
 - O aviso abre novamente em uma nova sessão de navegador se o motorista ainda não iniciou o frete; não precisa de armazenamento externo nem de dados de exemplo.
 - **Limitação atual:** o aplicativo não faz push em segundo plano quando está totalmente fechado; o aviso é exibido no painel ativo ou ao abrir a conta. A entrega de push nativo requer uma integração específica em etapa futura.
 
+
+## Convite opcional de instalação PWA no celular
+
+Para melhorar o acesso ao FreteOn no lançamento, as rotas **Cliente** e **Motorista** exibem um convite de instalação quando o usuário abre o site no celular, caso o aplicativo ainda não esteja instalado.
+
+- **Instalar aplicativo:** no Android, abre a confirmação nativa de instalação quando o navegador permite o evento `beforeinstallprompt`. Quando não há evento, mostra as instruções de instalação pelo menu do Chrome.
+- **iPhone/iPad:** apresenta orientações para abrir o FreteOn no Safari, tocar em Compartilhar e escolher **Adicionar à Tela de Início**.
+- **Continuar pelo navegador:** fecha a tela sem impedir login, cadastro ou qualquer outra função. A escolha é respeitada durante **sete dias** nesse navegador, via `localStorage` quando disponível.
+- **Aplicativo já instalado:** ao ser aberto pelo ícone do PWA (modo standalone), não exibe o convite. A instalação concluída também é reconhecida pelo evento `appinstalled`, quando suportado.
+- **Master, desktop e página inicial:** não exibem o convite.
+- Nenhuma instalação é executada automaticamente, nenhum navegador precisa instalar o aplicativo para usar o sistema e nenhuma notificação push com aplicativo fechado é prometida por esta tela.
+
+Testes das regras de elegibilidade e dispensa estão em `backend/test/installInvitation.test.js` (comando `npm test` na pasta `backend`).
+
