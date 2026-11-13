@@ -752,6 +752,15 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </div>
           )}
 
+          {area === "motorista" && state.user.verificationExpiringSoon && state.user.verified && (
+            <div className="verification-action-banner" role="status">
+              <ShieldCheck size={23}/>
+              <div><strong>A validade da sua CNH está próxima.</strong>
+                <p>Atualize seus dados em Meu perfil antes do vencimento para evitar a suspensão de novas propostas.</p>
+              </div>
+              <button className="secondary" onClick={() => setPage("perfil")}>Atualizar documentos</button>
+            </div>
+          )}
           {area === "motorista" && state.wallet?.blocked && (
             <div className="wallet-alert" role="alert">
               <span>Você possui comissão vencida há mais de 72 horas. Novas propostas estão temporariamente suspensas.</span>
@@ -836,6 +845,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             )}
             {area === "motorista" && (
               <button
+                disabled={!state.user.verified}
+                title={!state.user.verified ? "Envie e aprove seus documentos antes de ficar disponível." : ""}
                 className={`availability ${state.available ? "online" : ""}`}
                 onClick={() =>
                   mutate("/availability", "PATCH", {
@@ -974,11 +985,15 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                     <span
                       className={`status ${person.status === "approved" ? "completed" : "open"}`}
                     >
-                      {person.status === "approved"
-                        ? "Aprovado"
-                        : person.status === "rejected"
-                          ? "Reprovado"
-                          : "Em análise"}
+                      {person.verified
+                        ? "Verificado"
+                        : person.verificationStatus === "expired"
+                          ? "Documentos vencidos"
+                          : person.verificationStatus === "rejected"
+                            ? "Correções necessárias"
+                            : person.verificationStatus === "unsubmitted"
+                              ? "Sem documentos"
+                              : "Em análise"}
                     </span>
                     <button
                       className="secondary"
