@@ -3041,3 +3041,20 @@ dialog.install-invite-dialog::backdrop {
   .legal-gate-card { padding: 20px; }
   .public-legal-links, .dashboard-legal-links { gap: 7px 15px; }
 }
+
+.freight-legal-notice {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid #ddc8a7;
+  border-radius: 9px;
+  background: #fff9ef;
+  color: #775b3c;
+  font-size: 11px !important;
+  line-height: 1.6;
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.freight-legal-notice > svg { flex: 0 0 auto; color: #98652e; }
+.freight-legal-notice > a { color: #8a4a1f; text-decoration: underline; font-weight: 700; }
