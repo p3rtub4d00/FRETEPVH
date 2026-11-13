@@ -2,6 +2,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { Account, Freight } from "./models.js";
 import { authorize, fail, text } from "./auth.js";
+import { notifyInBackground } from "./webPush.js";
 
 export const PAYMENT_METHODS = ["pix_freteon", "card_driver", "cash_driver"];
 export const COMMISSION_PERCENT = 10;
@@ -185,5 +186,38 @@ finance.post("/requests/:id/finance", async (req, res) => {
     fail(403, "Ação financeira não autorizada ou inválida.");
   }
   await request.save();
+  const event = {
+    simulate_pix_payment: {
+      to: [request.driverId], role: "motorista",
+      title: "Pix de teste confirmado",
+      body: "O cliente confirmou o pagamento simulado. Você já pode iniciar o frete.",
+    },
+    confirm_delivery: {
+      to: [request.driverId], role: "motorista",
+      title: "Entrega confirmada pelo cliente",
+      body: "Consulte sua carteira para acompanhar comissão ou repasse simulado.",
+    },
+    confirm_delivery_master: {
+      to: [request.driverId], role: "motorista",
+      title: "Entrega confirmada",
+      body: "O Master confirmou a entrega. Consulte a carteira.",
+    },
+    confirm_commission_master: {
+      to: [request.driverId], role: "motorista",
+      title: "Comissão quitada (simulação)",
+      body: "O Master registrou o pagamento da comissão de teste.",
+    },
+    confirm_payout_master: {
+      to: [request.driverId], role: "motorista",
+      title: "Repasse registrado (simulação)",
+      body: "O Master confirmou o repasse fictício. Nenhum Pix real foi enviado.",
+    },
+    report_issue: {
+      to: [request.driverId], role: "motorista",
+      title: "Frete em contestação",
+      body: "O cliente informou um problema. A administração irá analisar.",
+    },
+  }[action];
+  if (event) notifyInBackground(event.to, { ...event, id: String(request._id) });
   res.json({ ok: true });
 });
