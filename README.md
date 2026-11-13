@@ -235,3 +235,26 @@ As notificações push são complementares aos avisos e modais dentro do painel;
 
 Testes de criptografia: `npm test --prefix backend`, incluindo retorno do aviso criptografado, assinatura VAPID e rejeição de endpoints internos. **Antes do lançamento, teste push em aparelhos reais e verifique que apenas a conta escolhida recebe avisos.**
 
+
+## Etapa 1.2: verificação documental privada de motoristas
+
+A partir desta versão, o FreteOn exige **verificação documental aprovada e vigente** para receber novos pedidos, enviar propostas, ser selecionado pelo cliente e ativar a disponibilidade. Motoristas já aprovados antes desta implantação precisam concluir o novo processo; o sistema **preserva o acesso e a conclusão de fretes que já foram contratados**, sem apagá-los. O fluxo financeiro permanece somente em simulação.
+
+**Motorista → Meu perfil → Verificação documental**
+- Informar placa (sete caracteres), validade da CNH, exercício do CRLV e declarar aplicabilidade de RNTRC (número, quando exigível).
+- Enviar as imagens de **CNH, CRLV e selfie**, usando câmera traseira/frontal ou seleção de arquivos. Fotos locais são otimizadas em JPEG, com resolução maior para legibilidade e limite de cerca de 650 KB por documento recebido.
+- Salvar dados, anexar os três documentos e solicitar análise. Alterar qualquer dado ou imagem invalida a aprovação anterior e exige nova revisão.
+- Ver status: incompleto, em análise, aprovado, correção solicitada ou vencido. O motorista pode acessar a conta e finalizar fretes existentes mesmo enquanto novos negócios estão suspensos.
+
+**Master → Motoristas → Analisar**
+- Consulta a cada documento por acesso autenticado exclusivo, junto aos metadados, placa e número RNTRC quando declarado.
+- Aprovação apenas com três imagens válidas, placa, datas e revisão manual. Reprovação exige motivo escrito de pelo menos dez caracteres.
+- Selo de **verificado** fica visível nas propostas apenas depois de aprovação documental válida. CNH vencida ou CRLV de exercício anterior perde a elegibilidade automaticamente; aviso de CNH próxima de vencer aparece 30 dias antes.
+- A análise deve confrontar foto do rosto, documentos e registros legais. Não existe reconhecimento facial automático nem consulta oficial à ANTT ou DETRAN. Um selo não é seguro nem garantia de qualidade.
+
+**Armazenamento e proteção:** as imagens dos documentos são gravadas como binários em **MongoDB GridFS**, bucket `private_driver_documents`, e não entram em `/api/state`, `publicUser`, fotos dos fretes nem conteúdo estático servido pelo Express. O endpoint de leitura exige autenticação como o próprio motorista ou Master. Nas respostas de listagem, apenas status e selo são públicos. Fotos antigas substituídas são descartadas do bucket. Não se deve colocar esses documentos em GitHub ou Render disk público.
+
+**Atenção à conformidade:** a ANTT exige RNTRC para o transporte rodoviário remunerado de cargas sujeito à legislação (Lei 11.442/2007 e Resolução 5.982/2022), além de requisitos específicos de registro e seguros. A declaração de aplicabilidade no perfil não substitui a análise da administração. Antes de lançamento comercial, estabelecer também procedimento de eliminação/retenção dos documentos, controle de acesso operacional, política de backups e verificação regulatória formal.
+
+A Política de Privacidade e os Termos foram atualizados para a versão `2026-11-13.2`, informando a finalidade e o acesso restrito aos documentos. Novos aceites são registrados no perfil para as contas existentes.
+
