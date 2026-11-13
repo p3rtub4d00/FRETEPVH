@@ -49,8 +49,11 @@ export async function optimizePhoto(file, kind = "cargo") {
   validateSourcePhoto(file);
   const image = await decodeImage(file);
   const profile = kind === "profile";
-  const maxWidth = profile ? 400 : 1280;
-  const maxLength = profile ? 220000 : 410000;
+  // Documentos exigem resolução superior à foto de perfil, sem
+  // ultrapassar os limites do upload autenticado.
+  const document = kind === "document";
+  const maxWidth = profile ? 400 : document ? 1800 : 1280;
+  const maxLength = profile ? 220000 : document ? 820000 : 410000;
   const imgWidth = image.naturalWidth || image.width;
   const imgHeight = image.naturalHeight || image.height;
   if (!imgWidth || !imgHeight)
