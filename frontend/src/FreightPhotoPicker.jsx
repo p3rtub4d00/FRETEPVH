@@ -22,6 +22,7 @@ export default function FreightPhotoPicker({
   onAdd,
   onRemove,
   busy = false,
+  onBusyChange,
   maxPhotos = 3,
 }) {
   const cameraId = useId();
@@ -40,6 +41,7 @@ export default function FreightPhotoPicker({
       return;
     }
     setProcessing(true);
+    onBusyChange?.(true);
     setError("");
     setNotice("");
     try {
@@ -56,6 +58,7 @@ export default function FreightPhotoPicker({
       setError(err.message || "Não foi possível abrir ou salvar as fotos.");
     } finally {
       setProcessing(false);
+      onBusyChange?.(false);
     }
   }
 

@@ -147,6 +147,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [photoProcessing, setPhotoProcessing] = useState(false);
   const [data, setData] = useState({
     title: "",
     origin: "",
@@ -173,6 +174,10 @@ function RequestForm({ onCreate, onClose, requestError }) {
   async function submit(event) {
     event.preventDefault();
     setError("");
+    if (photoProcessing) {
+      setError("Finalize o processamento da foto antes de continuar.");
+      return;
+    }
     if (step === 0 && data.origin.trim() === data.destination.trim()) {
       setError("Informe endereços diferentes para retirada e entrega.");
       return;
@@ -258,6 +263,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
             <FreightPhotoPicker
               photos={data.photos}
               busy={loading}
+              onBusyChange={setPhotoProcessing}
               onAdd={(images) => {
                 setData(previous => ({ ...previous, photos: [...previous.photos, ...images] }));
                 return true;
@@ -352,8 +358,8 @@ function RequestForm({ onCreate, onClose, requestError }) {
               Voltar
             </button>
           )}
-          <button className="primary" disabled={loading}>
-            {step === 2 ? "Publicar pedido" : "Continuar"}
+          <button className="primary" disabled={loading || photoProcessing}>
+            {photoProcessing ? "Preparando fotos..." : step === 2 ? "Publicar pedido" : "Continuar"}
             <ArrowRight size={17} />
           </button>
         </div>
