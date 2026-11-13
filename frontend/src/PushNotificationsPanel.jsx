@@ -1,6 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BellRing, BellOff, CheckCircle2, CircleAlert, Smartphone, TestTube2 } from "lucide-react";
 import { api } from "./api.js";
+import { shouldOfferPush } from "./pushInvitationRules.js";
+
+const storageKey = (role, accountId) =>
+  `freteon:push-invite-dismissed:v1:${role}:${accountId}`;
+function readDismissedAt(role, accountId) {
+  try {
+    const value = Number(localStorage.getItem(storageKey(role, accountId)));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch { return 0; }
+}
+
 
 function decodeBase64Url(input) {
   const normalized = String(input).replace(/-/g, "+").replace(/_/g, "/");
@@ -16,7 +27,15 @@ function isPushCapable() {
     "Notification" in window);
 }
 
-export default function PushNotificationsPanel({ role, compact = false }) {
+export default function PushNotificationsPanel({
+  role,
+  accountId = "",
+  autoInvite = false,
+  canDisplay = true,
+}) {
+  const dialogRef = useRef(null);
+  const [dismissedAt, setDismissedAt] = useState(() => readDismissedAt(role, accountId));
+  const [attemptedPermission, setAttemptedPermission] = useState(false);
   const [config, setConfig] = useState({ enabled: false, publicKey: null });
   const [supported] = useState(isPushCapable);
   const [permission, setPermission] = useState(
@@ -28,6 +47,34 @@ export default function PushNotificationsPanel({ role, compact = false }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  function dismissInvitation() {
+    const now = Date.now();
+    setDismissedAt(now);
+    try { localStorage.setItem(storageKey(role, accountId), String(now)); }
+    catch { /* Navegador sem armazenamento: o app continua funcionando */ }
+  }
+
+  useEffect(() => {
+    const sync = (event) => {
+      const data = event.detail;
+      if (data?.role !== role || data?.accountId !== accountId) return;
+      if (data.enabled) {
+        setActive(true);
+      } else {
+        setActive(false);
+        setDismissedAt(readDismissedAt(role, accountId));
+      }
+    };
+    window.addEventListener("freteon:push-setting", sync);
+    return () => window.removeEventListener("freteon:push-setting", sync);
+  }, [role, accountId]);
+
+  function broadcast(enabled) {
+    window.dispatchEvent(new CustomEvent("freteon:push-setting", {
+      detail: { role, accountId, enabled },
+    }));
+  }
 
   useEffect(() => {
     let live = true;
@@ -76,6 +123,8 @@ export default function PushNotificationsPanel({ role, compact = false }) {
         throw new Error("Permissão bloqueada. Libere as notificações nas configurações do navegador.");
       // Permissão solicitada SOMENTE após o usuário tocar em Ativar.
       if (Notification.permission === "default") {
+        setAttemptedPermission(true);
+        // A chamada nativa acontece diretamente após o clique do usuário.
         const result = await Notification.requestPermission();
         setPermission(result);
         if (result !== "granted")
@@ -101,7 +150,8 @@ export default function PushNotificationsPanel({ role, compact = false }) {
       });
       setActive(true);
       setCount((value) => Math.max(1, value));
-      setNotice("Avisos ativados neste dispositivo. Use Testar notificação para conferir.");
+      broadcast(true);
+      setNotice("Avisos ativados neste dispositivo. Você receberá novas atualizações.");
     } catch (e) {
       setError(e.message || "Não foi possível ativar os avisos.");
     } finally {
@@ -126,6 +176,8 @@ export default function PushNotificationsPanel({ role, compact = false }) {
       }
       setActive(false);
       setCount((value) => Math.max(0, value - 1));
+      dismissInvitation();
+      broadcast(false);
       setNotice("Avisos desativados neste dispositivo.");
     } catch (e) {
       setError(e.message || "Não foi possível desativar as notificações.");
@@ -152,6 +204,87 @@ export default function PushNotificationsPanel({ role, compact = false }) {
     (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   const standalone = navigator.standalone ||
     window.matchMedia?.("(display-mode: standalone)").matches;
+  const offer = shouldOfferPush({
+    role,
+    canDisplay,
+    loaded,
+    serverEnabled: config.enabled,
+    supported: supported && (!isIos || standalone),
+    permission: attemptedPermission ? "default" : permission,
+    active,
+    dismissedAt,
+    now: Date.now(),
+  });
+
+  useEffect(() => {
+    if (!autoInvite || !offer || !dialogRef.current) return;
+    const element = dialogRef.current;
+    // Preserve first-priority dialogs such as the install invitation and
+    // the customer's delivery confirmation. Open after they are closed.
+    const tryOpen = () => {
+      if (!element.isConnected || element.open) return;
+      const blocker = Array.from(document.querySelectorAll("dialog[open]"))
+        .some((dialog) => dialog !== element);
+      if (!blocker) {
+        try { element.showModal(); } catch { /* another dialog took priority */ }
+      }
+    };
+    tryOpen();
+    const observer = new MutationObserver(tryOpen);
+    observer.observe(document.body, {
+      subtree: true, childList: true, attributes: true, attributeFilter: ["open"],
+    });
+    return () => {
+      observer.disconnect();
+      if (element.open) element.close();
+    };
+  }, [autoInvite, offer]);
+
+  if (autoInvite) {
+    if (!offer) return null;
+    return (
+      <dialog ref={dialogRef} className="push-invite-dialog"
+        aria-labelledby="push-invite-title"
+        onCancel={(event) => {
+          event.preventDefault();
+          if (!busy) dismissInvitation();
+        }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget && !busy) dismissInvitation();
+        }}>
+        <div className="push-invite-body">
+          <div className="push-invite-icon"><BellRing size={32}/></div>
+          <span className="push-invite-eyebrow">FRETEON · AVISOS IMPORTANTES</span>
+          <h2 id="push-invite-title">Ative as notificações</h2>
+          <p>
+            {role === "motorista"
+              ? "Receba avisos de novos fretes e saiba quando sua proposta for aceita, mesmo fora do painel."
+              : "Saiba quando chegar uma proposta, um motorista for contratado ou seu frete for concluído."}
+          </p>
+          <div className="push-invite-benefits">
+            <span><CheckCircle2 size={17}/> Você escolhe se deseja autorizar.</span>
+            <span><CheckCircle2 size={17}/> Controle os avisos pelo seu perfil.</span>
+          </div>
+          {error && <p className="error" role="alert">{error}</p>}
+          {busy && <p className="muted" role="status">Configurando notificações...</p>}
+          <button className="primary push-invite-primary" type="button"
+            disabled={busy || permission === "denied"}
+            onClick={enable}>
+            <BellRing size={19}/> {busy ? "Ativando..." : permission === "denied"
+              ? "Permissão bloqueada" : "Ativar notificações"}
+          </button>
+          {permission === "denied" && (
+            <p className="push-warning">
+              O navegador bloqueou os avisos. Você pode liberá-los nas configurações do aparelho.
+            </p>
+          )}
+          <button className="push-invite-later" type="button"
+            disabled={busy} onClick={dismissInvitation}>Agora não, continuar</button>
+          <small>Não é obrigatório. Sua conta funciona normalmente sem notificações.</small>
+        </div>
+      </dialog>
+    );
+  }
   return (
     <section className={`push-panel${compact ? " compact" : ""}`}>
       <div className="push-panel-heading">
