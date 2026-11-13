@@ -34,6 +34,7 @@ import FreightPhotoPicker, { FreightPhotoImage } from "./FreightPhotoPicker.jsx"
 import { pendingDriverBookings } from "./driverBooking.js";
 import PrivacyMaster from "./PrivacyMaster.jsx";
 import PushNotificationsPanel from "./PushNotificationsPanel.jsx";
+import DriverVerificationPanel from "./DriverVerificationPanel.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
@@ -516,11 +517,6 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
       setNotice("Preferências de pagamento salvas.");
     });
   }
-  function reviewDriver(status) {
-    return mutate(`/drivers/${modal.driverId}`, "PATCH", { status }, () =>
-      setModal(null),
-    );
-  }
   async function logout() {
     try {
       await onLogout();
@@ -735,12 +731,25 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           {loaded && area !== "master" && page === "inicio" && (
             <PushNotificationsPanel role={area} compact />
           )}
-          {area === "motorista" && state.user.status !== "approved" && (
-            <p className="info" role="status">
-              {state.user.status === "rejected"
-                ? "Seu cadastro foi reprovado. Procure a administração."
-                : "Cadastro recebido! Aguarde a aprovação do administrador para receber pedidos e enviar propostas."}
-            </p>
+          {area === "motorista" && !state.user.verified && (
+            <div className="verification-action-banner" role="status">
+              <ShieldCheck size={23}/>
+              <div>
+                <strong>Verifique seus documentos para receber novos fretes</strong>
+                <p>
+                  {state.user.verificationStatus === "pending"
+                    ? "Sua documentação está em análise pelo Master."
+                    : state.user.verificationStatus === "rejected"
+                      ? "O Master solicitou correções na documentação."
+                      : state.user.verificationStatus === "expired"
+                        ? "Sua CNH ou CRLV precisa ser atualizado."
+                        : "Envie CNH, CRLV, selfie e dados do veículo para aprovação."}
+                  {" "}Fretes já contratados continuam disponíveis.
+                </p>
+              </div>
+              <button type="button" className="primary"
+                onClick={() => setPage("perfil")}>Enviar documentos</button>
+            </div>
           )}
 
           {area === "motorista" && state.wallet?.blocked && (
@@ -952,7 +961,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   <div className="person-row" key={person.id}>
                     <Avatar account={person} />
                     <div>
-                      <strong>{person.name}</strong>
+                      <strong>{person.name} {person.verified && (
+                        <span className="driver-verified-label"><ShieldCheck size={13}/> Verificado</span>
+                      )}</strong>
                       <p>
                         {person.vehicle || areas[person.role]}{" "}
                         {area === "master" && person.phone
@@ -1023,17 +1034,19 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                     <div>
                       <strong>Situação do cadastro</strong>
                       <p>
-                        {driver.status === "approved"
-                          ? "Cadastro aprovado."
-                          : driver.status === "rejected"
-                            ? "Cadastro reprovado. Entre em contato com a administração."
-                            : "Aguardando aprovação do administrador."}{" "}
-                        A verificação documental será adicionada em uma próxima
-                        etapa.
+                        {state.user.verified
+                          ? "Conta verificada e aprovada pelo Master."
+                          : "Documentos necessários para enviar novas propostas. Consulte a análise abaixo."}
                       </p>
                     </div>
                   </div>
                 </>
+              )}
+              {area === "motorista" && (
+                <DriverVerificationPanel
+                  driverId={user.id} role="motorista"
+                  onChange={refresh}
+                />
               )}
               <div className="profile-legal-links">
                 <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
@@ -1417,7 +1430,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               key={selected.id}
               request={selected}
               available={
-                state.available && state.user.status === "approved" &&
+                state.available && state.user.verified &&
                 !state.wallet?.blocked &&
                 (selected.paymentMethod !== "card_driver" || state.user.acceptsCard) &&
                 !busy
@@ -1457,7 +1470,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                       <div className="proposal-heading">
                         <Avatar account={person} />
                         <div>
-                          <strong>{person.name}</strong>
+                          <strong>{person.name} {person.verified && (
+                          <span className="driver-verified-label"><ShieldCheck size={13}/> Verificado</span>
+                        )}</strong>
                           <small>
                             <Star size={13} />
                             {person?.rating || "Novo"} · {person?.trips || 0}{" "}
@@ -1706,35 +1721,14 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           </p>
           <div className="review">
             <FileCheck2 />
-            <h3>Análise do cadastro</h3>
-            <p>
-              Celular:{" "}
-              {
-                state.drivers.find((person) => person.id === modal.driverId)
-                  .phone
-              }
-            </p>
-            <p>
-              Confira o nome, o telefone e o veículo do motorista antes de
-              aprovar. O envio de documentos será adicionado em uma próxima
-              etapa.
-            </p>
+            <p>Celular: {state.drivers.find((person) => person.id === modal.driverId).phone}</p>
           </div>
-          <div className="form-actions">
-            <button
-              className="secondary"
-              onClick={() => reviewDriver("rejected")}
-            >
-              Reprovar cadastro
-            </button>
-            <button
-              className="primary"
-              onClick={() => reviewDriver("approved")}
-            >
-              Aprovar cadastro
-              <Check size={18} />
-            </button>
-          </div>
+          <DriverVerificationPanel
+            key={modal.driverId}
+            driverId={modal.driverId}
+            role="master"
+            onChange={refresh}
+          />
         </Modal>
       )}
       {modal?.type === "notifications" && (
