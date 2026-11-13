@@ -95,6 +95,7 @@ driverVerification.post(
       metadata: { role: "motorista", ownerId: userId(req.user), kind: req.params.kind },
     });
     await pipeline(Readable.from([data]), upload);
+    if (!req.user.verification) req.user.verification = {};
     const v = req.user.verification;
     const old = v.documents.find((item) => item.kind === req.params.kind);
     v.documents = [
@@ -119,6 +120,7 @@ driverVerification.post(
 );
 
 driverVerification.patch("/driver-verification/details", authorize("motorista"), async (req, res) => {
+  if (!req.user.verification) req.user.verification = {};
   const v = req.user.verification;
   const plate = String(req.body?.plate || "").trim().toUpperCase().replace(/[-\s]/g, "");
   if (!validPlate(plate)) fail(400, "Placa inválida. Informe sete caracteres.");
@@ -154,6 +156,7 @@ driverVerification.patch("/driver-verification/details", authorize("motorista"),
 });
 
 driverVerification.post("/driver-verification/submit", authorize("motorista"), async (req, res) => {
+  if (!req.user.verification) req.user.verification = {};
   const v = req.user.verification;
   if (!types.every((kind) => v.documents.some((item) => item.kind === kind)))
     fail(409, "Envie CNH, CRLV e selfie antes de solicitar análise.");

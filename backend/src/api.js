@@ -147,7 +147,7 @@ api.get("/state", async (req, res) => {
       : [];
   res.json({
     user: publicUser(req.user),
-    available: req.user.available,
+    available: Boolean(req.user.available) && (req.user.role !== "motorista" || isVerifiedDriver(req.user)),
     drivers: people,
     users,
     requests: requests.map((request) => presentRequest(request, req.user)),
