@@ -1,9 +1,10 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Camera, ImagePlus, ImageOff, Trash2 } from "lucide-react";
 import { optimizePhoto, photoCountAllowed } from "./imageProcessing.js";
 
 export function FreightPhotoImage({ src, alt, className = "", eager = false }) {
   const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [src]);
   if (!src || failed) {
     return (
       <span className={`media-photo-fallback ${className}`} role="img" aria-label={alt || "Foto indisponível"}>
