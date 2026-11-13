@@ -4119,3 +4119,44 @@ dialog.push-invite-dialog::backdrop {
   line-height: 1.45;
   color: #60758a;
 }
+
+/* FreteOn: comunicação protegida e denúncias responsivas. */
+.proposal-services { display:grid; grid-template-columns:1fr; gap:8px; min-width:0;
+  margin:12px 0; padding:13px; border:1px solid #d8e2eb; border-radius:12px; }
+.proposal-services legend { font-weight:750; padding:0 5px; }
+.proposal-services p { font-size:12px; margin:0 0 3px; }
+.proposal-service-option { display:flex; align-items:center; gap:10px;
+  font-size:13px; padding:7px 5px; min-height:39px; }
+.proposal-service-option input { width:17px; height:17px; flex-shrink:0; }
+.freight-chat-panel { display:grid; gap:13px; margin:18px 0; padding:14px;
+  border:1px solid #dce6ed; border-radius:13px; background:#f8fbfd; min-width:0; }
+.freight-chat-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:9px; }
+.freight-chat-heading h3 { display:flex; align-items:center; gap:8px; font-size:16px; margin:0; }
+.freight-chat-heading button { width:auto; min-height:34px; padding:6px 10px; font-size:12px; display:flex; gap:6px; }
+.freight-chat-safety { display:flex; align-items:flex-start; gap:7px; margin:0;
+  color:#475d72; font-size:11px; line-height:1.6; }
+.freight-chat-safety svg { flex-shrink:0; margin-top:2px; }
+.freight-chat-messages { display:flex; flex-direction:column; gap:9px;
+  max-height:350px; min-height:80px; overflow:auto; padding:9px;
+  border:1px solid #dfe9f2; border-radius:10px; background:#fff; }
+.freight-chat-bubble { max-width:91%; padding:9px 11px; border-radius:10px;
+  display:grid; gap:4px; overflow-wrap:anywhere; background:#eaf0f6; }
+.freight-chat-bubble.mine { margin-left:auto; background:#d9f1e8; }
+.freight-chat-bubble small,.freight-chat-bubble time { font-size:10px; color:#577083; }
+.freight-chat-bubble p { margin:0; font-size:13px; white-space:pre-wrap; line-height:1.5; }
+.freight-chat-form { display:grid; gap:9px; }
+.freight-chat-form textarea { width:100%; box-sizing:border-box; min-height:66px; }
+.freight-chat-form button { width:fit-content; display:flex; align-items:center; gap:7px; min-height:38px; }
+.freight-report-form { display:grid; gap:13px; }
+.freight-report-form label { display:grid; gap:6px; font-weight:600; }
+.freight-report-form select,.freight-report-form textarea { width:100%; min-width:0; box-sizing:border-box; }
+.freight-report-card { display:grid; gap:8px; padding:13px; margin:12px 0;
+  border:1px solid #dee7ed; border-radius:11px; overflow-wrap:anywhere; }
+.freight-report-card header { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.freight-report-card p { margin:0; }
+.freight-report-card small { font-size:11px; }
+.freight-report-card button { width:fit-content; display:flex; gap:6px; align-items:center; }
+@media(max-width:480px) {
+  .freight-chat-panel { padding:10px; }
+  .freight-chat-bubble { max-width:96%; }
+}
