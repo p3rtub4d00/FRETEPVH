@@ -82,6 +82,21 @@ freightCommunication.post("/requests/:id/report", authorize("cliente", "motorist
   res.status(201).json({ ok: true, message: "Denúncia registrada para análise do Master." });
 });
 
+// A administração consulta o histórico de mensagens SOMENTE para um frete
+// com denúncia registrada, para avaliar a evidência da ocorrência.
+freightCommunication.get("/master/reports/:reportId/chat", authorize("master"), async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.reportId)) fail(404, "Denúncia não encontrada.");
+  const report = await FreightReport.findById(req.params.reportId);
+  if (!report) fail(404, "Denúncia não encontrada.");
+  const items = await FreightChat.find({ requestId: report.requestId })
+    .sort({ createdAt: -1 }).limit(100).lean();
+  res.setHeader("Cache-Control", "no-store, private");
+  res.json({ messages: items.reverse().map(item => ({
+    id: String(item._id), authorRole: item.authorRole,
+    content: item.content, createdAt: item.createdAt,
+  })) });
+});
+
 freightCommunication.get("/master/reports", authorize("master"), async (req, res) => {
   const reports = await FreightReport.find().sort({ createdAt: -1 }).limit(200).lean();
   res.setHeader("Cache-Control", "no-store, private");

@@ -10,7 +10,7 @@ import { finance, PAYMENT_METHODS, bookFinancials, overdueDriver, walletSummary 
 import { pushRouter } from "./pushRoutes.js";
 import { driverVerification } from "./driverVerification.js";
 import { freightCommunication } from "./freightCommunication.js";
-import { validProposalOptions, proposalDescription } from "./antiBypass.js";
+import { validProposalOptions, proposalDescription, hasExternalContact } from "./antiBypass.js";
 import { notifyInBackground } from "./webPush.js";
 
 export const api = Router();
@@ -79,6 +79,15 @@ function presentRequest(request, user) {
     result.proposals = data.proposals.filter(
       (proposal) => proposal.driverId === own(user),
     );
+  // Fretes antigos tinham texto livre. Não revelar contatos escritos
+  // em ofertas antigas enquanto o cliente ainda escolhe o motorista.
+  if (data.status === "open") {
+    result.proposals = result.proposals.map((proposal) => ({
+      ...proposal,
+      note: hasExternalContact(proposal.note) ?
+        "Descrição da proposta indisponível. Confira preço e serviços incluídos." : proposal.note,
+    }));
+  }
   if (user.role === "cliente") {
     // Cliente só visualiza o preço total contratado: não enviamos os dados
     // internos de comissão, líquido do motorista ou controle de repasses.
