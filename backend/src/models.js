@@ -209,6 +209,13 @@ export function publicUser(user) {
     acceptsCard: Boolean(user.acceptsCard),
     verified: isVerifiedDriver(user),
     verificationStatus: verificationStatus(user),
+    verificationExpiringSoon: Boolean(
+      user.role === "motorista" &&
+      user.verification?.cnhExpiresAt &&
+      new Date(user.verification.cnhExpiresAt).getTime() - Date.now() <
+        30 * 24 * 60 * 60 * 1000 &&
+      new Date(user.verification.cnhExpiresAt).getTime() >= Date.now()
+    ),
     profilePhoto: user.profilePhoto || "",
     termsVersion: user.termsVersion || "",
     termsAcceptedAt: user.termsAcceptedAt || null,
