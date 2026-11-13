@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema(
     acceptsCard: { type: Boolean, default: false },
     pixKey: { type: String, default: "", maxlength: 150 },
     profilePhoto: { type: String, default: "" },
+    termsVersion: { type: String, default: "" },
+    termsAcceptedAt: { type: Date, default: null },
+    privacyNoticeVersion: { type: String, default: "" },
+    privacyAcknowledgedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );
@@ -113,6 +117,19 @@ const freightSchema = new mongoose.Schema(
   { timestamps: true, optimisticConcurrency: true },
 );
 
+const privacyRequestSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, maxlength: 100 },
+    contact: { type: String, required: true, maxlength: 160 },
+    category: { type: String, required: true, enum: ["acesso", "correcao", "eliminacao", "oposicao", "outros"] },
+    message: { type: String, required: true, maxlength: 1500 },
+    status: { type: String, enum: ["pendente", "atendido"], default: "pendente", index: true },
+    handledAt: { type: Date, default: null },
+  },
+  { timestamps: true },
+);
+
+export const PrivacyRequest = mongoose.model("PrivacyRequest", privacyRequestSchema);
 export const Account = mongoose.model("Account", userSchema);
 export const Session = mongoose.model("Session", sessionSchema);
 export const Freight = mongoose.model("Freight", freightSchema);
@@ -127,6 +144,9 @@ export function publicUser(user) {
     available: user.available,
     acceptsCard: Boolean(user.acceptsCard),
     profilePhoto: user.profilePhoto || "",
+    termsVersion: user.termsVersion || "",
+    termsAcceptedAt: user.termsAcceptedAt || null,
+    privacyNoticeVersion: user.privacyNoticeVersion || "",
     initials: user.name
       .split(" ")
       .filter(Boolean)

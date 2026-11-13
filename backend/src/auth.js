@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { Account, Session, publicUser } from "./models.js";
+import { LEGAL_VERSION } from "./legalVersion.js";
 
 const scrypt = promisify(scryptCallback);
 const cookieName = "freteon_session"; // Compatibilidade com sessões anteriores.
@@ -125,6 +126,8 @@ const limit = rateLimit({
 });
 auth.post("/register", limit, async (req, res) => {
   const { role } = req.body;
+  if (req.body.termsAccepted !== true || req.body.privacyAcknowledged !== true)
+    fail(400, "Leia e aceite os Termos de Uso e confirme ciência da Política de Privacidade.");
   if (!["cliente", "motorista"].includes(role))
     fail(400, "Escolha Cliente ou Motorista.");
   const user = await Account.create({
@@ -135,6 +138,10 @@ auth.post("/register", limit, async (req, res) => {
     vehicle:
       role === "motorista" ? text(req.body.vehicle, 3, 100, "Veículo") : "",
     status: role === "motorista" ? "pending" : "approved",
+    termsVersion: LEGAL_VERSION,
+    termsAcceptedAt: new Date(),
+    privacyNoticeVersion: LEGAL_VERSION,
+    privacyAcknowledgedAt: new Date(),
   });
   res.status(201).json({ user: await issueSession(req, res, user) });
 });
@@ -148,6 +155,16 @@ auth.post("/login", limit, async (req, res) => {
   if (!roles.includes(req.body.role) || user.role !== req.body.role)
     fail(403, "Use a página de entrada correspondente ao seu perfil.");
   res.json({ user: await issueSession(req, res, user) });
+});
+auth.post("/accept-legal", authenticate, authorize("cliente", "motorista"), async (req, res) => {
+  if (req.body.termsAccepted !== true || req.body.privacyAcknowledged !== true)
+    fail(400, "A aceitação expressa dos Termos e a ciência da Política de Privacidade são obrigatórias.");
+  req.user.termsVersion = LEGAL_VERSION;
+  req.user.termsAcceptedAt = new Date();
+  req.user.privacyNoticeVersion = LEGAL_VERSION;
+  req.user.privacyAcknowledgedAt = new Date();
+  await req.user.save();
+  res.json({ user: publicUser(req.user) });
 });
 auth.get("/sessions", async (req, res) => {
   const sessions = {};

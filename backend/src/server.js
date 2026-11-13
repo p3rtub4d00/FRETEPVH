@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 import { auth, bootstrapAdmin } from "./auth.js";
 import { api } from "./api.js";
 import { maps } from "./maps.js";
-import { Account, Session, Freight } from "./models.js";
+import { Account, Session, Freight, PrivacyRequest } from "./models.js";
+import { privacyRouter } from "./privacyChannel.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -61,6 +62,7 @@ app.use((req, res, next) => {
   req.body ||= {};
   next();
 });
+app.use("/api/legal", privacyRouter);
 app.use("/api/auth", auth);
 app.use("/api", api);
 app.use("/api", (req, res) =>
@@ -128,7 +130,7 @@ let startupStage = "conexão MongoDB";
 try {
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
   startupStage = "criação de índices";
-  await Promise.all([Account.init(), Session.init(), Freight.init()]);
+  await Promise.all([Account.init(), Session.init(), Freight.init(), PrivacyRequest.init()]);
   startupStage = "criação do Master";
   await bootstrapAdmin();
   console.log("MongoDB conectado.");
