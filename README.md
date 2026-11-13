@@ -193,3 +193,16 @@ A versão contempla intermediação (FreteOn não executa o transporte), respons
 
 Documentação jurídica de referência: Lei 8.078/1990 (CDC), Lei 10.406/2002 (Código Civil, transporte), Lei 13.709/2018 (LGPD), Lei 12.965/2014 (Marco Civil), Lei 11.442/2007 e regulamentação ANTT, Lei 13.455/2017 (preço por modalidade de pagamento). Recomenda-se revisão final por advogado no Brasil antes de passar da simulação a operações reais.
 
+
+## Fotos de perfil e da carga: câmera, galeria e upload
+
+O sistema agora apresenta **dois botões explícitos em dispositivos móveis**:
+- **Tirar foto:** usa a câmera frontal para foto de perfil (`capture="user"`) e a traseira para a carga (`capture="environment"`), quando o navegador permitir.
+- **Escolher do aparelho:** permite selecionar arquivos da galeria, de Downloads ou do seletor de arquivos oferecido pelo sistema operacional. Para a carga, admite várias imagens de uma vez até completar o limite de três.
+
+Fotos de câmeras modernas geralmente ultrapassam 600 KB. Em vez de recusar o original, o navegador tenta ler JPEG, PNG, WebP e HEIC/HEIF, reduz suas dimensões e **envia JPEG otimizado**, compatível com o limite do servidor. Se o dispositivo não conseguir abrir um HEIC/HEIF, a interface orienta tirar foto em JPG ou selecionar outra imagem. A entrada aceita até 16 MB por arquivo original; o resultado enviado é muito menor. Fotos da carga não são obrigatórias, mas sua quantidade é mostrada antes de publicar.
+
+O **Cliente** também pode acrescentar ou excluir imagens pelos detalhes de um pedido **Aberto ou Contratado**, antes do transporte começar. As alterações são persistidas no MongoDB e aparecem nas atualizações do painel do Motorista. Os arquivos antigos válidos continuam disponíveis; casos de imagens danificadas apresentam um placeholder visível, em vez de um ícone quebrado. Os motoristas não podem modificar fotos do cliente.
+
+Limite backend: no máximo três imagens raster em data URI, máximo 810000 caracteres por imagem; perfil validado em até 320000 caracteres. Cabe a uma etapa futura estudar armazenamento de arquivos em objeto/bucket e thumbnails separados do estado, para escala. Os testes de validação e limites estão em `backend/test/imageProcessing.test.js` e `backend/test/freightPhotos.test.js`.
+
