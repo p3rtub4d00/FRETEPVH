@@ -2,13 +2,15 @@ import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { randomUUID } from "node:crypto";
 import mongoose from "mongoose";
-import { Account, Freight, publicUser, isVerifiedDriver } from "./models.js";
+import { Account, Freight, FreightReport, publicUser, isVerifiedDriver } from "./models.js";
 import { authenticate, authorize, fail, text } from "./auth.js";
 import { calculateRoadRoute } from "./maps.js";
 import { LEGAL_VERSION } from "./legalVersion.js";
 import { finance, PAYMENT_METHODS, bookFinancials, overdueDriver, walletSummary } from "./finance.js";
 import { pushRouter } from "./pushRoutes.js";
 import { driverVerification } from "./driverVerification.js";
+import { freightCommunication } from "./freightCommunication.js";
+import { validProposalOptions, proposalDescription } from "./antiBypass.js";
 import { notifyInBackground } from "./webPush.js";
 
 export const api = Router();
@@ -27,6 +29,7 @@ api.use((req, res, next) => {
 api.use(finance);
 api.use(pushRouter);
 api.use(driverVerification);
+api.use(freightCommunication);
 const own = (user) => String(user._id);
 function validId(id) {
   if (!mongoose.isValidObjectId(id)) fail(404, "Registro não encontrado.");
@@ -316,7 +319,8 @@ api.post(
       driverId: own(req.user),
       price: Math.round(req.body.price * 100) / 100,
       time: time(req.body.time),
-      note: text(req.body.note, 1, 400, "Detalhes da proposta"),
+      services: validProposalOptions(req.body.services || []),
+      note: proposalDescription(req.body.services || []),
     };
     request.proposals = [
       ...request.proposals.filter((item) => item.driverId !== own(req.user)),
@@ -398,6 +402,19 @@ api.patch("/requests/:id", async (req, res) => {
     } else fail(409, "Essa alteração não está disponível para este frete.");
   } else fail(403, "Você não pode alterar este frete.");
   await request.save();
+  // A auditoria não pune automaticamente: fornece ao Master sinais de
+  // cancelamento após escolha de motorista, inclusive em clientes antigos.
+  if (previousStatus === "booked" && request.status === "cancelled") {
+    const description = typeof req.body.cancelReason === "string"
+      ? req.body.cancelReason.trim().slice(0, 500)
+      : "";
+    await FreightReport.create({
+      requestId: request._id, reporterId: own(req),
+      reporterRole: "cliente", reportedId: request.driverId || "",
+      category: "cancel_after_booking",
+      description: description || "Cancelamento registrado após contratação, sem motivo informado.",
+    }).catch((error) => console.warn("Falha ao registrar cancelamento para análise:", error?.name));
+  }
   if (previousStatus !== request.status) {
     if (request.status === "booked" && request.driverId) {
       notifyInBackground([request.driverId], {

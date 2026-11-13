@@ -67,7 +67,10 @@ freightCommunication.post("/requests/:id/report", authorize("cliente", "motorist
   const category = req.body?.category;
   if (!["outside_deal", "inappropriate", "other"].includes(category))
     fail(400, "Selecione o tipo de denúncia.");
-  const description = safeChatMessage(req.body?.description);
+  const description = typeof req.body?.description === "string"
+    ? req.body.description.trim() : "";
+  if (description.length < 10 || description.length > 500)
+    fail(400, "Descreva o ocorrido em 10 a 500 caracteres.");
   const reportedId = isClient ? String(req.body?.reportedId || request.driverId || "") : request.clientId;
   if (isClient && reportedId && !request.proposals.some(p => p.driverId === reportedId) &&
       request.driverId !== reportedId)
