@@ -86,7 +86,8 @@ const freightSchema = new mongoose.Schema(
     origin: { type: String, required: true },
     destination: { type: String, required: true },
     description: { type: String, required: true },
-    vehicle: { type: String, required: true },
+    // Pedidos antigos preservam seu veículo; novos são livres para qualquer tipo.
+    vehicle: { type: String, default: "" },
     helper: { type: Boolean, default: false },
     distanceMeters: { type: Number, default: null, min: 0 },
     durationMinutes: { type: Number, default: null, min: 1 },

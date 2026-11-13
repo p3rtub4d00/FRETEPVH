@@ -189,7 +189,7 @@ api.post("/requests", authorize("cliente"), rateLimit({
     origin: text(data.origin, 5, 180, "Retirada"),
     destination: text(data.destination, 5, 180, "Entrega"),
     description: text(data.description, 1, 500, "Detalhes"),
-    vehicle: text(data.vehicle, 3, 40, "Veículo"),
+    // O veículo é escolhido pelo motorista, não exigido do cliente.
     date: text(data.date, 10, 10, "Data"),
     time: time(data.time),
   };
