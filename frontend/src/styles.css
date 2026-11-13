@@ -2601,3 +2601,180 @@ dialog:has(.driver-acceptance-content) {
     font-size: 15px;
   }
 }
+
+/* Convite de instalação PWA (não bloqueante): Cliente e Motorista no celular. */
+dialog.install-invite-dialog {
+  width: calc(100% - 28px);
+  max-width: 440px;
+  max-height: min(92dvh, 780px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 0;
+  border-radius: 22px;
+  padding: 0;
+  background: #fff;
+  color: #142c49;
+  box-shadow: 0 24px 90px #071c3980;
+}
+dialog.install-invite-dialog::backdrop {
+  background: #07192cc4;
+  backdrop-filter: blur(6px);
+}
+.install-invite-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 34px 26px max(24px, env(safe-area-inset-bottom));
+  text-align: center;
+}
+.install-invite-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #73849a;
+  background: #f3f6fa;
+}
+.install-invite-close:hover {
+  background: #e6edf5;
+}
+.install-invite-logo {
+  display: block;
+  width: 82px;
+  height: 82px;
+  object-fit: cover;
+  border: 1px solid #dce6f0;
+  border-radius: 19px;
+  box-shadow: 0 9px 23px #122f4c26;
+}
+.install-invite-eyebrow {
+  color: #c36d27;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+.install-invite-content h2 {
+  color: #112d49;
+  margin: 0;
+  max-width: 345px;
+  font-size: clamp(22px, 5vw, 27px);
+  letter-spacing: -0.5px;
+  line-height: 1.18;
+}
+.install-invite-description {
+  color: #687e94;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.install-invite-benefits {
+  display: grid;
+  gap: 12px;
+  align-self: stretch;
+  padding: 17px;
+  margin: 4px 0;
+  border: 1px solid #e2eaf2;
+  border-radius: 12px;
+  background: #f7f9fc;
+  text-align: left;
+}
+.install-invite-benefits span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #405b76;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.install-invite-benefits svg {
+  color: #279762;
+  flex-shrink: 0;
+}
+.install-invite-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  border-radius: 11px;
+}
+.install-invite-primary > svg {
+  flex-shrink: 0;
+}
+.install-invite-secondary {
+  color: #415b77;
+  font-weight: 700;
+  font-size: 13px;
+  min-height: 42px;
+  width: 100%;
+  padding: 9px;
+}
+.install-invite-secondary:hover {
+  color: #142e4c;
+  text-decoration: underline;
+}
+.install-invite-footnote {
+  color: #8793a4;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+.install-invite-instructions {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  align-self: stretch;
+  margin: 4px 0;
+  padding: 14px 14px 14px 11px;
+  background: #f5f8fd;
+  border: 1px solid #dfe7ef;
+  border-radius: 12px;
+  text-align: left;
+}
+.install-invite-instructions > svg {
+  color: #b36a2d;
+  flex-shrink: 0;
+}
+.install-invite-instructions ol {
+  padding-left: 17px;
+  margin: 0;
+  color: #49627f;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.install-invite-instructions li + li {
+  margin-top: 6px;
+}
+@media (max-width: 480px) {
+  .install-invite-content {
+    padding: 28px 19px max(20px, env(safe-area-inset-bottom));
+  }
+  .install-invite-logo {
+    width: 72px;
+    height: 72px;
+  }
+  .install-invite-content {
+    gap: 11px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  dialog.install-invite-dialog[open] {
+    animation: freteon-install-appear 160ms ease-out;
+  }
+  @keyframes freteon-install-appear {
+    from { opacity: 0.6; transform: translateY(9px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
