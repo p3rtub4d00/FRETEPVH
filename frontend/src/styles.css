@@ -3058,3 +3058,164 @@ dialog.install-invite-dialog::backdrop {
 }
 .freight-legal-notice > svg { flex: 0 0 auto; color: #98652e; }
 .freight-legal-notice > a { color: #8a4a1f; text-decoration: underline; font-weight: 700; }
+
+/* Foto por câmera ou galeria: controles acessíveis em Android/iOS. */
+.visually-hidden-media-input {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  border: 0 !important;
+  opacity: 0 !important;
+}
+.photo-source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.media-source-button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  cursor: pointer;
+  min-height: 46px;
+  text-align: center;
+  flex: 1 1 154px;
+  font-size: 13px;
+  line-height: 1.3;
+  margin: 0;
+  text-decoration: none;
+}
+.media-source-button.disabled,
+.media-source-button[aria-disabled="true"] {
+  opacity: .48;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+.visually-hidden-media-input:focus-visible + .media-source-button {
+  outline: 3px solid #f48a35;
+  outline-offset: 2px;
+}
+.freight-photo-picker {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e1e9f1;
+  border-radius: 12px;
+  padding: 15px;
+  margin: 12px 0 16px;
+  background: #f8fbfe;
+}
+.freight-photo-picker > p {
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}
+.photo-picker-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 14px;
+}
+.photo-picker-title span {
+  flex-shrink: 0;
+  color: #687e95;
+  font-size: 12px;
+}
+.cargo-photo-previews {
+  gap: 10px;
+  margin: 4px 0;
+}
+.cargo-photo-previews > div {
+  width: 94px;
+  min-height: 82px;
+}
+.cargo-photo-previews img,
+.cargo-photo-previews .media-photo-fallback {
+  width: 94px;
+  height: 82px;
+  object-fit: cover;
+  border-radius: 9px;
+  border: 1px solid #d9e4ed;
+}
+.cargo-photo-previews button {
+  border: 1px solid #dce4ed;
+  box-shadow: 0 2px 7px #10243e15;
+}
+.media-photo-fallback {
+  background: #f0f4f8;
+  border: 1px solid #dce6ef;
+  border-radius: 8px;
+  color: #718396;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 64px;
+  min-height: 64px;
+  padding: 8px;
+  text-align: center;
+}
+.media-photo-fallback small {
+  font-size: 9px;
+  line-height: 1.15;
+}
+.freight-card-photo .media-photo-fallback {
+  width: 83px;
+  height: 70px;
+  flex-shrink: 0;
+}
+.freight-gallery-images .media-photo-fallback {
+  display: flex;
+  width: 100%;
+  height: 110px;
+}
+.freight-photo-expanded.media-photo-fallback {
+  width: 100%;
+  height: min(50vh, 400px);
+}
+.profile-photo-actions .photo-source-actions {
+  width: 100%;
+}
+.profile-photo-actions .media-source-button {
+  flex: 0 1 auto;
+}
+.profile-photo-actions .media-source-button svg {
+  flex-shrink: 0;
+}
+.photo-success {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #236b47;
+  font-weight: 650;
+  margin: 0;
+}
+.photo-review-counter {
+  color: #4a657f;
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+@media (max-width: 560px) {
+  .photo-source-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .media-source-button {
+    padding: 10px 7px;
+    min-height: 54px;
+    width: 100%;
+    font-size: 12px;
+    white-space: normal;
+  }
+  .profile-photo-actions .media-source-button { flex: unset; }
+  .freight-photo-picker { padding: 12px; }
+  .freight-gallery-images .media-photo-fallback { height: 92px; }
+}
