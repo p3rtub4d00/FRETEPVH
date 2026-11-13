@@ -75,3 +75,18 @@ test("upload aceita JPEG reduzido mas rejeita URL, HTML ou PDF", () => {
   assert.throws(() => verifyDocumentPayload("data:application/pdf;base64,JVBERi0="), /Envie uma foto/);
   assert.throws(() => verifyDocumentPayload("data:image/jpeg;base64,"+randomBytes(400).toString("base64")), /Arquivo de foto inválido/);
 });
+
+test("motorista verificado fica disponível mesmo com status manual antigo desligado", () => {
+  const legacy = { ...driver, available: false };
+  const presented = publicUser(legacy);
+  assert.equal(isVerifiedDriver(legacy, now), true);
+  assert.equal(presented.verified, true);
+  assert.equal(presented.available, true);
+});
+
+test("motorista sem verificação continua sem novas propostas", () => {
+  const unverified = { ...driver, available: true, status: "pending" };
+  const presented = publicUser(unverified);
+  assert.equal(presented.verified, false);
+  assert.equal(presented.available, false);
+});
