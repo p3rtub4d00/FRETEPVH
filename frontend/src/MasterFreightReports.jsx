@@ -60,6 +60,7 @@ export default function MasterFreightReports() {
   const [reports, setReports] = useState([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
+  const [evidence, setEvidence] = useState({});
   async function load() {
     try { const r = await api("/master/reports"); setReports(r.reports || []); }
     catch(e) { setError(e.message); }
@@ -69,6 +70,18 @@ export default function MasterFreightReports() {
     setBusy(id); setError("");
     try { await api(`/master/reports/${id}`, { method: "PATCH", body: { status: "reviewed" } }); await load(); }
     catch(e) { setError(e.message); }
+    finally { setBusy(""); }
+  }
+  async function loadEvidence(id) {
+    if (evidence[id]) {
+      setEvidence(previous => ({ ...previous, [id]: null }));
+      return;
+    }
+    setBusy(id); setError("");
+    try {
+      const data = await api(`/master/reports/${id}/chat`);
+      setEvidence(previous => ({ ...previous, [id]: data.messages || [] }));
+    } catch(e) { setError(e.message); }
     finally { setBusy(""); }
   }
   return <section className="panel">
@@ -85,10 +98,24 @@ export default function MasterFreightReports() {
       <small>Frete: {item.requestId}</small>
       <small>Denunciante: {item.reporterRole} · ID {item.reporterId}</small>
       {item.reportedId && <small>Conta mencionada: {item.reportedId}</small>}
-      <div>{item.status === "pending" ?
-        <button className="secondary" disabled={busy === item.id} onClick={() => markReviewed(item.id)}>
-          <CheckCircle2 size={15}/> Marcar como analisada
-        </button> : <span className="muted">Analisada</span>}</div>
+      <div className="freight-report-actions">
+        <button type="button" className="secondary" disabled={busy === item.id}
+          onClick={() => loadEvidence(item.id)}>
+          {evidence[item.id] ? "Ocultar conversa" : "Consultar conversa vinculada"}
+        </button>
+        {item.status === "pending" ?
+          <button className="secondary" disabled={busy === item.id} onClick={() => markReviewed(item.id)}>
+            <CheckCircle2 size={15}/> Marcar como analisada
+          </button> : <span className="muted">Analisada</span>}
+      </div>
+      {Array.isArray(evidence[item.id]) && <div className="freight-report-evidence">
+        <strong>Mensagens do frete (até 100 mais recentes)</strong>
+        {!evidence[item.id].length && <p>Sem mensagens registradas para este frete.</p>}
+        {evidence[item.id].map(msg => <p key={msg.id}>
+          <small>{msg.authorRole} · {new Date(msg.createdAt).toLocaleString("pt-BR")}</small>
+          {msg.content}
+        </p>)}
+      </div>}
     </article>)}
   </section>;
 }
