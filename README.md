@@ -297,3 +297,10 @@ O botão **Solicitar frete** aparece somente nas telas de Início e Meus fretes 
 - A sessão atual e o ID da conta são preservados. Nenhuma foto, documento, frete, proposta ou cobrança é excluída ao editar o nome ou o número.
 - A versão do cache do PWA foi atualizada para distribuir os controles compactos aos usuários com aplicativo instalado.
 
+
+## Fretes sem exigência de veículo (13/11/2026)
+
+A seleção de picape, utilitário ou caminhão foi removida do formulário do Cliente. Um pedido novo descreve **carga, origem, destino, data, horário, fotos, necessidade de ajudante e pagamento**, mas não restringe o veículo. Todos os motoristas com documentação verificada acessam os chamados abertos em seus painéis; os que estão disponíveis também entram na lista de avisos push do servidor. Cada motorista avalia se o próprio veículo comporta a carga e decide se envia uma proposta; o Cliente compara preços e escolhe quem contratar.
+
+Na API de criação, `vehicle` deixou de ser obrigatório e novos documentos `Freight` recebem `vehicle: ""` por padrão. Os fretes antigos mantêm a categoria cadastrada; a interface mostra "Aberto a todos os veículos" apenas para novos pedidos sem tipo definido. A escolha e capacidade do veículo permanecem sob responsabilidade do motorista e a modalidade de pagamento precisa ser compatível com sua carteira. Não há exclusão de dados nem alteração em contratos antigos.
+
