@@ -380,6 +380,11 @@ function RequestForm({ onCreate, onClose, requestError }) {
               <small>
                 Os motoristas enviam seus preços. Você escolhe a proposta.
               </small>
+              <p className="freight-legal-notice">
+                <ShieldCheck size={16} />
+                O FreteOn apenas intermedeia a contratação: o transporte e a guarda da carga são executados pelo motorista escolhido, observadas as responsabilidades previstas em lei.
+                <a href="/termos" target="_blank" rel="noopener noreferrer">Ler Termos de Uso</a>
+              </p>
             </div>
           </>
         )}
@@ -1632,6 +1637,11 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           </p>
           <div className="finance-action">
             <PaymentLabel method={selected.paymentMethod} />
+            <p className="freight-legal-notice">
+              <ShieldCheck size={16} />
+              O contrato de transporte é celebrado diretamente com o motorista. O FreteOn fornece a intermediação digital e não inclui seguro automático da carga.
+              <a href="/termos" target="_blank" rel="noopener noreferrer">Ver responsabilidades</a>
+            </p>
             <p className="client-total-price">
               Total a pagar:{" "}
               <strong>{money(selected.proposals.find((p) => p.id === modal.proposalId).price)}</strong>
