@@ -3318,3 +3318,278 @@ dialog.install-invite-dialog::backdrop {
   }
   .push-panel-actions button { width: 100%; }
 }
+
+/* CNH, CRLV e selfie — upload privado e revisão documental. */
+.driver-verification-panel {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 17px;
+  margin: 20px 0;
+  padding: 17px;
+  border: 1px solid #dee9f2;
+  border-radius: 13px;
+  text-align: left;
+  background: #fbfcfe;
+}
+.verification-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.verification-icon {
+  flex-shrink: 0;
+  height: 45px;
+  width: 45px;
+  display: grid;
+  place-items: center;
+  color: #286a52;
+  border-radius: 12px;
+  background: #e4f5ed;
+}
+.verification-head h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+.verification-head p {
+  margin: 0;
+  color: #65798b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.verification-status {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 11px;
+  border: 1px solid #f2d39d;
+  background: #fff8eb;
+  color: #76521e;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.verification-status strong { font-size: 13px; }
+.verification-status span { font-weight: 400; }
+.verification-approved {
+  border-color: #addac0;
+  background: #f0faf5;
+  color: #256043;
+}
+.verification-rejected,.verification-expired {
+  border-color: #efb8b8;
+  background: #fff2f2;
+  color: #9f3333;
+}
+.verification-rejection {
+  display: flex; align-items: flex-start; gap: 9px;
+  color: #923e39; font-size: 12px; line-height: 1.6;
+  border: 1px solid #f0c9c2;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff5f2;
+}
+.verification-rejection svg { flex-shrink: 0; }
+.verification-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+  border: 1px solid #e0e8ef;
+  background: white;
+  border-radius: 11px;
+  padding: 13px;
+}
+.verification-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 7px;
+  line-height: 1.4;
+  font-weight: 700;
+  min-width: 0;
+  color: #475b70;
+}
+.verification-form input {
+  width: 100%;
+  min-height: 43px;
+  border-radius: 9px;
+  border: 1px solid #cddae6;
+  padding: 8px 11px;
+  background: #fff;
+}
+.verification-form label.verification-checkbox {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: row;
+  gap: 9px;
+  font-weight: 600;
+}
+.verification-checkbox input {
+  width: 18px;
+  min-height: 18px;
+  height: 18px;
+  accent-color: #196544;
+}
+.verification-form .verification-legal-warning {
+  grid-column: 1 / -1;
+}
+.verification-form > button {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+.verification-documents {
+  display: grid;
+  gap: 12px;
+}
+.verification-documents h4 {
+  font-size: 15px;
+  margin: 0;
+}
+.verification-documents > p {
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.5;
+  color: #687a8d;
+}
+.verification-doc-row {
+  display: grid;
+  gap: 11px;
+  padding: 12px 13px;
+  border-radius: 11px;
+  background: #fff;
+  border: 1px solid #dce6ee;
+}
+.verification-doc-info {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.verification-doc-info svg { color: #9d6532; flex-shrink: 0; }
+.verification-doc-info div { display: grid; gap: 3px; }
+.verification-doc-info strong { font-size: 13px; }
+.verification-doc-info span { color: #6c8296; font-size: 11px; }
+.verification-doc-row .media-source-button {
+  flex: 1 1 145px;
+  padding: 8px 11px;
+}
+.verification-master-details {
+  display: grid;
+  gap: 11px;
+}
+.verification-master-details > p {
+  margin: 0;
+  color: #506981;
+  font-size: 13px;
+}
+.verification-document-list {
+  display: grid;
+  gap: 12px;
+}
+.verification-document-item {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid #e1e7ee;
+  background: #fff;
+  border-radius: 11px;
+}
+.verification-document-item strong { font-size: 13px; }
+.verification-document-item > span { color: #687d91; font-size: 12px; }
+.verification-preview > button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin: 3px 0;
+  min-height: 39px;
+}
+.verification-document-image {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  max-height: 540px;
+  object-fit: contain;
+  background: #f2f4f7;
+  border: 1px solid #d9e3ed;
+  border-radius: 9px;
+  margin: 10px 0;
+}
+.verification-legal-warning {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  color: #715c3d;
+  border: 1px solid #e7d5b8;
+  background: #fffaf1;
+  border-radius: 9px;
+  padding: 11px;
+  font-size: 11px;
+  line-height: 1.65;
+  margin: 0;
+}
+.verification-legal-warning svg { flex-shrink: 0; }
+.verification-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.verification-review-actions textarea {
+  flex: 1 0 100%;
+  width: 100%;
+  min-height: 75px;
+  border: 1px solid #ced9e4;
+  border-radius: 9px;
+  padding: 10px;
+  font: inherit;
+}
+.verification-review-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1 1 140px;
+  min-height: 43px;
+  font-size: 12px;
+}
+.verification-action-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 17px;
+  border: 1px solid #ebce93;
+  border-radius: 12px;
+  padding: 15px;
+  background: #fffaf1;
+}
+.verification-action-banner > svg {
+  flex-shrink: 0;
+  color: #a46a25;
+}
+.verification-action-banner > div { flex: 1 1 240px; }
+.verification-action-banner strong { font-size: 13px; color: #724a1d; }
+.verification-action-banner p {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #866846;
+  margin: 6px 0 0;
+}
+.verification-action-banner button { min-height: 42px; }
+.driver-verified-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #e9f8ed;
+  color: #267550;
+  border: 1px solid #bce1c9;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 10px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+@media (max-width: 620px) {
+  .driver-verification-panel { padding: 12px; }
+  .verification-form { grid-template-columns: 1fr; }
+  .verification-review-actions { display: grid; grid-template-columns: 1fr; }
+  .verification-action-banner button { width: 100%; }
+}
