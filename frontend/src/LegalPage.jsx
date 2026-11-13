@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, ArrowRight, FileText, LockKeyhole, ShieldCheck } from "lucide-react";
 import { api } from "./api.js";
 
-export const LEGAL_VERSION = "2026-11-13";
+export const LEGAL_VERSION = "2026-11-13.2";
 export const legalPaths = ["/termos", "/privacidade"];
 
 const terms = [
@@ -25,6 +25,7 @@ const terms = [
     title: "3. Cadastro e segurança da conta",
     paragraphs: [
       "Cliente e motorista devem manter nome, número de celular, senha e demais informações de cadastro corretos. O motorista também informa seu veículo e suas modalidades de recebimento. Aprovação de cadastro, quando existente, não representa certificação de qualidade, seguro, habilitação ou regularidade permanente do transportador.",
+      "Para novas propostas e contratações, o motorista deve apresentar CNH, CRLV, selfie, placa, validade documental e dados de registro de transporte quando aplicáveis. A administração verifica os arquivos manualmente. O selo indica somente a revisão documental realizada, não representa garantia de transporte, seguro ou ausência de risco. Documentos incompletos, reprovados ou vencidos suspendem novas propostas, preservando a gestão dos fretes já contratados.",
       "Cada usuário deve proteger suas credenciais e comunicar uso suspeito. A plataforma poderá solicitar atualização cadastral e realizar verificações proporcionais para segurança e prevenção a fraudes."
     ]
   },
@@ -172,6 +173,7 @@ const privacy = [
     title: "2. Quais dados são coletados",
     paragraphs: [
       "Conta: nome, telefone, função na plataforma, senha protegida por hash, data de cadastro, aceite dos Termos e ciência da Política, fotografia de perfil caso enviada, informações do veículo e situação de aprovação do motorista.",
+      "Verificação de motoristas: fotografias da CNH, do CRLV e selfie, placa, validade da habilitação, exercício do documento veicular, RNTRC informado quando aplicável, data e resultado da revisão e eventual motivo de correção. Não há reconhecimento facial automatizado nesta etapa; as imagens são analisadas manualmente pela administração.",
       "Fretes: endereço de coleta e entrega, título, descrição, fotos dos objetos, veículo solicitado, data, horário, estimativa de rota quando disponível, propostas, valores, modalidade de pagamento, aceite, status da entrega, avaliação e registros de contestação.",
       "Carteira: chave Pix informada voluntariamente pelo motorista, valores simulados de comissão, solicitações de repasse, quitação fictícia e datas de movimentação no sistema. O FreteOn atualmente não solicita dados completos de cartão bancário nem processa Pix real.",
       "Dados técnicos: cookies de sessão, identificadores, registros de acesso e eventos necessários à segurança, prevenção a abuso e operação. Localização GPS é acessada apenas se o usuário optar por fornecê-la e o navegador autorizar."
@@ -188,6 +190,7 @@ const privacy = [
     title: "4. Acesso aos endereços, fotos e outros usuários",
     paragraphs: [
       "Motoristas aprovados poderão visualizar dados do pedido necessários para avaliar o frete, tais como endereços, descrição, horário e fotos da carga. Quando o cliente escolhe o motorista, as partes passam a compartilhar informações necessárias à execução. O cliente poderá visualizar informações do motorista, veículo, foto do perfil, propostas, preço e avaliação.",
+      "Os documentos de CNH, CRLV e selfie são armazenados em área privada do banco, separada das fotos públicas dos fretes, e somente podem ser consultados pelo próprio motorista ou administração autenticada. Clientes e outros motoristas não recebem cópias desses documentos.",
       "Os usuários se comprometem a não reutilizar dados, fotografias ou contatos obtidos na plataforma para marketing não autorizado, assédio, divulgação pública ou qualquer finalidade estranha ao serviço."
     ]
   },
