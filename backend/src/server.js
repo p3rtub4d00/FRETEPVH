@@ -17,7 +17,7 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        "img-src": ["'self'", "data:"],
+        "img-src": ["'self'", "data:", "blob:"],
         "style-src": [
           "'self'",
           "'unsafe-inline'",
