@@ -12,6 +12,8 @@ import Dashboard from "./App.jsx";
 import { api } from "./api.js";
 import RoleSwitcher from "./RoleSwitcher.jsx";
 import InstallInvitation from "./InstallInvitation.jsx";
+import LegalPage, { LEGAL_VERSION } from "./LegalPage.jsx";
+import LegalAcceptanceGate from "./LegalAcceptanceGate.jsx";
 
 const titles = {
   cliente: "Cliente",
@@ -81,6 +83,7 @@ export default function Entry() {
   }
   const area = path.split("/")[1];
   const user = sessions[area] || null;
+  const legalAccepted = area === "master" || (user?.termsVersion === LEGAL_VERSION && user?.privacyNoticeVersion === LEGAL_VERSION);
   const invitation = (
     <InstallInvitation
       pathname={path}
@@ -95,6 +98,16 @@ export default function Entry() {
         Carregando FreteOn…
       </div>
     );
+  if (titles[area] && user?.role === area && !path.includes("/cadastro") &&
+      !legalAccepted) {
+    return (
+      <LegalAcceptanceGate
+        account={user}
+        onAccepted={account => setSessions(previous => ({ ...previous, [account.role]: account }))}
+        onLogout={logout}
+      />
+    );
+  }
   if (titles[area] && user?.role === area && !path.includes("/cadastro"))
     return (
       <>
@@ -139,7 +152,9 @@ export default function Entry() {
           <span>Porto Velho, RO</span>
         )}
       </header>
-      {path === "/" ? (
+      {path === "/termos" || path === "/privacidade" ? (
+        <LegalPage kind={path === "/termos" ? "termos" : "privacidade"} navigate={navigate} />
+      ) : path === "/" ? (
         <main className="public-home">
           <div className="public-copy">
             <span className="eyebrow">FRETES EM PORTO VELHO</span>
@@ -215,9 +230,11 @@ export default function Entry() {
       )}
       <footer className="public-footer">
         <span>FreteOn · Porto Velho, RO</span>
-        <span>
-          Pagamentos combinados diretamente entre cliente e motorista.
-        </span>
+        <div className="public-legal-links">
+          <a href="/termos" onClick={event => { event.preventDefault(); navigate("/termos"); }}>Termos de Uso</a>
+          <a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Política de Privacidade</a>
+        </div>
+        <span>Intermediação de fretes · Financeiro em simulação</span>
       </footer>
     </div>
     {invitation}
@@ -245,6 +262,12 @@ function AuthForm({
       setError("As senhas precisam ser iguais.");
       return;
     }
+    if (register && (fields.termsAccepted !== "yes" || fields.privacyAcknowledged !== "yes")) {
+      setError("Leia e aceite os Termos de Uso e confirme a ciência da Política de Privacidade.");
+      return;
+    }
+    fields.termsAccepted = fields.termsAccepted === "yes";
+    fields.privacyAcknowledged = fields.privacyAcknowledged === "yes";
     setBusy(true);
     try {
       const result = await api(register ? "/auth/register" : "/auth/login", {
@@ -392,6 +415,19 @@ function AuthForm({
                   receber pedidos e enviar propostas.
                 </p>
               )}
+              {register && (
+                <div className="legal-register-checks">
+                  <label className="legal-check">
+                    <input type="checkbox" name="termsAccepted" value="yes" required/>
+                    <span>Li e aceito os <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>, incluindo regras de transporte, pagamento e comissão.</span>
+                  </label>
+                  <label className="legal-check">
+                    <input type="checkbox" name="privacyAcknowledged" value="yes" required/>
+                    <span>Li e tomei ciência da <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>.</span>
+                  </label>
+                  <small>O registro dessas declarações não representa consentimento genérico para todo tratamento de dados.</small>
+                </div>
+              )}
               <button className="primary full" type="submit">
                 {busy ? "Aguarde…" : register ? "Criar minha conta" : "Entrar"}
                 <ArrowRight size={18} />
@@ -418,6 +454,11 @@ function AuthForm({
             </a>
           </p>
         )}
+        <p className="auth-legal-links">
+          <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
+          {" · "}
+          <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
+        </p>
         {area === "master" && (
           <p className="auth-alternative">Acesso exclusivo à administração.</p>
         )}
