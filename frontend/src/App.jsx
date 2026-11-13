@@ -161,7 +161,6 @@ function RequestForm({ onCreate, onClose, requestError }) {
     routeEstimate: null,
     paymentMethod: "",
     description: "",
-    vehicle: "Picape",
     helper: false,
     date: "",
     time: "",
@@ -245,16 +244,11 @@ function RequestForm({ onCreate, onClose, requestError }) {
                 placeholder="Dimensões, quantidade, escadas e cuidados necessários"
               />
             </label>
-            <label>
-              Veículo
-              <select name="vehicle" value={data.vehicle} onChange={update}>
-                {["Picape", "Utilitário", "Caminhão pequeno", "Caminhão"].map(
-                  (type) => (
-                    <option key={type}>{type}</option>
-                  ),
-                )}
-              </select>
-            </label>
+            <p className="freight-open-vehicle-notice">
+              <Truck size={18} />
+              Seu pedido será mostrado a todos os motoristas disponíveis e verificados.
+              Cada motorista avalia a carga, suas fotos e o trajeto antes de oferecer um preço.
+            </p>
             <label className="checkbox">
               <input
                 type="checkbox"
@@ -328,7 +322,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
               {data.paymentMethod && <PaymentLabel method={data.paymentMethod} />}
               <p className="photo-review-counter">Fotos anexadas: <strong>{data.photos.length}/3</strong></p>
               <p>
-                {data.vehicle} · {data.helper ? "Com ajudante" : "Sem ajudante"}
+                {data.helper ? "Preciso de ajudante" : "Não preciso de ajudante"}
               </p>
               {data.routeEstimate && (
                 <p className="route-in-review">
@@ -336,7 +330,9 @@ function RequestForm({ onCreate, onClose, requestError }) {
                 </p>
               )}
               <small>
-                Os motoristas enviam seus preços. Você escolhe a proposta.
+                O pedido ficará aberto a todos os motoristas habilitados na plataforma.
+                Eles avaliam a carga e decidem se desejam enviar uma proposta.
+                Você escolhe o motorista e o preço.
               </small>
               <p className="freight-legal-notice">
                 <ShieldCheck size={16} />
@@ -587,7 +583,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         </div>
         <h3>{request.title}</h3>
         <small className="muted">
-          {request.id} · {request.vehicle}
+          {request.id}{request.vehicle ? ` · ${request.vehicle}` : " · Aberto a todos os veículos"}
         </small>
         <Route request={request} />
         {request.photos?.length > 0 && (
@@ -1224,7 +1220,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 {" · "}
                 {selected.proposals.find((proposal) => proposal.id === selected.selectedId)?.time || selected.time}
               </span>
-              <span><Truck size={16} /> {selected.vehicle}</span>
+              <span><Truck size={16} /> {selected.vehicle || "Veículo definido pelo motorista"}</span>
               <span><Package size={16} />
                 {selected.helper ? "Cliente solicitou ajudante" : "Sem ajudante solicitado"}
               </span>
@@ -1422,7 +1418,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             onCalculate={() => calculateMissingDistance(selected.id)} />
           <p>{selected.description}</p>
           <p className="muted">
-            {selected.vehicle} ·{" "}
+            {selected.vehicle ? `${selected.vehicle} · ` : "Tipo de veículo a combinar · "}
             {selected.helper ? "Com ajudante" : "Sem ajudante"} ·{" "}
             {selected.time}
           </p>
