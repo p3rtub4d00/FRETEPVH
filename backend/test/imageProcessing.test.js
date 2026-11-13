@@ -10,17 +10,20 @@ test("aceita originais de câmera grandes e formatos fotográficos", () => {
     type: "image/heic", name: "IMG_0001.HEIC", size: 9_000_000,
   }));
   assert.doesNotThrow(() => validateSourcePhoto({
+    type: "image/jpeg", name: "foto_17mb.jpg", size: 17_000_000,
+  }));
+  assert.doesNotThrow(() => validateSourcePhoto({
     type: "", name: "IMG_0001.heic", size: 6_000_000,
   }));
 });
 
-test("rejeita arquivos perigosos e imagens acima de 16MB", () => {
+test("rejeita arquivos perigosos e imagens acima de 25MB", () => {
   assert.throws(() => validateSourcePhoto({
     type: "image/svg+xml", name: "vetor.svg", size: 400,
   }), /Use uma foto/);
   assert.throws(() => validateSourcePhoto({
-    type: "image/jpeg", name: "foto.jpg", size: 17_000_000,
-  }), /16 MB/);
+    type: "image/jpeg", name: "foto.jpg", size: 27_000_000,
+  }), /25 MB/);
 });
 
 test("controla no máximo três fotos no pedido", () => {
