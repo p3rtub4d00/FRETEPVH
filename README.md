@@ -176,3 +176,20 @@ Para melhorar o acesso ao FreteOn no lançamento, as rotas **Cliente** e **Motor
 
 Testes das regras de elegibilidade e dispensa estão em `backend/test/installInvitation.test.js` (comando `npm test` na pasta `backend`).
 
+
+## Termos de Uso e Privacidade (versão 2026-11-13)
+
+Documentos disponíveis em **/termos** e **/privacidade**, na página inicial, no rodapé, nas telas de login/cadastro e no painel do usuário.
+
+A versão contempla intermediação (FreteOn não executa o transporte), responsabilidades reais do transportador e do cliente, perdas e avarias, itens especiais e proibidos, contrato de prestação direta, estimativas, preço, recebimento em dinheiro, cartão na maquininha do motorista, Pix simulado, comissão de 10%, prazo de 72 horas após confirmação da entrega, suspensão apenas de novas propostas por comissão não contestada, cancelamento, contestação, avaliação, obrigação de registros/seguro e proteção de dados segundo a LGPD.
+
+- Novo cadastro: dois campos de seleção obrigatórios e independentes — **aceitação dos Termos** e **ciência da Política de Privacidade**. A ciência da Política não é tratada como consentimento genérico.
+- Clientes e motoristas antigos: antes de reentrar no painel precisam aceitar a versão nova; **/api/auth/accept-legal** registra versão e data no banco, sem excluir suas contas nem seus pedidos. O Master não precisa passar pelo aceite de usuário. Escritas na API exigem a versão vigente (HTTP 428), preservadas consultas de histórico.
+- A Política fornece um canal de exercício de direitos: **/privacidade**, formulário com nome, contato, categoria e solicitação. O banco grava um protocolo; há limite de cinco envios por IP/hora. A administração consulta e marca atendimento em **Master > Privacidade LGPD**. A marcação como atendido exige que a equipe efetivamente responda pelo contato indicado, após a verificação de identidade necessária.
+- O controlador de dados e a entidade operadora devem ser identificados corretamente. **PENDÊNCIA LEGAL ANTES DO LANÇAMENTO COMERCIAL:** confirmar razão social, CNPJ, endereço/canal empresarial, documentos do motorista, regras finais de transporte/seguro e tratamento tributário. O texto publicado informa transparentemente que esses dados cadastrais precisam ser concluídos. Não inventar CNPJ ou nome de responsável.
+- **Limitação juridicamente indispensável:** Termos podem delimitar o objeto do FreteOn como plataforma intermediadora, mas não podem excluir responsabilidades legais da própria plataforma. Respeitar CDC, Código Civil, LGPD, legislação de transportes e ANTT, inclusive RNTRC quando aplicável.
+- Esta versão mantém **pagamentos e repasses bancários inteiramente simulados**. Antes de aceitar valores reais, revisar os documentos e integrar provedor adequado, cobrança, recibos e política de reembolsos.
+- Alterações substanciais de Termos exigem atualizar e sincronizar a constante `LEGAL_VERSION` nos arquivos `backend/src/legalVersion.js` e `frontend/src/LegalPage.jsx`, revisar documentos e exigir novo aceite.
+
+Documentação jurídica de referência: Lei 8.078/1990 (CDC), Lei 10.406/2002 (Código Civil, transporte), Lei 13.709/2018 (LGPD), Lei 12.965/2014 (Marco Civil), Lei 11.442/2007 e regulamentação ANTT, Lei 13.455/2017 (preço por modalidade de pagamento). Recomenda-se revisão final por advogado no Brasil antes de passar da simulação a operações reais.
+
