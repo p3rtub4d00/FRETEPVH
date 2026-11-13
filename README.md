@@ -206,3 +206,32 @@ O **Cliente** também pode acrescentar ou excluir imagens pelos detalhes de um p
 
 Limite backend: no máximo três imagens raster em data URI, máximo 810000 caracteres por imagem; perfil validado em até 320000 caracteres. Cabe a uma etapa futura estudar armazenamento de arquivos em objeto/bucket e thumbnails separados do estado, para escala. Os testes de validação e limites estão em `backend/test/imageProcessing.test.js` e `backend/test/freightPhotos.test.js`.
 
+
+## Roteiro de evolução FreteOn
+
+**Etapa 1 — Comunicação e segurança (início da implantação):**
+- [x] Notificações push Web Push para Cliente e Motorista, inclusive quando o PWA instalado está fechado, conforme permissões e suporte do dispositivo
+- [x] Eventos de novo frete, nova proposta, contratação, cancelamento, conclusão e financeiro em simulação
+- [x] Consentimento explícito de cada dispositivo, botão de teste, cancelamento e revogação no logout
+- [ ] Verificação documental do motorista com armazenamento privado e aprovação pela administração
+- [ ] Roteiro de testes manuais de fotos, cadastros, iPhone e Android antes de campanhas públicas
+
+**Etapa 2 — Execução do transporte:** etapas da coleta à entrega, comprovante fotográfico, código de entrega e chat autenticado entre as partes após contratação.
+
+**Etapa 3 — Operação e crescimento:** gestão de comissões, relatórios comerciais e, somente após contrato com instituição de pagamento adequada, dinheiro real e repasses.
+
+### Notificações push — configuração e uso
+
+O frontend oferece **Avisos push** aos usuários Cliente e Motorista, e um aviso discreto na página inicial. Para ativar, a pessoa toca em **Ativar notificações**, aceita a permissão do navegador e, opcionalmente, usa **Testar notificação**. Nenhuma permissão é pedida automaticamente e nenhuma inscrição é criada no Master. No iPhone, o PWA deve estar na Tela de Início e ser aberto pelo ícone; no Android, depende do navegador e das configurações de notificação.
+
+O backend emprega **VAPID ES256** e **Web Push AES128GCM** conforme RFC 8291/8292 usando recursos nativos de Node.js, sem serviços de SMS e sem novas dependências. Para operação real, configure exclusivamente no Render, como segredos de ambiente (nunca no GitHub):
+- `VAPID_PUBLIC_KEY`: chave pública P-256 sem compressão, base64url, usada no navegador
+- `VAPID_PRIVATE_KEY`: chave privada de 32 bytes, base64url, somente servidor
+- `VAPID_SUBJECT`: URL HTTPS de contato ou identificador da operação, como `https://fretepvh.onrender.com`
+
+O app recusa endpoints push que não sejam dos serviços HTTPS autorizados de Google/Firefox/Apple/Windows, valida chaves, não segue redirecionamentos de envio, limita inscrições por conta e remove endpoints expirados (HTTP 404/410). Uma inscrição de navegador pertence a uma conta ativa por vez, evitando mistura de sessões Cliente/Motorista. O envio ocorre depois de salvar as operações, sem bloquear o fluxo dos usuários, e não leva dados de endereço ou telefone nas mensagens. A assinatura é revogada ao fazer logout da conta (em todos os dispositivos da conta por precaução).
+
+As notificações push são complementares aos avisos e modais dentro do painel; não substituem o histórico nem garantem entrega quando o usuário desativa permissões ou está offline. Não existe monitoramento agendado de comissões por Render gratuito desligado; lembretes de vencimento automáticos contínuos exigirão rotina confiável em etapa posterior.
+
+Testes de criptografia: `npm test --prefix backend`, incluindo retorno do aviso criptografado, assinatura VAPID e rejeição de endpoints internos. **Antes do lançamento, teste push em aparelhos reais e verifique que apenas a conta escolhida recebe avisos.**
+

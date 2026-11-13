@@ -6,7 +6,7 @@
     "node": ">=22 <25"
   },
   "scripts": {
-    "build": "npm ci --prefix frontend && npm run build --prefix frontend && npm ci --prefix backend --omit=dev",
+    "build": "npm ci --prefix frontend && npm run build --prefix frontend && npm ci --prefix backend --omit=dev && npm test --prefix backend",
     "start": "npm start --prefix backend",
     "dev": "npm run dev --prefix frontend"
   }
