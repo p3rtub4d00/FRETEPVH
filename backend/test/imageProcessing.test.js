@@ -20,7 +20,7 @@ test("aceita originais de câmera grandes e formatos fotográficos", () => {
 test("rejeita arquivos perigosos e imagens acima de 25MB", () => {
   assert.throws(() => validateSourcePhoto({
     type: "image/svg+xml", name: "vetor.svg", size: 400,
-  }), /Use uma foto/);
+  }), /Formato não aceito/);
   assert.throws(() => validateSourcePhoto({
     type: "image/jpeg", name: "foto.jpg", size: 27_000_000,
   }), /25 MB/);
