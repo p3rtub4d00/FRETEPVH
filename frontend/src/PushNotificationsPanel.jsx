@@ -286,11 +286,11 @@ export default function PushNotificationsPanel({
     );
   }
   return (
-    <section className={`push-panel${compact ? " compact" : ""}`}>
+    <section className="push-panel">
       <div className="push-panel-heading">
         <div className="push-panel-symbol"><BellRing size={22} /></div>
         <div>
-          <h2>{compact ? "Não perca os avisos do FreteOn" : "Notificações push"}</h2>
+          <h2>Notificações push</h2>
           <p>
             {role === "motorista"
               ? "Saiba quando surgirem fretes e quando um cliente escolher sua proposta."
@@ -341,10 +341,8 @@ export default function PushNotificationsPanel({
           )}
         </div>
       )}
-      {!compact && (
-        <p className="push-help">Os avisos dependem das permissões do aparelho, do sistema operacional e da conexão.
-          Você pode desativá-los quando desejar. Sair da conta revoga suas assinaturas de notificação.</p>
-      )}
+      <p className="push-help">Os avisos dependem das permissões do aparelho, do sistema operacional e da conexão.
+        Você pode desativá-los quando desejar. Sair da conta revoga suas assinaturas de notificação.</p>
     </section>
   );
 }
