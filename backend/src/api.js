@@ -2,12 +2,13 @@ import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { randomUUID } from "node:crypto";
 import mongoose from "mongoose";
-import { Account, Freight, publicUser } from "./models.js";
+import { Account, Freight, publicUser, isVerifiedDriver } from "./models.js";
 import { authenticate, authorize, fail, text } from "./auth.js";
 import { calculateRoadRoute } from "./maps.js";
 import { LEGAL_VERSION } from "./legalVersion.js";
 import { finance, PAYMENT_METHODS, bookFinancials, overdueDriver, walletSummary } from "./finance.js";
 import { pushRouter } from "./pushRoutes.js";
+import { driverVerification } from "./driverVerification.js";
 import { notifyInBackground } from "./webPush.js";
 
 export const api = Router();
@@ -25,13 +26,14 @@ api.use((req, res, next) => {
 });
 api.use(finance);
 api.use(pushRouter);
+api.use(driverVerification);
 const own = (user) => String(user._id);
 function validId(id) {
   if (!mongoose.isValidObjectId(id)) fail(404, "Registro não encontrado.");
 }
 function driverApproved(user) {
-  if (user.status !== "approved")
-    fail(403, "Seu cadastro precisa ser aprovado pelo administrador.");
+  if (!isVerifiedDriver(user))
+    fail(403, "Envie seus documentos em Meu perfil e aguarde a aprovação do Master para receber fretes.");
 }
 function time(value) {
   if (typeof value !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(value))
@@ -96,7 +98,7 @@ api.get("/state", async (req, res) => {
   if (req.user.role === "cliente") query = { clientId: userId };
   if (req.user.role === "motorista") {
     const conditions = [{ driverId: userId }, { "proposals.driverId": userId }];
-    if (req.user.status === "approved") conditions.push({ status: "open" });
+    if (isVerifiedDriver(req.user)) conditions.push({ status: "open" });
     query = { $or: conditions };
   }
   const requests = await Freight.find(query).sort({ createdAt: -1 });
@@ -223,8 +225,9 @@ api.post("/requests", authorize("cliente"), rateLimit({
   });
   const visibleDrivers = await Account.find({
     role: "motorista", status: "approved", available: true,
-  }).select("_id").limit(300).lean();
-  notifyInBackground(visibleDrivers.map((person) => String(person._id)), {
+  }).limit(300);
+  const verifiedIds = visibleDrivers.filter(isVerifiedDriver).map((person) => String(person._id));
+  notifyInBackground(verifiedIds, {
     role: "motorista",
     title: "Novo frete disponível!",
     body: "Um cliente publicou um pedido. Confira os detalhes e envie sua proposta.",
@@ -349,8 +352,8 @@ api.patch("/requests/:id", async (req, res) => {
         role: "motorista",
         status: "approved",
       });
-      if (!selectedDriver)
-        fail(409, "Este motorista não está aprovado. Escolha outra proposta.");
+      if (!selectedDriver || !isVerifiedDriver(selectedDriver))
+        fail(409, "Este motorista precisa concluir a verificação documental. Escolha outro motorista.");
       if (request.paymentMethod === "card_driver" && !selectedDriver.acceptsCard)
         fail(409, "Este motorista não aceita cartão na maquininha.");
       if (await overdueDriver(String(selectedDriver._id)))
@@ -424,14 +427,7 @@ api.patch("/requests/:id", async (req, res) => {
   res.json({ request: presentRequest(request, req.user) });
 });
 api.patch("/drivers/:id", authorize("master"), async (req, res) => {
-  validId(req.params.id);
-  if (!["approved", "rejected"].includes(req.body.status))
-    fail(400, "Situação inválida.");
-  const driver = await Account.findOneAndUpdate(
-    { _id: req.params.id, role: "motorista" },
-    { $set: { status: req.body.status, available: false } },
-    { new: true },
-  );
-  if (!driver) fail(404, "Motorista não encontrado.");
-  res.json({ user: publicUser(driver) });
+  // Não permitir a antiga aprovação apenas por nome e telefone.
+  fail(410, "A aprovação de motoristas agora exige análise documental na aba Motoristas.");
 });
+
