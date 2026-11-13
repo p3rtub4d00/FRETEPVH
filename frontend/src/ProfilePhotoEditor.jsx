@@ -1,15 +1,20 @@
-import { useRef, useState } from "react";
-import { Camera, Trash2 } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import { Camera, ImagePlus, Trash2 } from "lucide-react";
+import { optimizePhoto } from "./imageProcessing.js";
 
 export function Avatar({ account, large = false }) {
+  const [brokenPhoto, setBrokenPhoto] = useState(false);
+  const photo = account?.profilePhoto || "";
+  useEffect(() => setBrokenPhoto(false), [photo]);
   return (
     <span className={`avatar${large ? " large" : ""}`}>
-      {account?.profilePhoto ? (
+      {photo && !brokenPhoto ? (
         <img
-          src={account.profilePhoto}
+          src={photo}
           alt={`Foto de ${account.name || "perfil"}`}
           className="avatar-image"
-          loading="lazy"
+          decoding="async"
+          onError={() => setBrokenPhoto(true)}
         />
       ) : (
         account?.initials || "?"
@@ -18,87 +23,89 @@ export function Avatar({ account, large = false }) {
   );
 }
 
-function readImage(file) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      resolve(img);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error("Não foi possível abrir essa imagem. Envie JPG, PNG ou WebP."));
-    };
-    img.src = objectUrl;
-  });
-}
-
-async function compressPhoto(file) {
-  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 6_000_000)
-    throw new Error("Selecione JPG, PNG ou WebP com até 6 MB.");
-  const image = await readImage(file);
-  const maxEdge = 400;
-  const scale = Math.min(1, maxEdge / Math.max(image.width, image.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(image.width * scale));
-  canvas.height = Math.max(1, Math.round(image.height * scale));
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Não foi possível preparar a imagem.");
-  context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  for (const quality of [0.78, 0.66, 0.5]) {
-    const photo = canvas.toDataURL("image/jpeg", quality);
-    if (photo.length <= 300000) return photo;
-  }
-  throw new Error("A foto ainda é muito grande. Tente outra imagem.");
-}
-
 export default function ProfilePhotoEditor({ account, busy, onSave }) {
-  const inputRef = useRef(null);
+  const cameraId = useId();
+  const galleryId = useId();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
   async function selectPhoto(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file) return;
+    if (!file || processing || busy) return;
     setProcessing(true);
     setError("");
+    setMessage("");
     try {
-      const photo = await compressPhoto(file);
-      await onSave(photo);
+      const photo = await optimizePhoto(file, "profile");
+      const result = await onSave(photo);
+      if (!result) setError("Não foi possível salvar a foto. Verifique o aviso na tela e tente novamente.");
+      else setMessage("Sua foto foi salva e aparecerá no perfil.");
     } catch (err) {
-      setError(err.message || "Erro ao enviar a foto.");
+      setError(err.message || "Não foi possível enviar a foto.");
     } finally {
       setProcessing(false);
     }
   }
+
+  async function removePhoto() {
+    if (busy || processing) return;
+    setError("");
+    setMessage("");
+    try {
+      const saved = await onSave("");
+      if (!saved) setError("Não foi possível remover a foto.");
+      else setMessage("Foto removida com sucesso.");
+    } catch (err) {
+      setError(err.message || "Não foi possível remover a foto.");
+    }
+  }
+
   const disabled = busy || processing;
   return (
     <div className="profile-photo-editor">
       <Avatar account={account} large />
       <div className="profile-photo-actions">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={selectPhoto}
-          className="profile-photo-input"
-          aria-label="Escolher foto de perfil"
-        />
-        <button type="button" className="secondary" disabled={disabled}
-          onClick={() => inputRef.current?.click()}>
-          <Camera size={16} />
-          {processing ? "Preparando foto..." : account.profilePhoto ? "Trocar foto" : "Adicionar minha foto"}
-        </button>
+        <div className="photo-source-actions">
+          <input
+            id={cameraId}
+            className="visually-hidden-media-input"
+            type="file"
+            accept="image/*"
+            capture="user"
+            onChange={selectPhoto}
+            disabled={disabled}
+            aria-label="Tirar foto para o perfil"
+          />
+          <label className={`secondary media-source-button${disabled ? " disabled" : ""}`}
+            htmlFor={cameraId} aria-disabled={disabled}>
+            <Camera size={17} /> Tirar foto
+          </label>
+
+          <input
+            id={galleryId}
+            className="visually-hidden-media-input"
+            type="file"
+            accept="image/*"
+            onChange={selectPhoto}
+            disabled={disabled}
+            aria-label="Escolher foto do aparelho"
+          />
+          <label className={`secondary media-source-button${disabled ? " disabled" : ""}`}
+            htmlFor={galleryId} aria-disabled={disabled}>
+            <ImagePlus size={17} /> Escolher da galeria
+          </label>
+        </div>
         {account.profilePhoto && (
           <button type="button" className="text-button" disabled={disabled}
-            onClick={() => onSave("")}>
+            onClick={removePhoto}>
             <Trash2 size={16} /> Remover foto
           </button>
         )}
-        <small>Foto de perfil: JPG, PNG ou WebP. Reduzida automaticamente para carregar mais rápido.</small>
+        <small>Foto de perfil: tire uma selfie ou escolha uma imagem do celular. O sistema reduz automaticamente antes de salvar.</small>
+        {processing && <p className="muted" role="status">Preparando e enviando foto...</p>}
+        {message && <p className="photo-success" role="status">{message}</p>}
         {error && <p className="error" role="alert">{error}</p>}
       </div>
     </div>
