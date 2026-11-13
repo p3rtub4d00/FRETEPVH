@@ -43,7 +43,16 @@ export default function PushNotificationsPanel({ role, compact = false }) {
         if (supported) {
           const registration = await navigator.serviceWorker.ready;
           const subscription = await registration.pushManager.getSubscription();
-          if (live) setActive(Boolean(subscription && status.deviceCount > 0));
+          if (live && subscription) {
+            // Uma única inscrição de navegador pode ser transferida entre
+            // Cliente e Motorista. Compare o endpoint da conta atual.
+            const digest = await crypto.subtle.digest(
+              "SHA-256", new TextEncoder().encode(subscription.endpoint),
+            );
+            const hex = Array.from(new Uint8Array(digest))
+              .map((v) => v.toString(16).padStart(2, "0")).join("");
+            setActive(Boolean(status.endpointHashes?.includes(hex)));
+          } else if (live) setActive(false);
         }
       } catch (e) {
         if (live) setError(e.message || "Não foi possível verificar as notificações.");

@@ -25,8 +25,13 @@ pushRouter.get("/push/config", roles, (req, res) => {
 });
 
 pushRouter.get("/push/status", roles, async (req, res) => {
-  const subscriptions = await PushSubscription.countDocuments({ userId: own(req) });
-  res.json({ enabled: pushEnabled(), deviceCount: subscriptions });
+  const subscriptions = await PushSubscription.find({ userId: own(req) })
+    .select("endpointHash").lean();
+  res.json({
+    enabled: pushEnabled(),
+    deviceCount: subscriptions.length,
+    endpointHashes: subscriptions.map((item) => item.endpointHash),
+  });
 });
 
 pushRouter.post("/push/subscribe", roles, limit, async (req, res) => {
