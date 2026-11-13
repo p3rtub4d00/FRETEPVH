@@ -7,6 +7,8 @@ import { authenticate, authorize, fail, text } from "./auth.js";
 import { calculateRoadRoute } from "./maps.js";
 import { LEGAL_VERSION } from "./legalVersion.js";
 import { finance, PAYMENT_METHODS, bookFinancials, overdueDriver, walletSummary } from "./finance.js";
+import { pushRouter } from "./pushRoutes.js";
+import { notifyInBackground } from "./webPush.js";
 
 export const api = Router();
 api.use(authenticate);
@@ -22,6 +24,7 @@ api.use((req, res, next) => {
   next();
 });
 api.use(finance);
+api.use(pushRouter);
 const own = (user) => String(user._id);
 function validId(id) {
   if (!mongoose.isValidObjectId(id)) fail(404, "Registro não encontrado.");
@@ -169,7 +172,13 @@ api.patch("/availability", authorize("motorista"), async (req, res) => {
   await req.user.save();
   res.json({ user: publicUser(req.user) });
 });
-api.post("/requests", authorize("cliente"), async (req, res) => {
+api.post("/requests", authorize("cliente"), rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 15,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Muitos fretes criados em pouco tempo. Tente novamente mais tarde." },
+}), async (req, res) => {
   const data = req.body;
   if (!PAYMENT_METHODS.includes(data.paymentMethod))
     fail(400, "Escolha Pix pelo FreteOn, cartão ou dinheiro antes de publicar.");
@@ -211,6 +220,15 @@ api.post("/requests", authorize("cliente"), async (req, res) => {
     paymentMethod: data.paymentMethod,
     ...roadEstimate,
     clientId: own(req.user),
+  });
+  const visibleDrivers = await Account.find({
+    role: "motorista", status: "approved", available: true,
+  }).select("_id").limit(300).lean();
+  notifyInBackground(visibleDrivers.map((person) => String(person._id)), {
+    role: "motorista",
+    title: "Novo frete disponível!",
+    body: "Um cliente publicou um pedido. Confira os detalhes e envie sua proposta.",
+    id: String(request._id),
   });
   res.status(201).json({ request: presentRequest(request, req.user) });
 });
@@ -304,6 +322,13 @@ api.post(
       proposal,
     ];
     await request.save();
+    if (!previous)
+      notifyInBackground([request.clientId], {
+        role: "cliente",
+        title: "Você recebeu uma proposta!",
+        body: "Um motorista enviou um preço para seu frete. Compare e escolha.",
+        id: String(request._id),
+      });
     res.json({ ok: true });
   },
 );
@@ -312,6 +337,7 @@ api.patch("/requests/:id", async (req, res) => {
   const request = await Freight.findById(req.params.id);
   if (!request || !canRead(request, req.user))
     fail(404, "Frete não encontrado.");
+  const previousStatus = request.status;
   if (req.user.role === "cliente" && request.clientId === own(req.user)) {
     if (req.body.status === "booked" && request.status === "open") {
       const proposal = request.proposals.find(
@@ -371,6 +397,30 @@ api.patch("/requests/:id", async (req, res) => {
     } else fail(409, "Essa alteração não está disponível para este frete.");
   } else fail(403, "Você não pode alterar este frete.");
   await request.save();
+  if (previousStatus !== request.status) {
+    if (request.status === "booked" && request.driverId) {
+      notifyInBackground([request.driverId], {
+        role: "motorista",
+        title: "Sua proposta foi aceita!",
+        body: "Você foi escolhido para realizar um frete. Abra seu painel para iniciar.",
+        id: String(request._id),
+      });
+    } else if (request.status === "cancelled" && request.driverId) {
+      notifyInBackground([request.driverId], {
+        role: "motorista",
+        title: "Frete cancelado",
+        body: "O cliente cancelou um frete contratado. Confira seu painel.",
+        id: String(request._id),
+      });
+    } else if (request.status === "completed") {
+      notifyInBackground([request.clientId], {
+        role: "cliente",
+        title: "Motorista concluiu o frete",
+        body: "Confira a entrega e confirme o recebimento pelo FreteOn.",
+        id: String(request._id),
+      });
+    }
+  }
   res.json({ request: presentRequest(request, req.user) });
 });
 api.patch("/drivers/:id", authorize("master"), async (req, res) => {
