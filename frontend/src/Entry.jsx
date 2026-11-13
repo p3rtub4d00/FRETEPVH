@@ -11,6 +11,7 @@ import {
 import Dashboard from "./App.jsx";
 import { api } from "./api.js";
 import RoleSwitcher from "./RoleSwitcher.jsx";
+import InstallInvitation from "./InstallInvitation.jsx";
 
 const titles = {
   cliente: "Cliente",
@@ -21,6 +22,8 @@ export default function Entry() {
   const [path, setPath] = useState(location.pathname);
   const [sessions, setSessions] = useState({});
   const [loading, setLoading] = useState(true);
+  const [installEvent, setInstallEvent] = useState(null);
+  const [installed, setInstalled] = useState(false);
   const [error, setError] = useState("");
   function navigate(next) {
     history.pushState({}, "", next);
@@ -41,6 +44,24 @@ export default function Entry() {
       .finally(() => setLoading(false));
     return () => window.removeEventListener("popstate", pop);
   }, []);
+  useEffect(() => {
+    // Captura a oportunidade de instalação desde a primeira visita, inclusive
+    // antes do login. Sem instalação automática nem perda de acesso no navegador.
+    const capture = (event) => {
+      event.preventDefault();
+      setInstallEvent(event);
+    };
+    const completed = () => {
+      setInstallEvent(null);
+      setInstalled(true);
+    };
+    window.addEventListener("beforeinstallprompt", capture);
+    window.addEventListener("appinstalled", completed);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", capture);
+      window.removeEventListener("appinstalled", completed);
+    };
+  }, []);
   function authenticated(account) {
     setSessions((previous) => ({ ...previous, [account.role]: account }));
     navigate(`/${account.role}`);
@@ -60,6 +81,14 @@ export default function Entry() {
   }
   const area = path.split("/")[1];
   const user = sessions[area] || null;
+  const invitation = (
+    <InstallInvitation
+      pathname={path}
+      installEvent={installEvent}
+      onConsumeInstall={() => setInstallEvent(null)}
+      installed={installed}
+    />
+  );
   if (loading)
     return (
       <div className="auth-loading" role="status">
@@ -68,6 +97,7 @@ export default function Entry() {
     );
   if (titles[area] && user?.role === area && !path.includes("/cadastro"))
     return (
+      <>
       <Dashboard
         key={user.id}
         user={user}
@@ -83,8 +113,11 @@ export default function Entry() {
           setError("Sua sessão expirou. Entre novamente.");
         }}
       />
+      {invitation}
+      </>
     );
   return (
+    <>
     <div className="public-site">
       <header className="public-header">
         <a
@@ -187,6 +220,8 @@ export default function Entry() {
         </span>
       </footer>
     </div>
+    {invitation}
+    </>
   );
 }
 
