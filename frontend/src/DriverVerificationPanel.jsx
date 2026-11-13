@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "./api.js";
 import { optimizePhoto } from "./imageProcessing.js";
+import { normalizePlate, validateDriverDetails, displayCnhDate } from "./driverDocumentFields.js";
 import { Camera, ImagePlus, ShieldCheck, Lock, FileCheck2, Clock3, XCircle, AlertTriangle, Eye, EyeOff } from "lucide-react";
 
 const labels = {
@@ -110,6 +111,7 @@ export default function DriverVerificationPanel({ driverId, role, onChange }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [reason, setReason] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [showDocs, setShowDocs] = useState({});
 
   async function refresh() {
@@ -117,8 +119,7 @@ export default function DriverVerificationPanel({ driverId, role, onChange }) {
     setInfo(res.verification);
     setData({
       plate: res.verification.plate || "",
-      cnhExpiresAt: res.verification.cnhExpiresAt
-        ? res.verification.cnhExpiresAt.slice(0, 10) : "",
+      cnhExpiresAt: displayCnhDate(res.verification.cnhExpiresAt),
       crlvYear: String(res.verification.crlvYear || new Date().getFullYear()),
       rntrcApplies: Boolean(res.verification.rntrcApplies),
       rntrc: res.verification.rntrc || "",
@@ -132,7 +133,7 @@ export default function DriverVerificationPanel({ driverId, role, onChange }) {
       setInfo(value);
       setData({
         plate: value.plate || "",
-        cnhExpiresAt: value.cnhExpiresAt?.slice(0, 10) || "",
+        cnhExpiresAt: displayCnhDate(value.cnhExpiresAt),
         crlvYear: String(value.crlvYear || new Date().getFullYear()),
         rntrcApplies: Boolean(value.rntrcApplies),
         rntrc: value.rntrc || "",
@@ -159,6 +160,25 @@ export default function DriverVerificationPanel({ driverId, role, onChange }) {
       setBusy(false);
     }
   }
+  async function saveVehicleDetails() {
+    const checked = validateDriverDetails(data);
+    if (!checked.valid) {
+      setFieldErrors(checked.errors);
+      setError(Object.values(checked.errors)[0]);
+      setMessage("");
+      return false;
+    }
+    setFieldErrors({});
+    return action("/driver-verification/details", "PATCH", checked.data,
+      "Placa, validade da CNH e informações do CRLV salvas.");
+  }
+
+  function updateField(name, value) {
+    setData((previous) => ({ ...previous, [name]: value }));
+    setFieldErrors((previous) => ({ ...previous, [name]: "" }));
+    setError("");
+  }
+
   const documentList = info?.documents || [];
   const complete = ["cnh", "crlv", "selfie"].every((kind) =>
     documentList.find((item) => item.kind === kind)?.exists);
@@ -224,35 +244,40 @@ export default function DriverVerificationPanel({ driverId, role, onChange }) {
             <>
               <div className="verification-form">
                 <label>Placa do veículo
-                  <input value={data?.plate || ""} maxLength={8} placeholder="ABC1D23"
-                    disabled={busy} onChange={e => setData({ ...data, plate: e.target.value })} />
+                  <input value={data?.plate || ""} maxLength={10} placeholder="ABC1D23 ou ABC-1234"
+                    inputMode="text" autoCapitalize="characters" autoCorrect="off"
+                    aria-invalid={Boolean(fieldErrors.plate)}
+                    disabled={busy} onChange={e => updateField("plate", e.target.value.toUpperCase())} />
+                  <small>Placas antigas e Mercosul são aceitas, com ou sem hífen.</small>
+                  {fieldErrors.plate && <small className="verification-field-error">{fieldErrors.plate}</small>}
                 </label>
                 <label>Validade da CNH
                   <input type="date" value={data?.cnhExpiresAt || ""}
-                    disabled={busy} onChange={e => setData({ ...data, cnhExpiresAt: e.target.value })} />
+                    aria-invalid={Boolean(fieldErrors.cnhExpiresAt)}
+                    disabled={busy} onChange={e => updateField("cnhExpiresAt", e.target.value)} />
+                  <small>Informe a data de vencimento impressa na CNH.</small>
+                  {fieldErrors.cnhExpiresAt && <small className="verification-field-error">{fieldErrors.cnhExpiresAt}</small>}
                 </label>
                 <label>Exercício do CRLV
                   <input type="number" min={new Date().getFullYear()} max={new Date().getFullYear()+1}
                     value={data?.crlvYear || ""} disabled={busy}
-                    onChange={e => setData({ ...data, crlvYear: e.target.value })} />
+                    aria-invalid={Boolean(fieldErrors.crlvYear)}
+                    onChange={e => updateField("crlvYear", e.target.value)} />
+                  <small>Exercício que consta no documento do veículo.</small>
+                  {fieldErrors.crlvYear && <small className="verification-field-error">{fieldErrors.crlvYear}</small>}
                 </label>
                 <label className="verification-checkbox">
                   <input type="checkbox" checked={Boolean(data?.rntrcApplies)} disabled={busy}
-                    onChange={e => setData({ ...data, rntrcApplies: e.target.checked })}/>
+                    onChange={e => updateField("rntrcApplies", e.target.checked)}/>
                   Minha atividade exige RNTRC (cadastro ANTT).
                 </label>
                 {data?.rntrcApplies && <label>Número RNTRC
                   <input inputMode="numeric" placeholder="Número para verificação" disabled={busy}
-                    value={data.rntrc || ""} onChange={e => setData({ ...data, rntrc: e.target.value })}/>
+                    value={data.rntrc || ""} onChange={e => updateField("rntrc", e.target.value)}/>
                 </label>}
                 <p className="verification-legal-warning">A declaração de não aplicabilidade do RNTRC não dispensa requisitos legais. O Master avaliará seu enquadramento e os seguros exigíveis.</p>
                 <button className="secondary" type="button" disabled={busy}
-                  onClick={() => action("/driver-verification/details", "PATCH", {
-                    plate: data.plate, cnhExpiresAt: data.cnhExpiresAt,
-                    crlvYear: Number(data.crlvYear),
-                    rntrcApplies: Boolean(data.rntrcApplies),
-                    rntrc: data.rntrc || "",
-                  }, "Dados do veículo e da CNH salvos.")}>
+                  onClick={saveVehicleDetails}>
                   Salvar dados do veículo
                 </button>
               </div>
