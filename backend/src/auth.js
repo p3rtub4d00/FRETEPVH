@@ -226,10 +226,18 @@ auth.post("/logout", async (req, res) => {
   if (validToken(token)) {
     await Session.deleteOne({ tokenHash: digest(token) });
   }
-  // Revogar assinaturas para não enviar notificações a um dispositivo
-  // depois de encerrar a conta. Reativação exige nova ação do titular.
-  if (loggedOut?.role === role)
-    await PushSubscription.deleteMany({ userId: String(loggedOut._id) });
+  // Revogar somente o navegador que encerrou a sessão. A versão antiga
+  // apagava assinaturas de TODOS os aparelhos do motorista, interrompendo push
+  // no dispositivo de trabalho ao sair da conta em outro celular.
+  const pushEndpoint = req.body?.pushEndpoint;
+  if (loggedOut?.role === role && typeof pushEndpoint === "string" &&
+      pushEndpoint.length >= 30 && pushEndpoint.length <= 2200 &&
+      /^https:\/\//.test(pushEndpoint)) {
+    await PushSubscription.deleteOne({
+      userId: String(loggedOut._id),
+      endpointHash: digest(pushEndpoint),
+    });
+  }
   res.clearCookie(name, cookieOptions);
   // Apague a sessão antiga somente quando ela pertencer ao perfil que saiu.
   const legacyToken = req.cookies[cookieName];

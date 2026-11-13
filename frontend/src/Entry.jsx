@@ -71,7 +71,18 @@ export default function Entry() {
   }
   async function logout() {
     const role = location.pathname.split("/")[1];
-    await api("/auth/logout", { method: "POST", body: {} });
+    // Revoga apenas este dispositivo no banco, preservando os avisos
+    // dos outros celulares. A inscrição Web Push local pode ser reutilizada
+    // quando o usuário entrar novamente e habilitar os avisos.
+    let pushEndpoint = "";
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        const subscription = await registration?.pushManager.getSubscription();
+        pushEndpoint = subscription?.endpoint || "";
+      } catch { /* ausência de push não bloqueia o logout */ }
+    }
+    await api("/auth/logout", { method: "POST", body: { pushEndpoint } });
     setSessions((previous) => {
       const next = { ...previous };
       delete next[role];
