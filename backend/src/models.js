@@ -76,6 +76,7 @@ const proposalSchema = new mongoose.Schema(
     price: { type: Number, required: true },
     time: { type: String, required: true },
     note: { type: String, default: "" },
+    services: { type: [String], default: [] },
   },
   { _id: false },
 );
@@ -146,6 +147,27 @@ const freightSchema = new mongoose.Schema(
   { timestamps: true, optimisticConcurrency: true },
 );
 
+// As conversas e denúncias não são incluídas nas respostas públicas de fretes.
+const freightChatSchema = new mongoose.Schema({
+  requestId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Freight", index: true },
+  authorId: { type: String, required: true },
+  authorRole: { type: String, required: true, enum: ["cliente", "motorista"] },
+  content: { type: String, required: true, maxlength: 500 },
+}, { timestamps: true });
+freightChatSchema.index({ requestId: 1, createdAt: 1 });
+
+const freightReportSchema = new mongoose.Schema({
+  requestId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Freight", index: true },
+  reporterId: { type: String, required: true },
+  reporterRole: { type: String, enum: ["cliente", "motorista"], required: true },
+  reportedId: { type: String, default: "" },
+  category: { type: String, enum: ["outside_deal", "inappropriate", "other", "cancel_after_booking"], required: true },
+  description: { type: String, required: true, maxlength: 500 },
+  status: { type: String, enum: ["pending", "reviewed"], default: "pending" },
+  reviewedAt: { type: Date, default: null },
+}, { timestamps: true });
+freightReportSchema.index({ status: 1, createdAt: -1 });
+
 const pushSubscriptionSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true, index: true },
@@ -175,6 +197,8 @@ export const PushSubscription = mongoose.model("PushSubscription", pushSubscript
 export const Account = mongoose.model("Account", userSchema);
 export const Session = mongoose.model("Session", sessionSchema);
 export const Freight = mongoose.model("Freight", freightSchema);
+export const FreightChat = mongoose.model("FreightChat", freightChatSchema);
+export const FreightReport = mongoose.model("FreightReport", freightReportSchema);
 export function verificationStatus(user, now = new Date()) {
   if (user.role !== "motorista") return "not_applicable";
   const v = user.verification;
