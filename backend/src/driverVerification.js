@@ -4,6 +4,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { Account, isVerifiedDriver, verificationStatus } from "./models.js";
 import { authorize, fail, text } from "./auth.js";
+import { validateDriverDetails, validPlate, todayInPortoVelho } from "../../frontend/src/driverDocumentFields.js";
 
 export const driverVerification = Router();
 const types = ["cnh", "crlv", "selfie"];
@@ -15,8 +16,7 @@ const userId = (user) => String(user._id);
 const requireId = (id) => {
   if (!mongoose.isValidObjectId(id)) fail(404, "Motorista não encontrado.");
 };
-const validPlate = (value) => /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(value || "");
-const currentYear = () => new Date().getFullYear();
+const currentYear = () => Number(todayInPortoVelho().slice(0, 4));
 
 export function verifyDocumentPayload(image) {
   if (typeof image !== "string" || image.length < 50 || image.length > 900000 ||
@@ -122,29 +122,19 @@ driverVerification.post(
 driverVerification.patch("/driver-verification/details", authorize("motorista"), async (req, res) => {
   if (!req.user.verification) req.user.verification = {};
   const v = req.user.verification;
-  const plate = String(req.body?.plate || "").trim().toUpperCase().replace(/[-\s]/g, "");
-  if (!validPlate(plate)) fail(400, "Placa inválida. Informe sete caracteres.");
-  const date = req.body?.cnhExpiresAt;
-  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date))
-    fail(400, "Informe a validade da CNH.");
-  const expiration = new Date(date + "T23:59:59-04:00");
-  if (!Number.isFinite(expiration.getTime()) || expiration <= new Date() ||
-      expiration.getUTCFullYear() > currentYear() + 20)
-    fail(400, "A CNH precisa estar válida.");
-  const crlvYear = Number(req.body?.crlvYear);
-  if (!Number.isInteger(crlvYear) || crlvYear < currentYear() ||
-      crlvYear > currentYear() + 1)
-    fail(400, "Informe o exercício atual do CRLV.");
-  if (typeof req.body?.rntrcApplies !== "boolean")
-    fail(400, "Informe se sua atividade exige RNTRC.");
-  const rntrc = String(req.body?.rntrc || "").replace(/\D/g, "");
-  if (req.body.rntrcApplies && !/^\d{8,12}$/.test(rntrc))
-    fail(400, "Informe um RNTRC válido para conferência manual.");
+  const checked = validateDriverDetails(req.body);
+  if (!checked.valid) {
+    const first = Object.values(checked.errors)[0];
+    fail(400, first);
+  }
+  const { plate, cnhExpiresAt, crlvYear, rntrcApplies, rntrc } = checked.data;
+  // Registrar o último dia de validade às 23:59:59 no horário de Rondônia.
+  const expiration = new Date(cnhExpiresAt + "T23:59:59-04:00");
   v.plate = plate;
   v.cnhExpiresAt = expiration;
   v.crlvYear = crlvYear;
-  v.rntrcApplies = req.body.rntrcApplies;
-  v.rntrc = req.body.rntrcApplies ? rntrc : "";
+  v.rntrcApplies = rntrcApplies;
+  v.rntrc = rntrc;
   v.status = "unsubmitted";
   v.rejectionReason = "";
   v.reviewedAt = null;
