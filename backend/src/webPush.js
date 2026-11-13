@@ -103,7 +103,10 @@ export function encryptPush(payload, p256dh, auth) {
 
 export async function sendPush(subscription, message) {
   if (!pushEnabled()) return { ok: false, unavailable: true };
-  const checked = checkSubscription(subscription);
+  const checked = checkSubscription({
+    endpoint: subscription.endpoint,
+    keys: { p256dh: subscription.p256dh, auth: subscription.auth },
+  });
   const endpoint = checked.endpoint;
   const body = encryptPush(message, checked.p256dh, checked.auth);
   const jwt = createVapidJwt(endpoint);
