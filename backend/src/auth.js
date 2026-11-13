@@ -7,7 +7,7 @@ import {
 import { promisify } from "node:util";
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
-import { Account, Session, publicUser } from "./models.js";
+import { Account, Session, PushSubscription, publicUser } from "./models.js";
 import { LEGAL_VERSION } from "./legalVersion.js";
 
 const scrypt = promisify(scryptCallback);
@@ -181,9 +181,14 @@ auth.post("/logout", async (req, res) => {
   const role = requestedRole(req);
   const name = roleCookieName(role);
   const token = req.cookies[name];
+  const loggedOut = await findSessionUser(token);
   if (validToken(token)) {
     await Session.deleteOne({ tokenHash: digest(token) });
   }
+  // Revogar assinaturas para não enviar notificações a um dispositivo
+  // depois de encerrar a conta. Reativação exige nova ação do titular.
+  if (loggedOut?.role === role)
+    await PushSubscription.deleteMany({ userId: String(loggedOut._id) });
   res.clearCookie(name, cookieOptions);
   // Apague a sessão antiga somente quando ela pertencer ao perfil que saiu.
   const legacyToken = req.cookies[cookieName];

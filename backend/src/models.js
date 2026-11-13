@@ -117,6 +117,18 @@ const freightSchema = new mongoose.Schema(
   { timestamps: true, optimisticConcurrency: true },
 );
 
+const pushSubscriptionSchema = new mongoose.Schema(
+  {
+    userId: { type: String, required: true, index: true },
+    role: { type: String, enum: ["cliente", "motorista"], required: true },
+    endpointHash: { type: String, required: true, unique: true },
+    endpoint: { type: String, required: true, maxlength: 2200 },
+    p256dh: { type: String, required: true, maxlength: 128 },
+    auth: { type: String, required: true, maxlength: 64 },
+  },
+  { timestamps: true },
+);
+
 const privacyRequestSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, maxlength: 100 },
@@ -130,6 +142,7 @@ const privacyRequestSchema = new mongoose.Schema(
 );
 
 export const PrivacyRequest = mongoose.model("PrivacyRequest", privacyRequestSchema);
+export const PushSubscription = mongoose.model("PushSubscription", pushSubscriptionSchema);
 export const Account = mongoose.model("Account", userSchema);
 export const Session = mongoose.model("Session", sessionSchema);
 export const Freight = mongoose.model("Freight", freightSchema);
