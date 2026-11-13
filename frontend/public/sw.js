@@ -1,4 +1,4 @@
-const CACHE = "freteon-shell-v2";
+const CACHE = "freteon-shell-v3";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -56,4 +56,54 @@ self.addEventListener("fetch", (event) => {
             : Response.error()),
       ),
   );
+});
+
+/**
+ * Recebe notificações push enviadas pelo FreteOn. A notificação sempre é
+ * visível para o usuário, inclusive no iPhone quando o PWA está instalado.
+ * O payload não contém endereço, telefone ou dados bancários.
+ */
+self.addEventListener("push", (event) => {
+  event.waitUntil((async () => {
+    let data = {};
+    try { data = event.data?.json() || {}; } catch { /* push sem conteúdo */ }
+    const role = data.role === "cliente" ? "cliente" : "motorista";
+    const path = role === "cliente" ? "/cliente" : "/motorista";
+    const title = String(data.title || "Atualização no FreteOn").slice(0, 90);
+    const body = String(data.body || "Abra o FreteOn para conferir.").slice(0, 180);
+
+    // Atualizar a interface aberta sem exigir recarregamento manual.
+    const tabs = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const tab of tabs) {
+      try { tab.postMessage({ type: "FRETEON_PUSH_EVENT", role }); } catch { /* ignore */ }
+    }
+
+    await self.registration.showNotification(title, {
+      body,
+      icon: "/assets/icon-192.png",
+      badge: "/assets/icon-192.png",
+      tag: `freteon-${role}-${String(data.id || "update").slice(0, 60)}`,
+      renotify: true,
+      data: { path },
+    });
+  })());
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetPath = event.notification.data?.path === "/cliente" ? "/cliente" : "/motorista";
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of windows) {
+      try {
+        const url = new URL(client.url);
+        if (url.origin === self.location.origin && url.pathname === targetPath) {
+          await client.focus();
+          client.postMessage({ type: "FRETEON_PUSH_EVENT" });
+          return;
+        }
+      } catch { /* ignore */ }
+    }
+    if (self.clients.openWindow) await self.clients.openWindow(targetPath);
+  })());
 });
