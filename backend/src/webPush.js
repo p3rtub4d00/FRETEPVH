@@ -183,7 +183,7 @@ export function notifyInBackground(userIds, message) {
   void notifyAccounts(userIds, message).then((result) => {
     // Somente indicadores técnicos. Nenhum nome, telefone, endereço ou token.
     console.info("Web Push", {
-      event: message?.id === "test" ? "test" :
+      event: message?.event === "chat" ? "chat" : message?.id === "test" ? "test" :
         message?.title === "Sua proposta foi aceita!" ? "booking" : "freight_event",
       attempted: result.attempted,
       acceptedByGateway: result.ok,

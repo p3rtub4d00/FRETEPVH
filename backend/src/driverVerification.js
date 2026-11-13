@@ -1,3 +1,4 @@
+import { notifyInBackground } from "./webPush.js";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { Readable } from "node:stream";
@@ -188,5 +189,10 @@ driverVerification.patch("/driver-verification/:id/review", authorize("master"),
   account.status = req.body.status;
   account.available = false;
   await account.save();
+  notifyInBackground([String(account._id)], {
+    role: "motorista", title: v.status === "approved" ? "Cadastro aprovado!" : "Documentação precisa de ajustes",
+    body: "Confira o resultado da análise no seu perfil FreteOn.",
+    id: `verification-${account._id}-${Date.now()}`,
+  });
   res.json({ verification: summary(account) });
 });

@@ -439,6 +439,12 @@ api.patch("/requests/:id", async (req, res) => {
         body: "O cliente cancelou um frete contratado. Confira seu painel.",
         id: String(request._id),
       });
+    } else if (request.status === "transit") {
+      notifyInBackground([request.clientId], {
+        role: "cliente", title: "Seu frete está a caminho",
+        body: "O motorista iniciou o transporte. Acompanhe pelo FreteOn.",
+        id: `transit-${request._id}`,
+      });
     } else if (request.status === "completed") {
       notifyInBackground([request.clientId], {
         role: "cliente",

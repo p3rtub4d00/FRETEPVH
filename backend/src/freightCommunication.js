@@ -49,7 +49,8 @@ freightCommunication.post("/requests/:id/chat", authorize("cliente", "motorista"
     role: req.user.role === "cliente" ? "motorista" : "cliente",
     title: "Nova mensagem sobre o frete",
     body: "Confira a conversa no FreteOn.",
-    id: String(request._id),
+    id: `chat-${item._id}`,
+    event: "chat",
   });
   res.status(201).json({ message: {
     id: String(item._id), authorId: item.authorId, authorRole: item.authorRole,

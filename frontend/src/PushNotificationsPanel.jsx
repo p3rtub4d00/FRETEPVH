@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BellRing, BellOff, CheckCircle2, CircleAlert, Smartphone, TestTube2 } from "lucide-react";
 import { api } from "./api.js";
+import { recoverPush } from "./pushRecovery.js";
 import { shouldOfferPush } from "./pushInvitationRules.js";
 
 const storageKey = (role, accountId) =>
@@ -90,16 +91,28 @@ export default function PushNotificationsPanel({
         if (supported) {
           const registration = await navigator.serviceWorker.ready;
           const subscription = await registration.pushManager.getSubscription();
-          if (live && subscription) {
-            // Uma única inscrição de navegador pode ser transferida entre
-            // Cliente e Motorista. Compare o endpoint da conta atual.
-            const digest = await crypto.subtle.digest(
-              "SHA-256", new TextEncoder().encode(subscription.endpoint),
-            );
-            const hex = Array.from(new Uint8Array(digest))
-              .map((v) => v.toString(16).padStart(2, "0")).join("");
-            setActive(Boolean(status.endpointHashes?.includes(hex)));
-          } else if (live) setActive(false);
+          if (live) {
+            const currentPermission = Notification.permission;
+            setPermission(currentPermission);
+            const restored = settings.enabled && await recoverPush({
+              subscription, publicKey: settings.publicKey,
+              permission: currentPermission, endpointHashes: status.endpointHashes || [],
+              digest: async endpoint => {
+                const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(endpoint));
+                return Array.from(new Uint8Array(digest)).map(v => v.toString(16).padStart(2, "0")).join("");
+              },
+              save: subscription => {
+                if (!live) throw new Error("Verificação cancelada.");
+                return api("/push/subscribe", {
+                method: "POST", headers: { "X-FreteOn-Role": role }, body: { subscription },
+                });
+              },
+            });
+            if (live) {
+              setActive(Boolean(restored));
+              if (restored) setCount(Math.max(1, status.deviceCount || 0));
+            }
+          }
         }
       } catch (e) {
         if (live) setError(e.message || "Não foi possível verificar as notificações.");
@@ -108,7 +121,7 @@ export default function PushNotificationsPanel({
       }
     })();
     return () => { live = false; };
-  }, [role, supported]);
+  }, [role, accountId, supported]);
 
   async function enable() {
     if (busy) return;
@@ -151,7 +164,7 @@ export default function PushNotificationsPanel({
       setActive(true);
       setCount((value) => Math.max(1, value));
       broadcast(true);
-      setNotice("Avisos ativados neste dispositivo. Você receberá novas atualizações.");
+      setNotice("Avisos ativados neste dispositivo. Você receberá atualizações de fretes e mensagens do chat.");
     } catch (e) {
       setError(e.message || "Não foi possível ativar os avisos.");
     } finally {
@@ -191,7 +204,7 @@ export default function PushNotificationsPanel({
     setError("");
     setNotice("");
     try {
-      await api("/push/test", { method: "POST", body: {} });
+      await api("/push/test", { method: "POST", body: { subscription: (await (await navigator.serviceWorker.ready).pushManager.getSubscription())?.toJSON() } });
       setNotice("O serviço push aceitou a notificação de teste. Confira se ela apareceu no celular. Se não apareceu, revise as permissões do aparelho.");
     } catch (e) {
       setError(e.message || "Não foi possível testar o envio.");
@@ -294,7 +307,7 @@ export default function PushNotificationsPanel({
           <p>
             {role === "motorista"
               ? "Saiba quando surgirem fretes e quando um cliente escolher sua proposta."
-              : "Receba avisos sobre propostas, confirmação do frete e conclusão da entrega."}
+              : "Receba avisos de propostas, etapas da entrega e mensagens do chat."}
           </p>
         </div>
       </div>

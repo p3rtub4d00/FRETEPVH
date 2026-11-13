@@ -2,7 +2,7 @@ import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { PushSubscription } from "./models.js";
 import { authorize, fail } from "./auth.js";
-import { checkSubscription, pushEnabled, notifyAccounts } from "./webPush.js";
+import { checkSubscription, pushEnabled, sendPush } from "./webPush.js";
 
 export const pushRouter = Router();
 const roles = authorize("cliente", "motorista");
@@ -60,14 +60,20 @@ pushRouter.post("/push/unsubscribe", roles, limit, async (req, res) => {
 
 pushRouter.post("/push/test", roles, limit, async (req, res) => {
   if (!pushEnabled()) fail(503, "Notificações ainda não configuradas.");
-  const total = await PushSubscription.countDocuments({ userId: own(req) });
-  if (total === 0) fail(409, "Ative as notificações neste dispositivo primeiro.");
-  const result = await notifyAccounts([own(req)], {
+  // Test the device being used, not a different phone on the same account.
+  if (!req.body?.subscription) fail(409, "Atualize o aplicativo e ative as notificações neste aparelho.");
+  const checked = checkSubscription(req.body?.subscription);
+  const subscription = await PushSubscription.findOne({
+    userId: own(req), endpointHash: checked.endpointHash,
+  }).lean();
+  if (!subscription) fail(409, "Ative novamente as notificações neste aparelho.");
+  const sent = await sendPush(subscription, {
     title: "Teste de notificação FreteOn",
-    body: "Os avisos estão configurados. Você poderá receber atualizações dos fretes.",
-    role: req.user.role,
-    id: "test",
+    body: "Avisos de fretes e mensagens do chat estão configurados neste aparelho.",
+    role: req.user.role, id: "test",
   });
+  if (sent.gone) await PushSubscription.deleteOne({ _id: subscription._id });
+  const result = { ok: sent.ok ? 1 : 0 };
   if (result.ok === 0)
     return res.status(502).json({ error: "Serviço push não confirmou a entrega. Verifique as permissões e tente novamente." });
   res.json({ ok: true, acceptedByPushService: result.ok });

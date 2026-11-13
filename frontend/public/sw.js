@@ -1,4 +1,4 @@
-const CACHE = "freteon-shell-v11";
+const CACHE = "freteon-shell-v12";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -73,7 +73,7 @@ self.addEventListener("push", (event) => {
     const body = String(data.body || "Abra o FreteOn para conferir.").slice(0, 180);
 
     // Atualizar a interface aberta sem exigir recarregamento manual.
-    const tabs = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const tabs = await self.clients.matchAll({ type: "window", includeUncontrolled: true }).catch(() => []);
     for (const tab of tabs) {
       try { tab.postMessage({ type: "FRETEON_PUSH_EVENT", role }); } catch { /* ignore */ }
     }
