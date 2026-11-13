@@ -166,6 +166,47 @@ auth.post("/accept-legal", authenticate, authorize("cliente", "motorista"), asyn
   await req.user.save();
   res.json({ user: publicUser(req.user) });
 });
+// Atualização de dados cadastrais com senha obrigatória se o celular de login mudar.
+// Nunca permite mudar o tipo de conta ou aprovar motorista por este endpoint.
+const profileUpdateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 12,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Muitas tentativas de atualização. Tente novamente mais tarde." },
+});
+auth.patch("/profile", authenticate, authorize("cliente", "motorista"),
+  profileUpdateLimit, async (req, res) => {
+    if (req.user.termsVersion !== LEGAL_VERSION ||
+        req.user.privacyNoticeVersion !== LEGAL_VERSION)
+      fail(428, "Aceite os Termos de Uso atualizados antes de alterar seus dados.");
+
+    const name = text(req.body?.name, 3, 100, "Nome");
+    const phone = phoneNumber(req.body?.phone);
+    const changingPhone = phone !== req.user.phone;
+    if (!changingPhone && name === req.user.name)
+      return res.json({ user: publicUser(req.user), changed: false });
+
+    if (changingPhone) {
+      const account = await Account.findById(req.user._id).select("+passwordHash");
+      if (!account || !await verifyPassword(req.body?.password, account.passwordHash))
+        fail(403, "Para alterar o celular, informe a senha atual da sua conta.");
+      const exists = await Account.exists({ phone, _id: { $ne: req.user._id } });
+      if (exists) fail(409, "Este número de celular já está cadastrado.");
+    }
+
+    req.user.name = name;
+    if (changingPhone) req.user.phone = phone;
+    try {
+      await req.user.save();
+    } catch (error) {
+      if (error?.code === 11000)
+        fail(409, "Este número de celular já está cadastrado.");
+      throw error;
+    }
+    res.json({ user: publicUser(req.user), changed: true });
+  },
+);
 auth.get("/sessions", async (req, res) => {
   const sessions = {};
   for (const role of roles) {
