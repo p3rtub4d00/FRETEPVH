@@ -30,6 +30,7 @@ import RoutePicker from "./RoutePicker.jsx";
 import RoleSwitcher from "./RoleSwitcher.jsx";
 import ProfilePhotoEditor, { Avatar } from "./ProfilePhotoEditor.jsx";
 import { pendingDriverBookings } from "./driverBooking.js";
+import PrivacyMaster from "./PrivacyMaster.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
@@ -53,6 +54,7 @@ const navigation = {
     ["fretes", "Fretes", Package],
     ["financeiro", "Financeiro", FileCheck2],
     ["usuarios", "Usuários", Users],
+    ["privacidade", "Privacidade LGPD", ShieldCheck],
     ["denuncias", "Denúncias", Flag],
   ],
 };
@@ -1050,10 +1052,16 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   </div>
                 </>
               )}
+              <div className="profile-legal-links">
+                <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
+              </div>
               <button className="secondary" onClick={logout}>
                 Sair da conta
               </button>
             </section>
+          ) : area === "master" && page === "privacidade" ? (
+            <PrivacyMaster />
           ) : page === "usuarios" ? (
             <section className="panel">
               <h2>Usuários cadastrados</h2>
@@ -1136,6 +1144,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           )}
           <footer>
             <span>FreteOn · Porto Velho, RO</span>
+            <div className="dashboard-legal-links">
+              <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
+              <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
+            </div>
             <button onClick={() => setModal({ type: "help" })}>
               Precisa de ajuda?
             </button>
