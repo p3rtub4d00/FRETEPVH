@@ -5,10 +5,22 @@ import mongoose from "mongoose";
 import { Account, Freight, publicUser } from "./models.js";
 import { authenticate, authorize, fail, text } from "./auth.js";
 import { calculateRoadRoute } from "./maps.js";
+import { LEGAL_VERSION } from "./legalVersion.js";
 import { finance, PAYMENT_METHODS, bookFinancials, overdueDriver, walletSummary } from "./finance.js";
 
 export const api = Router();
 api.use(authenticate);
+api.use((req, res, next) => {
+  // Operações que alteram dados exigem a versão atual dos Termos aceita
+  // expressamente. Consultas permanecem acessíveis para histórico/segurança.
+  if (
+    !["GET", "HEAD", "OPTIONS"].includes(req.method) &&
+    req.user.role !== "master" &&
+    (req.user.termsVersion !== LEGAL_VERSION ||
+      req.user.privacyNoticeVersion !== LEGAL_VERSION)
+  ) fail(428, "Leia e aceite os Termos de Uso e a Política de Privacidade para continuar.");
+  next();
+});
 api.use(finance);
 const own = (user) => String(user._id);
 function validId(id) {
