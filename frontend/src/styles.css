@@ -3593,3 +3593,149 @@ dialog.install-invite-dialog::backdrop {
   .verification-review-actions { display: grid; grid-template-columns: 1fr; }
   .verification-action-banner button { width: 100%; }
 }
+
+/* Aviso de push opcional: abre após login, sem ocupar a home ou menu inferior. */
+dialog.push-invite-dialog {
+  width: calc(100% - 28px);
+  max-width: 430px;
+  max-height: min(93dvh, 680px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0;
+  border: 0;
+  border-radius: 21px;
+  box-shadow: 0 22px 80px #101c3660;
+  background: #fff;
+  color: #152e4a;
+}
+dialog.push-invite-dialog::backdrop {
+  background: #071a2dbb;
+  backdrop-filter: blur(5px);
+}
+.push-invite-body {
+  padding: 32px 26px 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.push-invite-icon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  color: #b86822;
+  background: #fff0de;
+  border-radius: 19px;
+}
+.push-invite-eyebrow {
+  color: #a8662b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+.push-invite-body h2 {
+  font-size: clamp(22px, 5vw, 27px);
+  line-height: 1.22;
+  margin: 0;
+  color: #122e4e;
+}
+.push-invite-body > p {
+  margin: 0;
+  color: #5d7289;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.push-invite-benefits {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  margin: 4px 0;
+  border: 1px solid #dce7f1;
+  border-radius: 11px;
+  background: #f7f9fc;
+  text-align: left;
+}
+.push-invite-benefits span {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #4d657f;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.push-invite-benefits svg {
+  flex-shrink: 0;
+  color: #2b9861;
+}
+.push-invite-primary {
+  width: 100%;
+  min-height: 49px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-size: 14px;
+  border-radius: 10px;
+}
+.push-invite-later {
+  background: none;
+  min-height: 40px;
+  padding: 9px 14px;
+  color: #415c78;
+  font-size: 13px;
+  font-weight: 700;
+}
+.push-invite-later:hover { text-decoration: underline; }
+.push-invite-body > small {
+  font-size: 11px;
+  color: #8a99a9;
+  line-height: 1.5;
+}
+.profile-push-settings {
+  width: 100%;
+  margin: 10px 0 17px;
+  border: 1px solid #dbe5f0;
+  border-radius: 11px;
+  overflow: hidden;
+}
+.profile-push-settings summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 12px 14px;
+  color: #3e5772;
+  font-size: 13px;
+  font-weight: 700;
+  background: #f8fafc;
+}
+.profile-push-settings summary::-webkit-details-marker { display: none; }
+.profile-push-settings summary::after {
+  content: "▾";
+  margin-left: auto;
+  font-size: 14px;
+}
+.profile-push-settings[open] summary::after { transform: rotate(180deg); }
+.profile-push-settings .push-panel {
+  border: 0;
+  border-top: 1px solid #dbe5f0;
+  border-radius: 0;
+  margin: 0;
+}
+@media (max-width: 520px) {
+  .push-invite-body { padding: 27px 17px 20px; }
+  .push-invite-icon { width: 62px; height: 62px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  dialog.push-invite-dialog[open] {
+    animation: freteon-push-appear 170ms ease-out;
+  }
+  @keyframes freteon-push-appear {
+    from { opacity: .7; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
