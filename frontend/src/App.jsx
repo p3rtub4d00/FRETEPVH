@@ -43,7 +43,6 @@ const navigation = {
     ["inicio", "Início", Home],
     ["fretes", "Meus fretes", Package],
     ["historico", "Histórico", History],
-    ["avisos", "Avisos push", BellRing],
     ["perfil", "Meu perfil", Users],
   ],
   motorista: [
@@ -51,7 +50,6 @@ const navigation = {
     ["propostas", "Propostas", Package],
     ["historico", "Histórico", History],
     ["carteira", "Minha carteira", FileCheck2],
-    ["avisos", "Avisos push", BellRing],
     ["perfil", "Meu perfil", Users],
   ],
   master: [
@@ -728,9 +726,6 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         </div>
         <main>
           {!loaded && <p role="status">Carregando seus dados…</p>}
-          {loaded && area !== "master" && page === "inicio" && (
-            <PushNotificationsPanel role={area} compact />
-          )}
           {area === "motorista" && !state.user.verified && (
             <div className="verification-action-banner" role="status">
               <ShieldCheck size={23}/>
@@ -943,9 +938,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               </div>
             </div>
           )}
-          {page === "avisos" && area !== "master" ? (
-            <PushNotificationsPanel role={area} />
-          ) : ((area === "motorista" && page === "carteira") ||
+          {((area === "motorista" && page === "carteira") ||
              (area === "master" && page === "financeiro")) ? (
             <WalletPanel
               role={area}
@@ -1062,6 +1055,12 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   driverId={user.id} role="motorista"
                   onChange={refresh}
                 />
+              )}
+              {["cliente", "motorista"].includes(area) && (
+                <details className="profile-push-settings">
+                  <summary><BellRing size={18}/> Notificações do aparelho</summary>
+                  <PushNotificationsPanel role={area} accountId={user.id}/>
+                </details>
               )}
               <div className="profile-legal-links">
                 <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
@@ -1823,6 +1822,11 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             são recebidos pelo motorista; Pix pelo FreteOn ainda é simulado.
           </p>
         </Modal>
+      )}
+      {area !== "master" && (
+        <PushNotificationsPanel role={area} accountId={user.id} autoInvite
+          canDisplay={loaded && !modal && page === "inicio"}
+        />
       )}
     </div>
   );
