@@ -31,6 +31,7 @@ export default function Entry() {
     history.pushState({}, "", next);
     setPath(next);
     setError("");
+    window.scrollTo?.({ top: 0, behavior: "instant" });
   }
   useEffect(() => {
     const pop = () => {
