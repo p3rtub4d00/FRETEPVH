@@ -287,3 +287,13 @@ Regras de elegibilidade e dispensa: `frontend/src/pushInvitationRules.js`, teste
 
 O botão **Solicitar frete** aparece somente nas telas de Início e Meus fretes do Cliente, não mais no perfil nem no histórico. No perfil de Cliente ou Motorista, a foto é maior e centralizada, com um selo discreto de câmera. Tocar na foto revela os controles **Tirar foto**, **Galeria** e, caso exista foto, **Remover foto**, sobrepostos à imagem. Os seletores nativos que corrigimos para Android e iPhone foram preservados; mensagens de carregamento e erro continuam disponíveis. O cache do PWA foi renovado para distribuir o layout atualizado a quem instalou o aplicativo.
 
+
+## Perfil: edição de dados e controles de foto compactos (13/11/2026)
+
+- Os botões de **Câmera**, **Galeria** e **Remover foto** agora são compactos e permanecem sobre a foto, visíveis somente após tocar no retrato, sem afetar o upload nativo.
+- **Termos de Uso** e **Política de Privacidade** são exibidos apenas no rodapé do painel, não dentro do cartão Meu perfil.
+- Clientes e motoristas podem tocar em **Editar nome e celular**, alterar os campos e salvar via `PATCH /api/auth/profile`. O nome é validado entre três e cem caracteres. O celular exige DDD e formato brasileiro de onze dígitos. Celular duplicado é rejeitado, inclusive se pertencer a outro perfil.
+- Se o número de celular for alterado, o servidor exige a **senha atual** da conta como prova de identidade, já que o celular é utilizado no login. O novo número passa a valer imediatamente para o próximo acesso. Alterações de nome não exigem senha.
+- A sessão atual e o ID da conta são preservados. Nenhuma foto, documento, frete, proposta ou cobrança é excluída ao editar o nome ou o número.
+- A versão do cache do PWA foi atualizada para distribuir os controles compactos aos usuários com aplicativo instalado.
+

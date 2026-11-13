@@ -1,4 +1,4 @@
-const CACHE = "freteon-shell-v5";
+const CACHE = "freteon-shell-v6";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
