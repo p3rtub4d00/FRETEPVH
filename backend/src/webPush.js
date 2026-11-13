@@ -13,7 +13,10 @@ const enc = (buffer) => Buffer.from(buffer).toString("base64url");
 const dec = (value) => Buffer.from(value, "base64url");
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const hmac = (key, input) => createHmac("sha256", key).update(input).digest();
-const info = (label) => Buffer.concat([Buffer.from(label, "ascii"), Buffer.from([0, 1])]);
+// RFC 8188 §2.2/2.3: info = ASCII label || 0x00 || 0x01.
+const info = (label) => Buffer.concat([
+  Buffer.from(label, "ascii"), Buffer.from([0, 1]),
+]);
 
 function validEndpoint(raw) {
   if (typeof raw !== "string" || raw.length < 30 || raw.length > 2200) return null;
@@ -140,28 +143,49 @@ function safeMessage(msg) {
 
 /** Never include street addresses, personal phones or financial keys in push. */
 export async function notifyAccounts(userIds, message) {
-  if (!pushEnabled()) return { attempted: 0, ok: 0 };
+  if (!pushEnabled()) return { attempted: 0, ok: 0, unavailable: true };
   const ids = [...new Set(userIds.filter(Boolean).map(String))];
-  if (!ids.length) return { attempted: 0, ok: 0 };
+  if (!ids.length) return { attempted: 0, ok: 0, noRecipients: true };
   const subscriptions = await PushSubscription.find({ userId: { $in: ids } }).limit(300).lean();
   const safe = safeMessage(message);
-  let delivered = 0;
+  let accepted = 0;
+  let expired = 0;
+  const failures = {};
   await Promise.allSettled(subscriptions.map(async (subscription) => {
     try {
       const result = await sendPush(subscription, safe);
-      if (result.ok) delivered += 1;
-      if (result.gone)
+      if (result.ok) accepted += 1;
+      else {
+        const code = String(result.status || "unknown");
+        failures[code] = (failures[code] || 0) + 1;
+      }
+      if (result.gone) {
+        expired += 1;
         await PushSubscription.deleteOne({ _id: subscription._id });
+      }
     } catch (error) {
       // No endpoint URL or encrypted keys in logs.
+      const reason = error?.name === "TimeoutError" ? "timeout" : "exception";
+      failures[reason] = (failures[reason] || 0) + 1;
       console.warn("Envio push não concluído:", error?.name || "Erro");
     }
   }));
-  return { attempted: subscriptions.length, ok: delivered };
+  return { attempted: subscriptions.length, ok: accepted, expired, failures };
 }
 
 export function notifyInBackground(userIds, message) {
-  void notifyAccounts(userIds, message).catch((error) => {
+  void notifyAccounts(userIds, message).then((result) => {
+    // Somente indicadores técnicos. Nenhum nome, telefone, endereço ou token.
+    console.info("Web Push", {
+      event: message?.id === "test" ? "test" :
+        message?.title === "Sua proposta foi aceita!" ? "booking" : "freight_event",
+      attempted: result.attempted,
+      acceptedByGateway: result.ok,
+      expired: result.expired || 0,
+      failures: result.failures || {},
+      unavailable: Boolean(result.unavailable),
+    });
+  }).catch((error) => {
     console.warn("Notificações indisponíveis:", error?.name || "Erro");
   });
 }
