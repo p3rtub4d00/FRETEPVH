@@ -29,6 +29,7 @@ import { api } from "./api.js";
 import RoutePicker from "./RoutePicker.jsx";
 import RoleSwitcher from "./RoleSwitcher.jsx";
 import ProfilePhotoEditor, { Avatar } from "./ProfilePhotoEditor.jsx";
+import FreightPhotoPicker, { FreightPhotoImage } from "./FreightPhotoPicker.jsx";
 import { pendingDriverBookings } from "./driverBooking.js";
 import PrivacyMaster from "./PrivacyMaster.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
@@ -169,44 +170,6 @@ function RequestForm({ onCreate, onClose, requestError }) {
           ? event.target.checked
           : event.target.value,
     }));
-  async function photos(event) {
-    const files = [...event.target.files];
-    if (
-      files.length + data.photos.length > 3 ||
-      files.some(
-        (file) =>
-          !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-          file.size > 600000,
-      )
-    ) {
-      setError("Selecione até 3 fotos JPG, PNG ou WebP, com até 600 KB cada.");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      const images = await Promise.all(
-        files.map(
-          (file) =>
-            new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result);
-              reader.onerror = reject;
-              reader.readAsDataURL(file);
-            }),
-        ),
-      );
-      setData((previous) => ({
-        ...previous,
-        photos: [...previous.photos, ...images],
-      }));
-    } catch {
-      setError("Não foi possível abrir a foto. Tente outro arquivo.");
-    } finally {
-      setLoading(false);
-      event.target.value = "";
-    }
-  }
   async function submit(event) {
     event.preventDefault();
     setError("");
@@ -292,36 +255,20 @@ function RequestForm({ onCreate, onClose, requestError }) {
               />
               Preciso de ajuda para carregar
             </label>
-            <label className="upload">
-              <Camera size={20} /> Fotos da carga{" "}
-              <small>Até 3 fotos · 600 KB por foto</small>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                onChange={photos}
-                disabled={loading}
-              />
-            </label>
-            <div className="photos">
-              {data.photos.map((photo, index) => (
-                <div key={photo}>
-                  <img src={photo} alt={`Foto ${index + 1} da carga`} />
-                  <button
-                    type="button"
-                    aria-label={`Remover foto ${index + 1}`}
-                    onClick={() =>
-                      setData({
-                        ...data,
-                        photos: data.photos.filter((_, i) => i !== index),
-                      })
-                    }
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
+            <FreightPhotoPicker
+              photos={data.photos}
+              busy={loading}
+              onAdd={(images) => {
+                setData(previous => ({ ...previous, photos: [...previous.photos, ...images] }));
+                return true;
+              }}
+              onRemove={(index) =>
+                setData(previous => ({
+                  ...previous,
+                  photos: previous.photos.filter((_, i) => i !== index),
+                }))
+              }
+            />
           </>
         )}
         {step === 2 && (
@@ -369,6 +316,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
               <h3>{data.title}</h3>
               <Route request={data} />
               {data.paymentMethod && <PaymentLabel method={data.paymentMethod} />}
+              <p className="photo-review-counter">Fotos anexadas: <strong>{data.photos.length}/3</strong></p>
               <p>
                 {data.vehicle} · {data.helper ? "Com ajudante" : "Sem ajudante"}
               </p>
@@ -530,6 +478,14 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
       setNotice("Registro financeiro atualizado (somente simulação).");
     });
   }
+  function addFreightPhotos(id, photos) {
+    return mutate(`/requests/${id}/photos`, "POST", { photos },
+      () => setNotice("Foto(s) da carga salva(s) e disponível(is) para os motoristas."));
+  }
+  function removeFreightPhoto(id, index) {
+    return mutate(`/requests/${id}/photos/${index}`, "DELETE", {},
+      () => setNotice("Foto removida do pedido."));
+  }
   function saveProfilePhoto(photo) {
     return mutate("/profile/photo", "PATCH", { photo },
       () => setNotice(photo ? "Foto de perfil atualizada." : "Foto removida."));
@@ -625,7 +581,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         {request.photos?.length > 0 && (
           <button type="button" className="freight-card-photo" onClick={() =>
             setModal({ type: "detail", id: request.id })}>
-            <img src={request.photos[0]} alt={`Foto da carga: ${request.title}`} loading="lazy" />
+            <FreightPhotoImage src={request.photos[0]} alt={`Foto da carga: ${request.title}`} />
             <span><Camera size={16} /> Ver {request.photos.length} foto(s) da carga</span>
           </button>
         )}
@@ -1226,7 +1182,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   {selected.photos.map((photo, index) => (
                     <button type="button" key={index} onClick={() =>
                       setModal({ type: "photo", id: selected.id, index, returnTo: "driverBooking" })}>
-                      <img src={photo} alt={`Ampliar foto ${index + 1} da carga`} loading="lazy" />
+                      <FreightPhotoImage src={photo} alt={`Ampliar foto ${index + 1} da carga`} />
                     </button>
                   ))}
                 </div>
@@ -1412,19 +1368,28 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             {selected.helper ? "Com ajudante" : "Sem ajudante"} ·{" "}
             {selected.time}
           </p>
-          <div className="freight-gallery">
-            <h3>Fotos da carga ({selected.photos?.length || 0})</h3>
-            {selected.photos?.length ? (
-              <div className="freight-gallery-images">
-                {selected.photos.map((photo, i) => (
-                  <button type="button" key={i} onClick={() =>
-                    setModal({ type: "photo", id: selected.id, index: i })}>
-                    <img src={photo} alt={`Abrir foto ${i + 1} da carga`} loading="lazy" />
-                  </button>
-                ))}
-              </div>
-            ) : <p className="muted">O cliente não anexou fotos a este frete.</p>}
-          </div>
+          {area === "cliente" && ["open", "booked"].includes(selected.status) ? (
+            <FreightPhotoPicker
+              photos={selected.photos || []}
+              busy={busy}
+              onAdd={(photos) => addFreightPhotos(selected.id, photos)}
+              onRemove={(index) => removeFreightPhoto(selected.id, index)}
+            />
+          ) : (
+            <div className="freight-gallery">
+              <h3>Fotos da carga ({selected.photos?.length || 0})</h3>
+              {selected.photos?.length ? (
+                <div className="freight-gallery-images">
+                  {selected.photos.map((photo, i) => (
+                    <button type="button" key={i} onClick={() =>
+                      setModal({ type: "photo", id: selected.id, index: i })}>
+                      <FreightPhotoImage src={photo} alt={`Abrir foto ${i + 1} da carga`} />
+                    </button>
+                  ))}
+                </div>
+              ) : <p className="muted">O cliente não anexou fotos a este frete.</p>}
+            </div>
+          )}
           {area === "motorista" && selected.status === "open" ? (
             <ProposalForm
               key={selected.id}
@@ -1602,8 +1567,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
       )}
       {modal?.type === "photo" && selected && (
         <Modal title="Foto da carga" onClose={() => setModal({ type: modal.returnTo || "detail", id: selected.id })}>
-          <img className="freight-photo-expanded"
-            src={selected.photos?.[modal.index]} alt={`Foto ${modal.index + 1} da carga`} />
+          <FreightPhotoImage className="freight-photo-expanded"
+            src={selected.photos?.[modal.index]} alt={`Foto ${modal.index + 1} da carga`} eager />
           <button className="secondary full" onClick={() =>
             setModal({ type: modal.returnTo || "detail", id: selected.id })}>Voltar aos detalhes</button>
         </Modal>
