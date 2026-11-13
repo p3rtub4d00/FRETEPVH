@@ -24,6 +24,7 @@ import {
   CircleHelp,
   Flag,
   Camera,
+  MessageSquare,
 } from "lucide-react";
 import { money, statusLabels } from "./format.js";
 import { api } from "./api.js";
@@ -37,6 +38,8 @@ import PrivacyMaster from "./PrivacyMaster.jsx";
 import PushNotificationsPanel from "./PushNotificationsPanel.jsx";
 import DriverVerificationPanel from "./DriverVerificationPanel.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
+import FreightChatPanel from "./FreightChatPanel.jsx";
+import MasterFreightReports, { ReportFreightForm } from "./MasterFreightReports.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
 const navigation = {
@@ -1081,11 +1084,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               ))}
             </section>
           ) : page === "denuncias" ? (
-            <section className="panel">
-              <Empty title="Nenhuma denúncia">
-                O envio de denúncias estará disponível em uma próxima etapa.
-              </Empty>
-            </section>
+            <MasterFreightReports />
           ) : (
             <section>
               <div className="section-heading">
@@ -1204,6 +1203,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 {selected.helper ? "Cliente solicitou ajudante" : "Sem ajudante solicitado"}
               </span>
             </div>
+            <button className="secondary full" type="button"
+              onClick={() => setModal({ type: "detail", id: selected.id })}>
+              <MessageSquare size={17}/> Conversar com o cliente
+            </button>
             <div className="driver-acceptance-description">
               <strong>Descrição da carga</strong>
               <p>{selected.description}</p>
@@ -1505,10 +1508,29 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 })}
               {!selected.proposals.length && (
                 <p className="info">
-                  Aguardando propostas dos motoristas disponíveis.
+                  Aguardando propostas de motoristas verificados.
                 </p>
               )}
             </>
+          )}
+          {["booked", "transit", "completed"].includes(selected.status) &&
+            ((area === "cliente" && selected.clientId === user.id) ||
+             (area === "motorista" && selected.driverId === user.id)) && (
+              <FreightChatPanel requestId={selected.id} currentUserId={user.id}
+                onReport={() => setModal({ type: "report", id: selected.id })} />
+            )}
+          {area === "cliente" && selected.status === "open" && selected.proposals.length > 0 && (
+            <button type="button" className="secondary full"
+              onClick={() => setModal({ type: "report", id: selected.id })}>
+              <Flag size={16}/> Denunciar tentativa de negociação por fora
+            </button>
+          )}
+          {area === "motorista" && selected.status === "open" &&
+            selected.proposals.some(p => p.driverId === user.id) && (
+            <button type="button" className="secondary full"
+              onClick={() => setModal({ type: "report", id: selected.id })}>
+              <Flag size={16}/> Denunciar problema neste pedido
+            </button>
           )}
           {area === "motorista" &&
             selected.proposals.find(
@@ -1673,6 +1695,16 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           </button>
         </Modal>
       )}
+      {modal?.type === "report" && selected && ["cliente", "motorista"].includes(area) && (
+        <Modal title="Denunciar ocorrência" busy={busy}
+          onClose={() => setModal({ type: "detail", id: selected.id })}>
+          <ReportFreightForm request={selected} role={area} currentId={user.id}
+            onDone={() => {
+              setModal({ type: "detail", id: selected.id });
+              setNotice("Denúncia enviada para análise do Master.");
+            }} />
+        </Modal>
+      )}
       {modal?.type === "issue" && selected && (
         <Modal title="Informar problema com o frete" error={notice} busy={busy}
           onClose={() => setModal({ type: "detail", id: selected.id })}>
@@ -1689,16 +1721,24 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           title="Cancelar pedido?"
           onClose={() => setModal({ type: "detail", id: selected.id })}
         >
-          <p>O pedido será encerrado e deixará de receber propostas.</p>
-          <button
-            className="primary full"
-            onClick={async () => {
-              if (await updateRequest(selected.id, { status: "cancelled" }))
-                setModal(null);
-            }}
-          >
-            Confirmar cancelamento
-          </button>
+          <p>O pedido será encerrado e deixará de receber propostas. Cancelamentos após a contratação serão registrados para análise administrativa.</p>
+          <form onSubmit={async event => {
+            event.preventDefault();
+            const reason = new FormData(event.currentTarget).get("cancelReason");
+            if (await updateRequest(selected.id, { status: "cancelled", cancelReason: reason }))
+              setModal(null);
+          }}>
+            <label>Motivo do cancelamento
+              <select name="cancelReason" required defaultValue="">
+                <option value="" disabled>Selecione um motivo</option>
+                <option value="Não preciso mais do transporte">Não preciso mais do transporte</option>
+                <option value="Alteração de data ou endereço">Alteração de data ou endereço</option>
+                <option value="Não consegui concluir com o motorista">Não consegui concluir com o motorista</option>
+                <option value="Outro motivo">Outro motivo</option>
+              </select>
+            </label>
+            <button type="submit" className="primary full">Confirmar cancelamento</button>
+          </form>
         </Modal>
       )}
       {modal?.type === "driver" && (
@@ -1850,7 +1890,7 @@ function ProposalForm({ request, available, driverId, onSubmit }) {
         onSubmit({
           price: Number(data.get("price")),
           time: data.get("time"),
-          note: data.get("note").trim(),
+          services: data.getAll("services"),
         });
       }}
     >
@@ -1891,16 +1931,24 @@ function ProposalForm({ request, available, driverId, onSubmit }) {
           />
         </label>
       </div>
-      <label>
-        O que está incluído?
-        <textarea
-          name="note"
-          required
-          maxLength={400}
-          defaultValue={previous?.note}
-          placeholder="Ajudante, proteção da carga e outras informações"
-        />
-      </label>
+      <fieldset className="proposal-services">
+        <legend>Serviços incluídos na proposta</legend>
+        <p className="muted">Marque o que está incluído no valor. Não é permitido compartilhar contatos ou links antes da contratação.</p>
+        {[
+          ["helper", "Ajudante incluso"],
+          ["blanket", "Proteção com mantas"],
+          ["disassembly", "Desmontagem e montagem"],
+          ["stairs", "Retirada/entrega em escadas"],
+          ["loading", "Carregamento e descarregamento"],
+          ["tieDown", "Amarração e fixação da carga"],
+        ].map(([key, label]) => (
+          <label key={key} className="proposal-service-option">
+            <input type="checkbox" name="services" value={key}
+              defaultChecked={previous?.services?.includes(key)}/>
+            {label}
+          </label>
+        ))}
+      </fieldset>
       <CommissionPreview price={proposedPrice} method={request.paymentMethod} />
       <button className="primary full" disabled={!available}>
         {available ? "Enviar proposta" : "Verifique seus documentos, carteira e meios de pagamento"}
