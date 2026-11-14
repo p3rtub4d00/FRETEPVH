@@ -1,3 +1,4 @@
+import FreightCarousel from "./FreightCarousel.jsx";
 import RefundPanel, { refundBlocked } from "./RefundPanel.jsx";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -574,9 +575,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   if (filter !== "all")
     requests = requests.filter((request) => request.status === filter);
 
-  function requestCard(request) {
+  function requestCard(request, featured = false) {
     return (
-      <article className="freight-card" key={request.id}>
+      <article className={`freight-card${featured === true ? " freight-card-featured" : ""}`} key={request.id}>
         <div className="card-top">
           <div className="package-icon">
             <Package size={22} />
@@ -586,9 +587,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           </span>
         </div>
         <h3>{request.title}</h3>
-        <small className="muted">
+        {featured !== true && <small className="muted">
           {request.id}{request.vehicle ? ` · ${request.vehicle}` : " · Aberto a todos os veículos"}
-        </small>
+        </small>}
+        {featured === true && <p className="freight-card-summary">{request.description || "Confira os detalhes da carga antes de enviar sua proposta."}</p>}
         <Route request={request} />
         {request.photos?.length > 0 && (
           <button type="button" className="freight-card-photo" onClick={() =>
@@ -613,17 +615,18 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           <span>{request.helper ? "Com ajudante" : "Sem ajudante"}</span>
         </div>
         <RouteDistance request={request} />
-        <button
-          className="card-link"
-          onClick={() => setModal({ type: "detail", id: request.id })}
-        >
-          {request.status === "open"
-            ? area === "motorista"
-              ? "Ver pedido e enviar proposta"
-              : `${request.proposals.length} propostas recebidas`
-            : "Ver detalhes"}
-          <ArrowRight size={18} />
-        </button>
+        {area === "motorista" ? <div className="driver-card-actions">
+          <button type="button" className="driver-details-button" onClick={() => setModal({ type: "detail", id: request.id })}>
+            Ver detalhes <ArrowRight size={18}/>
+          </button>
+          {request.status === "open" && <button type="button" className="driver-proposal-button"
+            onClick={() => setModal({ type: "detail", id: request.id, focusProposal: true })}>
+            {request.proposals.some(p => p.driverId === user.id) ? "Editar proposta" : "Enviar proposta"}
+          </button>}
+        </div> : <button className="card-link" onClick={() => setModal({ type: "detail", id: request.id })}>
+          {request.status === "open" ? `${request.proposals.length} propostas recebidas` : "Ver detalhes"}
+          <ArrowRight size={18}/>
+        </button>}
       </article>
     );
   }
@@ -1129,8 +1132,15 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   ))}
                 </div>
               )}
-              <div className="cards">{requests.map(requestCard)}</div>
-              {!requests.length && (
+              {area === "motorista" && page === "inicio" ? <>
+                <FreightCarousel requests={requests.filter(request => request.status === "open")} renderCard={requestCard}/>
+                {!requests.some(request => request.status === "open") && <Empty title="Nenhum chamado disponível">Novos pedidos aparecerão aqui assim que forem publicados.</Empty>}
+                {requests.some(request => request.status !== "open") && <>
+                  <div className="section-heading"><h2>Seus fretes contratados</h2></div>
+                  <div className="cards">{requests.filter(request => request.status !== "open").map(request => requestCard(request))}</div>
+                </>}
+              </> : <div className="cards">{requests.map(request => requestCard(request))}</div>}
+              {!requests.length && !(area === "motorista" && page === "inicio") && (
                 <Empty title="Nenhum frete por aqui">
                   Novos pedidos e atualizações aparecerão nesta área.
                 </Empty>
@@ -1433,6 +1443,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           )}
           {area === "motorista" && selected.status === "open" ? (
             <ProposalForm
+              focusOnOpen={modal.focusProposal}
               key={selected.id}
               request={selected}
               available={
@@ -1883,7 +1894,14 @@ function IssueForm({ onSubmit, busy }) {
   );
 }
 
-function ProposalForm({ request, available, driverId, onSubmit }) {
+function ProposalForm({ request, available, driverId, onSubmit, focusOnOpen = false }) {
+  const headingRef = useRef(null);
+  useEffect(() => {
+    if (focusOnOpen) {
+      headingRef.current?.scrollIntoView({ block: "start" });
+      headingRef.current?.focus({ preventScroll: true });
+    }
+  }, [focusOnOpen]);
   const previous = request.proposals.find(
     (proposal) => proposal.driverId === driverId,
   );
@@ -1900,7 +1918,7 @@ function ProposalForm({ request, available, driverId, onSubmit }) {
         });
       }}
     >
-      <h3>{previous ? "Atualizar minha proposta" : "Enviar proposta"}</h3>
+      <h3 ref={headingRef} tabIndex={-1}>{previous ? "Atualizar minha proposta" : "Enviar proposta"}</h3>
       <div className="payment-choice-notice">
         <strong>Pagamento escolhido pelo cliente</strong>
         <PaymentLabel method={request.paymentMethod} />

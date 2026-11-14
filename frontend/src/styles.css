@@ -4174,3 +4174,25 @@ dialog.push-invite-dialog::backdrop {
 .refund-panel form { display: grid; gap: 10px; }
 .refund-panel label { display: grid; gap: 6px; }
 .refund-panel textarea { box-sizing: border-box; width: 100%; min-width: 0; resize: vertical; }
+
+/* Chamados disponíveis: um card por vez, sem ações automáticas no gesto. */
+.freight-carousel { width: 100%; max-width: 560px; margin: 0 auto 26px; min-width: 0; }
+.freight-carousel-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; color: #526478; font-size: .9rem; }
+.freight-carousel-nav strong { color: #10243e; font-size: 1.1rem; }
+.freight-carousel-nav button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #dce5ef; border-radius: 50%; background: white; color: #10243e; cursor: pointer; }
+.freight-carousel-nav button:disabled { opacity: .35; cursor: default; }
+.freight-carousel-stage { touch-action: pan-y pinch-zoom; border-radius: 20px; }
+.freight-carousel-stage:focus-visible, .driver-card-actions button:focus-visible { outline: 3px solid #ff8a35; outline-offset: 4px; }
+.freight-card.freight-card-featured { border-radius: 20px; border-top: 4px solid #ff8a35; padding: 18px; box-shadow: 0 10px 28px #10243e0d; }
+.freight-card-featured .card-top { margin-bottom: 10px; }
+.freight-card-summary { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #617186; font-size: .9rem; line-height: 1.5; margin: 8px 0 12px; }
+.freight-card-featured .freight-card-photo { padding: 0; overflow: hidden; position: relative; height: 138px; }
+.freight-card-featured .freight-card-photo > img { width: 100%; height: 100%; border-radius: 0; object-fit: cover; }
+.freight-card-featured .freight-card-photo > span { position: absolute; bottom: 8px; left: 8px; background: #10243ee6; color: white; font-size: .75rem; padding: 6px 9px; border-radius: 8px; }
+.driver-card-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin-top: 16px; }
+.driver-card-actions button { display: flex; justify-content: center; align-items: center; gap: 6px; min-height: 46px; padding: 11px 8px; border: 0; border-radius: 12px; font-size: .85rem; font-weight: 700; cursor: pointer; }
+.driver-card-actions button:only-child { grid-column: 1 / -1; }
+.driver-details-button { background: #10243e; color: white; }
+.driver-proposal-button { background: #ff8a35; color: #10243e; }
+.freight-carousel-hint { text-align: center; color: #617186; font-size: .8rem; margin: 12px 0 0; }
+@media (prefers-reduced-motion: no-preference) { .freight-card-featured { animation: freight-card-appear .18s ease-out; } @keyframes freight-card-appear { from { opacity: .5; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } } }
