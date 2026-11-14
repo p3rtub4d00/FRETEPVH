@@ -1,3 +1,4 @@
+import { applyRefund, refundBlocks } from "./refunds.js";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { Account, Freight } from "./models.js";
@@ -26,6 +27,7 @@ export function bookFinancials(request, proposal) {
 }
 
 export function confirmDelivery(request) {
+  if (refundBlocks(request)) fail(409, "O reembolso bloqueia a confirmação e o repasse deste frete.");
   if (request.status !== "completed" || request.deliveryConfirmedAt)
     fail(409, "Esta entrega não pode ser confirmada novamente.");
   if (request.disputeStatus === "open" || request.disputeStatus === "resolved_cancelled")
@@ -73,8 +75,8 @@ export function walletSummary(requests, user) {
           request.disputeStatus !== "open")
         overdueCents += request.commissionCents || 0;
     }
-    if (request.payoutStatus === "available") availableCents += request.driverNetCents || 0;
-    if (request.payoutStatus === "requested") requestedCents += request.driverNetCents || 0;
+    if (!refundBlocks(request) && request.disputeStatus !== "open" && request.payoutStatus === "available") availableCents += request.driverNetCents || 0;
+    if (!refundBlocks(request) && request.disputeStatus !== "open" && request.payoutStatus === "requested") requestedCents += request.driverNetCents || 0;
     if (request.payoutStatus === "paid_simulated") paidOutCents += request.driverNetCents || 0;
     if (request.commissionStatus === "paid") commissionsPaidCents += request.commissionCents || 0;
   }
@@ -115,7 +117,12 @@ finance.post("/requests/:id/finance", async (req, res) => {
   if (!isClient && !isDriver && !isMaster)
     fail(403, "Você não tem acesso a este frete.");
 
-  if (action === "simulate_pix_payment" && isClient) {
+  const refundAction = ["request_refund", "approve_refund", "reject_refund", "simulate_refund"].includes(action);
+  if (!refundAction && refundBlocks(request))
+    fail(409, "Este frete está bloqueado por uma solicitação de reembolso.");
+  if (refundAction) {
+    applyRefund(request, req.user, action, req.body.reason);
+  } else if (action === "simulate_pix_payment" && isClient) {
     if (request.paymentMethod !== "pix_freteon" ||
         request.status !== "booked" || request.paymentStatus !== "awaiting")
       fail(409, "O pagamento simulado só pode ser confirmado após contratar o motorista.");
@@ -186,6 +193,20 @@ finance.post("/requests/:id/finance", async (req, res) => {
     fail(403, "Ação financeira não autorizada ou inválida.");
   }
   await request.save();
+  if (refundAction) {
+    const titles = {
+      request_refund: "Cancelamento com reembolso em análise",
+      approve_refund: "Reembolso aprovado · frete cancelado",
+      reject_refund: "Solicitação de reembolso recusada",
+      simulate_refund: "Reembolso concluído (simulação)",
+    };
+    for (const [id, role] of [[request.clientId, "cliente"], [request.driverId, "motorista"]]) {
+      notifyInBackground([id], {
+        role, title: titles[action], body: "Confira os detalhes e a decisão no FreteOn. Nenhum Pix real foi movimentado.",
+        id: `refund-${action}-${request._id}`,
+      });
+    }
+  }
   const event = {
     simulate_pix_payment: {
       to: [request.driverId], role: "motorista",

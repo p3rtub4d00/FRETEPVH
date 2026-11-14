@@ -1,3 +1,4 @@
+import RefundPanel, { refundBlocked } from "./RefundPanel.jsx";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -405,7 +406,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
       setLoaded(true);
       if (area === "cliente" && !modalRef.current) {
         const toReview = data.requests.find((request) =>
-          request.status === "completed" &&
+          request.status === "completed" && !refundBlocked(request) &&
           !seenCompletions.current.has(request.id) &&
           ((request.paymentMethod && !request.deliveryConfirmedAt &&
               request.disputeStatus === "none") ||
@@ -533,7 +534,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     : [];
   const completionPending = area === "cliente"
     ? state.requests.filter((request) =>
-        request.status === "completed" &&
+        request.status === "completed" && !refundBlocked(request) &&
         ((request.paymentMethod && !request.deliveryConfirmedAt &&
           request.disputeStatus === "none") ||
          (!request.rating && request.disputeStatus !== "open" &&
@@ -597,6 +598,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           </button>
         )}
         {request.paymentMethod && <PaymentLabel method={request.paymentMethod} />}
+        {request.refundStatus && request.refundStatus !== "none" && <p className="wallet-status warning">{{pending: "Reembolso em análise · frete suspenso", approved: "Reembolso aprovado", rejected: "Reembolso recusado — veja a justificativa", refunded_simulated: "Reembolsado (simulação)"}[request.refundStatus]}</p>}
         <div className="card-meta">
           <span>
             <Clock3 size={15} />
@@ -1224,6 +1226,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 </div>
               ) : <p className="muted">O cliente não anexou fotos.</p>}
             </div>
+            <RefundPanel request={selected} role={area} busy={busy} onAction={walletAction} />
             <div className="driver-acceptance-payment">
               <h3>Pagamento combinado</h3>
               <PaymentLabel method={selected.paymentMethod} />
@@ -1250,7 +1253,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   </p>
                 )}
                 <button className="primary full"
-                  disabled={busy ||
+                  disabled={busy || refundBlocked(selected) ||
                     (selected.paymentMethod === "pix_freteon" &&
                      selected.paymentStatus !== "simulated_paid")}
                   onClick={async () => {
@@ -1285,6 +1288,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           busy={busy}
           onClose={() => setModal(null)}
         >
+          <RefundPanel request={selected} role={area} busy={busy} onAction={walletAction} />
           <div className="completion-modal-content">
             <div className="completion-modal-headline">
               <CheckCircle2 size={35} />
@@ -1307,7 +1311,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               </div>
             </div>
             {selected.paymentMethod && !selected.deliveryConfirmedAt &&
-              selected.disputeStatus === "none" && (
+              selected.disputeStatus === "none" && !refundBlocked(selected) && (
               <div className="completion-actions">
                 <h3>Confirme a entrega</h3>
                 <p>
@@ -1326,7 +1330,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               </div>
             )}
             {(selected.deliveryConfirmedAt || !selected.paymentMethod) &&
-              !selected.rating && selected.disputeStatus !== "open" && (
+              !selected.rating && selected.disputeStatus !== "open" && !refundBlocked(selected) && (
               <div className="completion-actions">
                 <h3>Como foi o serviço?</h3>
                 <p>Escolha de 1 a 5 estrelas para avaliar o motorista.</p>
@@ -1370,6 +1374,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             {statusLabels[selected.status]}
           </span>
           <Route request={selected} />
+          <RefundPanel key={`refund-${selected.id}`} request={selected} role={area} busy={busy} onAction={walletAction} />
           {selected.paymentMethod && (
             <div className="freight-payment-panel">
               <PaymentLabel method={selected.paymentMethod} />
@@ -1536,7 +1541,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             selected.proposals.find(
               (proposal) => proposal.id === selected.selectedId,
             )?.driverId === user.id &&
-            ["booked", "transit"].includes(selected.status) && (
+            ["booked", "transit"].includes(selected.status) && !refundBlocked(selected) && (
               <button
                 className="primary full"
                 onClick={() =>
@@ -1563,12 +1568,12 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           )}
           {area === "cliente" && selected.status === "completed" &&
             selected.paymentMethod && !selected.deliveryConfirmedAt &&
-            selected.disputeStatus === "none" && (
+            selected.disputeStatus === "none" && !refundBlocked(selected) && (
             <div className="finance-action">
               <h3>Confirmação da entrega e do pagamento</h3>
               <p>O motorista marcou este frete como concluído. Confirme somente após verificar a entrega
               {selected.paymentMethod !== "pix_freteon" ? " e efetuar o pagamento diretamente ao motorista." : "."}</p>
-              <button className="primary full" disabled={busy}
+              <button className="primary full" disabled={busy || refundBlocked(selected)}
                 onClick={() => walletAction(selected.id, "confirm_delivery")}>
                 Confirmar entrega {selected.paymentMethod === "pix_freteon" ? "(simulação)" : "e pagamento"}
               </button>
@@ -1612,7 +1617,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </div>
           )}
           {area === "cliente" &&
-            ["open", "booked"].includes(selected.status) && (
+            ["open", "booked"].includes(selected.status) && !refundBlocked(selected) &&
+            !(selected.paymentMethod === "pix_freteon" && selected.paymentStatus === "simulated_paid") && (
               <button
                 className="danger-link"
                 onClick={() => setModal({ type: "cancel", id: selected.id })}

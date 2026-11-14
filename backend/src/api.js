@@ -1,3 +1,4 @@
+import { refundBlocks, canRequestRefund } from "./refunds.js";
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { randomUUID } from "node:crypto";
@@ -75,6 +76,7 @@ function presentRequest(request, user) {
   const result = { ...data, id: String(data._id) };
   delete result._id;
   delete result.__v;
+  result.canRequestRefund = user.role === "cliente" && canRequestRefund(data);
   if (user.role === "motorista")
     result.proposals = data.proposals.filter(
       (proposal) => proposal.driverId === own(user),
@@ -92,7 +94,7 @@ function presentRequest(request, user) {
     // Cliente só visualiza o preço total contratado: não enviamos os dados
     // internos de comissão, líquido do motorista ou controle de repasses.
     result.canDispute =
-      data.status === "completed" &&
+      !refundBlocks(data) && data.status === "completed" &&
       data.disputeStatus === "none" &&
       data.payoutStatus !== "paid_simulated" &&
       data.commissionStatus !== "paid";
@@ -351,6 +353,7 @@ api.patch("/requests/:id", async (req, res) => {
   const request = await Freight.findById(req.params.id);
   if (!request || !canRead(request, req.user))
     fail(404, "Frete não encontrado.");
+  if (refundBlocks(request)) fail(409, "Aguarde a análise do reembolso antes de alterar este frete.");
   const previousStatus = request.status;
   if (req.user.role === "cliente" && request.clientId === own(req.user)) {
     if (req.body.status === "booked" && request.status === "open") {
@@ -377,11 +380,9 @@ api.patch("/requests/:id", async (req, res) => {
       req.body.status === "cancelled" &&
       ["open", "booked"].includes(request.status)
     ) {
+      if (request.paymentMethod === "pix_freteon" && request.paymentStatus === "simulated_paid")
+        fail(409, "Use Cancelar e solicitar reembolso para o Master analisar o Pix pago.");
       request.status = "cancelled";
-      // Reverte o Pix fictício na simulação, sem qualquer transferência real.
-      if (request.paymentMethod === "pix_freteon" &&
-          request.paymentStatus === "simulated_paid")
-        request.paymentStatus = "refunded_simulated";
       request.payoutStatus = "none";
       request.commissionStatus = "none";
     }

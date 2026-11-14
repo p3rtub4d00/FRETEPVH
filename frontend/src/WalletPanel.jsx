@@ -1,3 +1,4 @@
+import RefundPanel, { refundBlocked } from "./RefundPanel.jsx";
 import { useEffect, useState } from "react";
 import { AlertCircle, Banknote, CheckCircle2, Clock3, CreditCard, QrCode, Wallet } from "lucide-react";
 import { money } from "./format.js";
@@ -79,7 +80,8 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction }) {
         <strong>{byCents(amount)}</strong>
       </div>
       <PaymentLabel method={request.paymentMethod} />
-      <StatusText request={request} />
+      <RefundPanel request={request} role={role} busy={busy} onAction={onAction} />
+      {!refundBlocked(request) && <StatusText request={request} />}
       <div className="wallet-item-values">
         <span>Comissão: <strong>{byCents(request.commissionCents)}</strong></span>
         <span>Motorista: <strong>{byCents(request.driverNetCents)}</strong></span>
@@ -93,7 +95,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction }) {
       {request.disputeStatus === "open" && (
         <p className="wallet-note"><AlertCircle size={15} /> Reclamação: {request.disputeReason}</p>
       )}
-      {isDriver && request.payoutStatus === "available" && (
+      {isDriver && !refundBlocked(request) && request.payoutStatus === "available" && (
         <button className="primary full" disabled={busy} onClick={() => onAction(request.id, "request_payout")}>
           Solicitar repasse Pix manual (simulação)
         </button>
@@ -104,7 +106,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction }) {
           {request.commissionPaymentRequestedAt ? "Pagamento informado ao Master" : "Informar comissão enviada (simulação)"}
         </button>
       )}
-      {isMaster && request.status === "completed" &&
+      {isMaster && !refundBlocked(request) && request.status === "completed" &&
         !request.deliveryConfirmedAt && request.disputeStatus !== "open" &&
         request.disputeStatus !== "resolved_cancelled" &&
         (request.paymentMethod !== "pix_freteon" || request.paymentStatus === "simulated_paid") && (
@@ -113,13 +115,13 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction }) {
             Confirmar entrega após análise (simulação)
           </button>
       )}
-      {isMaster && request.commissionStatus === "pending" && request.disputeStatus !== "open" && (
+      {isMaster && !refundBlocked(request) && request.commissionStatus === "pending" && request.disputeStatus !== "open" && (
         <button className="primary full" disabled={busy}
           onClick={() => onAction(request.id, "confirm_commission_master")}>
           Confirmar quitação da comissão (simulação)
         </button>
       )}
-      {isMaster && request.payoutStatus === "requested" && request.disputeStatus !== "open" && (
+      {isMaster && !refundBlocked(request) && request.payoutStatus === "requested" && request.disputeStatus !== "open" && (
         <div className="wallet-transfer">
           <p>Chave Pix do motorista: <strong className="wallet-pix-key">{driver?.pixKey || "Não cadastrada"}</strong></p>
           <button className="primary full" disabled={busy || !driver?.pixKey}
@@ -128,7 +130,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction }) {
           </button>
         </div>
       )}
-      {isMaster && request.disputeStatus === "open" && (
+      {isMaster && !refundBlocked(request) && request.disputeStatus === "open" && (
         <div className="wallet-review-actions">
           <button className="secondary" disabled={busy}
             onClick={() => onAction(request.id, "resolve_dispute_accept_master")}>Reconhecer entrega</button>
@@ -155,6 +157,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
     (role === "master" || request.driverId === user.id)
   );
   const priority = (request) =>
+    ["pending", "approved"].includes(request.refundStatus) ? -1 :
     request.disputeStatus === "open" ? 0 :
       request.payoutStatus === "requested" ? 1 :
         request.commissionStatus === "pending" ? 2 :
@@ -167,6 +170,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
         <Wallet size={22} />
         <div><strong>Carteira FreteOn · Simulação</strong><p>Nenhum Pix ou repasse real será realizado nesta versão.</p></div>
       </div>
+      {role === "master" && all.some(r => ["pending", "approved"].includes(r.refundStatus)) && <p className="wallet-alert" role="status">{all.filter(r => r.refundStatus === "pending").length} reembolso(s) em análise · {all.filter(r => r.refundStatus === "approved").length} aguardando devolução simulada. Solicitações aparecem primeiro no extrato.</p>}
       <div className="wallet-metrics">
         <div><span>{role === "master" ? "Comissões a receber" : "Comissões a repassar"}</span><strong>{byCents(amount.pendingCents)}</strong></div>
         <div><span>{role === "master" ? "Repasses pendentes" : "Saldo disponível para solicitar"}</span><strong>{byCents(role === "master" ? amount.requestedCents : amount.availableCents)}</strong></div>
