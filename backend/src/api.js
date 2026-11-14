@@ -237,16 +237,25 @@ api.post("/requests", authorize("cliente"), rateLimit({
     ...roadEstimate,
     clientId: own(req.user),
   });
-  const visibleDrivers = await Account.find({
-    role: "motorista", status: "approved",
-  }).limit(300);
-  const verifiedIds = visibleDrivers.filter(isVerifiedDriver).map((person) => String(person._id));
-  notifyInBackground(verifiedIds, {
-    role: "motorista",
-    title: "Novo frete disponível!",
-    body: "Um cliente publicou um pedido. Confira os detalhes e envie sua proposta.",
-    id: String(request._id),
-  });
+  // O pedido já foi salvo. Uma falha auxiliar de notificação nunca deve
+  // devolver erro de publicação e induzir o cliente a publicar novamente.
+  try {
+    const visibleDrivers = await Account.find({
+      role: "motorista", status: "approved",
+    }).limit(300);
+    // filter passa o índice como segundo argumento; isVerifiedDriver espera
+    // uma Date nessa posição. Encaminhar apenas o motorista.
+    const verifiedIds = visibleDrivers.filter(person => isVerifiedDriver(person))
+      .map(person => String(person._id));
+    notifyInBackground(verifiedIds, {
+      role: "motorista",
+      title: "Novo frete disponível!",
+      body: "Um cliente publicou um pedido. Confira os detalhes e envie sua proposta.",
+      id: String(request._id),
+    });
+  } catch (error) {
+    console.warn("Pedido salvo; seleção de destinatários push indisponível:", error?.name || "Erro");
+  }
   res.status(201).json({ request: presentRequest(request, req.user) });
 });
 // Anexar imagens a pedidos já publicados, sem recriar a contratação.
