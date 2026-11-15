@@ -9,6 +9,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import Dashboard from "./App.jsx";
+import { RecoveryRequest, RecoveryReset } from "./PasswordRecovery.jsx";
 import { api } from "./api.js";
 import RoleSwitcher from "./RoleSwitcher.jsx";
 import InstallInvitation from "./InstallInvitation.jsx";
@@ -164,7 +165,7 @@ export default function Entry() {
           <span>Porto Velho, RO</span>
         )}
       </header>
-      {path === "/termos" || path === "/privacidade" ? (
+      {path === "/recuperar-senha" ? <RecoveryReset onBack={() => navigate("/cliente")}/> : (area === "cliente" || area === "motorista") && path.endsWith("/esqueci-senha") ? <RecoveryRequest role={area} onBack={() => navigate(`/${area}`)}/> : path === "/termos" || path === "/privacidade" ? (
         <LegalPage kind={path === "/termos" ? "termos" : "privacidade"} navigate={navigate} />
       ) : path === "/" ? (
         <main className="public-home">
@@ -452,6 +453,7 @@ function AuthForm({
             {error}
           </p>
         )}
+        {!user && !register && area !== "master" && <p className="auth-alternative"><button className="text-button" onClick={() => navigate(`/${area}/esqueci-senha`)}>Esqueci minha senha</button></p>}
         {!user && area !== "master" && (
           <p className="auth-alternative">
             {register ? "Já tem uma conta?" : "Ainda não tem conta?"}{" "}
