@@ -6,21 +6,23 @@ import { authorize, fail, text } from "./auth.js";
 import { notifyInBackground } from "./webPush.js";
 
 export const PAYMENT_METHODS = ["pix_freteon", "card_driver", "cash_driver"];
-export const COMMISSION_PERCENT = 10;
+import { commissionConfig, commissionForDriver } from "./commissionSettings.js";
 const COMMISSION_WINDOW_MS = 72 * 60 * 60 * 1000;
 export const finance = Router();
 
 const own = (user) => String(user._id);
 const cents = (value) => Math.round(value * 100);
 
-export function bookFinancials(request, proposal) {
+export async function bookFinancials(request, proposal, driver) {
   if (!PAYMENT_METHODS.includes(request.paymentMethod)) return; // legado sem cobrança.
   const gross = cents(proposal.price);
-  const commission = Math.round(gross * COMMISSION_PERCENT / 100);
+  const config = await commissionConfig();
+  const { rate } = commissionForDriver(driver, config);
+  const commission = Math.round(gross * rate / 100);
   request.agreedPriceCents = gross;
   request.commissionCents = commission;
   request.driverNetCents = gross - commission;
-  request.commissionRate = COMMISSION_PERCENT;
+  request.commissionRate = rate;
   request.paymentStatus = "awaiting";
   request.commissionStatus = "none";
   request.payoutStatus = "none";
