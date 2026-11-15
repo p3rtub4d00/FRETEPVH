@@ -10,6 +10,7 @@ import { rateLimit } from "express-rate-limit";
 import { Account, Session, PushSubscription, publicUser } from "./models.js";
 import { pushLogoutFilter } from "./pushLogout.js";
 import { LEGAL_VERSION } from "./legalVersion.js";
+import { notifyMasters } from "./webPush.js";
 
 const scrypt = promisify(scryptCallback);
 const cookieName = "freteon_session"; // Compatibilidade com sessões anteriores.
@@ -144,6 +145,7 @@ auth.post("/register", limit, async (req, res) => {
     privacyNoticeVersion: LEGAL_VERSION,
     privacyAcknowledgedAt: new Date(),
   });
+  if (role === "motorista") void notifyMasters({ title: "Novo motorista cadastrado", body: "Um motorista aguarda análise no painel Master.", id: String(user._id) });
   res.status(201).json({ user: await issueSession(req, res, user) });
 });
 auth.post("/login", limit, async (req, res) => {

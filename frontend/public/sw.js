@@ -67,8 +67,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     let data = {};
     try { data = event.data?.json() || {}; } catch { /* push sem conteúdo */ }
-    const role = data.role === "cliente" ? "cliente" : "motorista";
-    const path = role === "cliente" ? "/cliente" : "/motorista";
+    const role = ["cliente", "motorista", "master"].includes(data.role) ? data.role : "motorista";
+    const path = "/" + role;
     const title = String(data.title || "Atualização no FreteOn").slice(0, 90);
     const body = String(data.body || "Abra o FreteOn para conferir.").slice(0, 180);
 
@@ -91,7 +91,7 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetPath = event.notification.data?.path === "/cliente" ? "/cliente" : "/motorista";
+  const targetPath = ["/cliente", "/motorista", "/master"].includes(event.notification.data?.path) ? event.notification.data.path : "/motorista";
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     for (const client of windows) {

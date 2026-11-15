@@ -1,0 +1,9 @@
+import { useEffect, useState } from "react";
+import { api } from "./api.js";
+export default function CommissionSettings() {
+ const [standardRate,setStandardRate]=useState("10"); const [introductoryRate,setIntroductoryRate]=useState("5");
+ const [busy,setBusy]=useState(false);const [notice,setNotice]=useState("");
+ useEffect(()=>{api("/master/commission").then(c=>{setStandardRate(String(c.standardRate));setIntroductoryRate(String(c.introductoryRate));}).catch(e=>setNotice(e.message));},[]);
+ async function save(e){e.preventDefault();setBusy(true);setNotice("");try{const c=await api("/master/commission",{method:"PATCH",body:{standardRate:Number(standardRate),introductoryRate:Number(introductoryRate)}});setNotice("Taxas salvas. Válidas para novas contratações; fretes contratados não mudam.");setStandardRate(String(c.standardRate));setIntroductoryRate(String(c.introductoryRate));}catch(e){setNotice(e.message);}finally{setBusy(false);}}
+ return <section className="panel"><h2>Configuração de comissão</h2><p>Motoristas pagam a taxa promocional nos primeiros 30 dias a partir do cadastro. Após esse período, vale a taxa padrão.</p><form onSubmit={save}><label>Comissão promocional (%)<input type="number" required min="0" max="100" step="0.01" value={introductoryRate} onChange={e=>setIntroductoryRate(e.target.value)}/></label><label>Comissão padrão (%)<input type="number" required min="0" max="100" step="0.01" value={standardRate} onChange={e=>setStandardRate(e.target.value)}/></label><button className="primary" disabled={busy}>{busy?"Salvando…":"Salvar taxas"}</button></form>{notice&&<p role="status">{notice}</p>}<small>As comissões são calculadas e registradas quando o cliente aceita uma proposta. Alterações futuras não recalculam fretes anteriores.</small></section>;
+}

@@ -39,6 +39,7 @@ import FreightPhotoPicker, { FreightPhotoImage } from "./FreightPhotoPicker.jsx"
 import { pendingDriverBookings } from "./driverBooking.js";
 import PrivacyMaster from "./PrivacyMaster.jsx";
 import { RecoveryMaster } from "./PasswordRecovery.jsx";
+import CommissionSettings from "./CommissionSettings.jsx";
 import PushNotificationsPanel from "./PushNotificationsPanel.jsx";
 import DriverVerificationPanel from "./DriverVerificationPanel.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
@@ -65,6 +66,7 @@ const navigation = {
     ["motoristas", "Motoristas", Truck],
     ["fretes", "Fretes", Package],
     ["financeiro", "Financeiro", FileCheck2],
+    ["comissoes", "Taxas de comissão", FileCheck2],
     ["usuarios", "Usuários", Users],
     ["recuperacao", "Recuperar senhas", ShieldCheck],
     ["privacidade", "Privacidade LGPD", ShieldCheck],
@@ -378,6 +380,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     user,
   });
   const [page, setPage] = useState("inicio");
+  const [commissionRate, setCommissionRate] = useState(10);
+  useEffect(() => { if (area === "motorista") api("/commission/current").then(c => setCommissionRate(c.rate)).catch(() => {}); }, [area]);
   const [recoveryPending, setRecoveryPending] = useState(0);
   useEffect(() => {
     if (area !== "master") return;
@@ -1057,7 +1061,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   onChange={refresh}
                 />
               )}
-              {["cliente", "motorista"].includes(area) && (
+              {["cliente", "motorista", "master"].includes(area) && (
                 <details className="profile-push-settings">
                   <summary><BellRing size={18}/> Notificações do aparelho</summary>
                   <PushNotificationsPanel role={area} accountId={user.id}/>
@@ -1067,6 +1071,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 Sair da conta
               </button>
             </section>
+          ) : area === "master" && page === "comissoes" ? (
+            <CommissionSettings />
           ) : area === "master" && page === "privacidade" ? (
             <PrivacyMaster />
           ) : area === "master" && page === "recuperacao" ? (
@@ -1243,6 +1249,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               {selected.agreedPriceCents != null ? (
                 <CommissionPreview
                   price={selected.agreedPriceCents / 100}
+                  rate={selected.commissionRate}
                   method={selected.paymentMethod}
                 />
               ) : (
@@ -1396,6 +1403,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 ) : (
                   <CommissionPreview
                     price={selected.agreedPriceCents / 100}
+                    rate={selected.commissionRate}
                     method={selected.paymentMethod}
                   />
                 )
@@ -1452,6 +1460,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 !busy
               }
               driverId={user.id}
+              commissionRate={commissionRate}
               onSubmit={(proposal) =>
                 mutate(
                   `/requests/${selected.id}/proposals`,
@@ -1863,7 +1872,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           </p>
         </Modal>
       )}
-      {area !== "master" && (
+      {(
         <PushNotificationsPanel role={area} accountId={user.id} autoInvite
           canDisplay={loaded && !modal && page === "inicio"}
         />
@@ -1893,7 +1902,7 @@ function IssueForm({ onSubmit, busy }) {
   );
 }
 
-function ProposalForm({ request, available, driverId, onSubmit, focusOnOpen = false }) {
+function ProposalForm({ request, available, driverId, onSubmit, focusOnOpen = false, commissionRate = 10 }) {
   const headingRef = useRef(null);
   useEffect(() => {
     if (focusOnOpen) {
@@ -1972,7 +1981,7 @@ function ProposalForm({ request, available, driverId, onSubmit, focusOnOpen = fa
           </label>
         ))}
       </fieldset>
-      <CommissionPreview price={proposedPrice} method={request.paymentMethod} />
+      <CommissionPreview price={proposedPrice} method={request.paymentMethod} rate={commissionRate} />
       <button className="primary full" disabled={!available}>
         {available ? "Enviar proposta" : "Verifique seus documentos, carteira e meios de pagamento"}
         <ArrowRight size={18} />

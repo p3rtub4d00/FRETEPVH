@@ -5,7 +5,7 @@ import { authorize, fail } from "./auth.js";
 import { checkSubscription, pushEnabled, sendPush } from "./webPush.js";
 
 export const pushRouter = Router();
-const roles = authorize("cliente", "motorista");
+const roles = authorize("cliente", "motorista", "master");
 const limit = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 20,

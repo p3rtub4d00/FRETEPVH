@@ -10,7 +10,7 @@ export const paymentLabels = {
 };
 
 const byCents = (value) => money((value || 0) / 100);
-const percentAmount = (price) => Math.round(Math.round(Number(price || 0) * 100) * 0.10);
+const percentAmount = (price, rate = 10) => Math.round(Math.round(Number(price || 0) * 100) * rate / 100);
 const paymentIcon = {
   pix_freteon: QrCode,
   card_driver: CreditCard,
@@ -25,14 +25,14 @@ export function PaymentLabel({ method }) {
   );
 }
 
-export function CommissionPreview({ price, method }) {
+export function CommissionPreview({ price, method, rate = 10 }) {
   const grossCents = Math.round(Number(price || 0) * 100);
   if (!Number.isFinite(grossCents) || grossCents <= 0) return null;
-  const commissionCents = percentAmount(price);
+  const commissionCents = percentAmount(price, rate);
   return (
     <div className="commission-preview">
       <div><span>Valor total proposto</span><strong>{byCents(grossCents)}</strong></div>
-      <div><span>Comissão FreteOn (10%)</span><strong>− {byCents(commissionCents)}</strong></div>
+      <div><span>Comissão FreteOn ({rate}%)</span><strong>− {byCents(commissionCents)}</strong></div>
       <div><span>Motorista após comissão</span><strong>{byCents(grossCents - commissionCents)}</strong></div>
       {method === "card_driver" && <small>Não inclui as taxas da sua maquininha. Considere-as ao propor o preço.</small>}
       {method === "pix_freteon" && <small>Repasse Pix manual após a entrega confirmada, somente em simulação.</small>}

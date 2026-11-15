@@ -7,7 +7,7 @@ import {
   randomBytes,
   sign,
 } from "node:crypto";
-import { PushSubscription } from "./models.js";
+import { PushSubscription, Account } from "./models.js";
 
 const enc = (buffer) => Buffer.from(buffer).toString("base64url");
 const dec = (value) => Buffer.from(value, "base64url");
@@ -134,13 +134,21 @@ export async function sendPush(subscription, message) {
 }
 
 function safeMessage(msg) {
-  const role = msg.role === "cliente" ? "cliente" : "motorista";
+  const role = ["cliente", "motorista", "master"].includes(msg.role) ? msg.role : "motorista";
   const title = String(msg.title || "FreteOn").slice(0, 90);
   const body = String(msg.body || "Você tem uma atualização de frete.").slice(0, 180);
   const id = String(msg.id || "").slice(0, 80);
-  return { title, body, path: role === "cliente" ? "/cliente" : "/motorista", id, role };
+  return { title, body, path: "/" + role, id, role };
 }
 
+export async function notifyMasters(message) {
+  try {
+    const masters = await Account.find({ role: "master" }).select("_id").lean();
+    return await notifyAccounts(masters.map(x => String(x._id)), { ...message, role: "master" });
+  } catch (error) {
+    console.warn("Aviso Master indisponível:", error?.name || "Erro");
+  }
+}
 /** Never include street addresses, personal phones or financial keys in push. */
 export async function notifyAccounts(userIds, message) {
   if (!pushEnabled()) return { attempted: 0, ok: 0, unavailable: true };

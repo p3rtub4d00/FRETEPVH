@@ -3,24 +3,26 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { Account, Freight } from "./models.js";
 import { authorize, fail, text } from "./auth.js";
-import { notifyInBackground } from "./webPush.js";
+import { notifyInBackground, notifyMasters } from "./webPush.js";
 
 export const PAYMENT_METHODS = ["pix_freteon", "card_driver", "cash_driver"];
-export const COMMISSION_PERCENT = 10;
+import { commissionConfig, commissionForDriver } from "./commissionSettings.js";
 const COMMISSION_WINDOW_MS = 72 * 60 * 60 * 1000;
 export const finance = Router();
 
 const own = (user) => String(user._id);
 const cents = (value) => Math.round(value * 100);
 
-export function bookFinancials(request, proposal) {
+export async function bookFinancials(request, proposal, driver) {
   if (!PAYMENT_METHODS.includes(request.paymentMethod)) return; // legado sem cobrança.
   const gross = cents(proposal.price);
-  const commission = Math.round(gross * COMMISSION_PERCENT / 100);
+  const config = await commissionConfig();
+  const { rate } = commissionForDriver(driver, config);
+  const commission = Math.round(gross * rate / 100);
   request.agreedPriceCents = gross;
   request.commissionCents = commission;
   request.driverNetCents = gross - commission;
-  request.commissionRate = COMMISSION_PERCENT;
+  request.commissionRate = rate;
   request.paymentStatus = "awaiting";
   request.commissionStatus = "none";
   request.payoutStatus = "none";
@@ -193,6 +195,9 @@ finance.post("/requests/:id/finance", async (req, res) => {
     fail(403, "Ação financeira não autorizada ou inválida.");
   }
   await request.save();
+  if (["request_payout", "notify_commission", "report_issue", "request_refund"].includes(action)) {
+    void notifyMasters({ title: action === "request_payout" ? "Repasse solicitado" : action === "notify_commission" ? "Comissão informada" : action === "report_issue" ? "Contestação recebida" : "Reembolso solicitado", body: "Há uma nova solicitação financeira para análise no painel Master.", id: String(request._id) });
+  }
   if (refundAction) {
     const titles = {
       request_refund: "Cancelamento com reembolso em análise",

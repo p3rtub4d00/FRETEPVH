@@ -183,7 +183,7 @@ freightReportSchema.index({ status: 1, createdAt: -1 });
 const pushSubscriptionSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true, index: true },
-    role: { type: String, enum: ["cliente", "motorista"], required: true },
+    role: { type: String, enum: ["cliente", "motorista", "master"], required: true },
     endpointHash: { type: String, required: true, unique: true },
     endpoint: { type: String, required: true, maxlength: 2200 },
     p256dh: { type: String, required: true, maxlength: 128 },

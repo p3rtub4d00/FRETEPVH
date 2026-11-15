@@ -3,6 +3,7 @@ import { randomBytes, randomInt, createHash, timingSafeEqual } from "node:crypto
 import { rateLimit } from "express-rate-limit";
 import mongoose from "mongoose";
 import { Account, Session } from "./models.js";
+import { notifyMasters } from "./webPush.js";
 import { authenticate, authorize, hashPassword, phoneNumber, fail } from "./auth.js";
 
 const schema = new mongoose.Schema({
@@ -31,7 +32,10 @@ recovery.post("/request", limiter(8), async (req, res) => {
   const user = await Account.findOne({ phone, role });
   if (user) {
     const recent = await Recovery.findOne({ userId: user._id, createdAt: { $gt: new Date(Date.now() - 5 * 60_000) }, status: { $in: ["pending", "issued"] } });
-    if (!recent) await Recovery.create({ userId: user._id, role, phone, name: user.name });
+    if (!recent) {
+      await Recovery.create({ userId: user._id, role, phone, name: user.name });
+      void notifyMasters({ title: "Recuperação de senha solicitada", body: "Há uma nova solicitação no painel Master.", id: String(user._id) });
+    }
   }
   res.json({ message: "Se os dados estiverem cadastrados, a solicitação será encaminhada ao administrador." });
 });
