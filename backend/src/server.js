@@ -5,6 +5,7 @@ import helmet from "helmet";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { auth, bootstrapAdmin } from "./auth.js";
+import { recovery } from "./recovery.js";
 import { api } from "./api.js";
 import { maps } from "./maps.js";
 import { Account, Session, Freight, PrivacyRequest, PushSubscription } from "./models.js";
@@ -64,6 +65,7 @@ app.use((req, res, next) => {
 });
 app.use("/api/legal", privacyRouter);
 app.use("/api/auth", auth);
+app.use("/api/recovery", recovery);
 app.use("/api", api);
 app.use("/api", (req, res) =>
   res.status(404).json({ error: "Endpoint não encontrado." }),

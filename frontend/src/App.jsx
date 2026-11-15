@@ -38,6 +38,7 @@ import ProfileDetailsEditor from "./ProfileDetailsEditor.jsx";
 import FreightPhotoPicker, { FreightPhotoImage } from "./FreightPhotoPicker.jsx";
 import { pendingDriverBookings } from "./driverBooking.js";
 import PrivacyMaster from "./PrivacyMaster.jsx";
+import { RecoveryMaster } from "./PasswordRecovery.jsx";
 import PushNotificationsPanel from "./PushNotificationsPanel.jsx";
 import DriverVerificationPanel from "./DriverVerificationPanel.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
@@ -65,6 +66,7 @@ const navigation = {
     ["fretes", "Fretes", Package],
     ["financeiro", "Financeiro", FileCheck2],
     ["usuarios", "Usuários", Users],
+    ["recuperacao", "Recuperar senhas", ShieldCheck],
     ["privacidade", "Privacidade LGPD", ShieldCheck],
     ["denuncias", "Denúncias", Flag],
   ],
@@ -376,6 +378,15 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     user,
   });
   const [page, setPage] = useState("inicio");
+  const [recoveryPending, setRecoveryPending] = useState(0);
+  useEffect(() => {
+    if (area !== "master") return;
+    let active = true;
+    const check = () => api("/recovery/master").then(data => { if (active) setRecoveryPending(data.items.filter(x => x.status === "pending").length); }).catch(() => {});
+    check();
+    const timer = setInterval(check, 15000);
+    return () => { active = false; clearInterval(timer); };
+  }, [area, page]);
   const [modal, setModal] = useState(null);
   const [notice, setNotice] = useState("");
   const [install, setInstall] = useState(null);
@@ -653,9 +664,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <Icon size={20} />
               {label}
               {area === "master" &&
-                key === "motoristas" &&
-                pending.length > 0 && (
-                  <span className="count">{pending.length}</span>
+                ((key === "motoristas" && pending.length > 0) || (key === "recuperacao" && recoveryPending > 0)) && (
+                  <span className="count">{key === "recuperacao" ? recoveryPending : pending.length}</span>
                 )}
             </button>
           ))}
@@ -697,10 +707,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <button
               className="icon-button"
               aria-label="Notificações"
-              onClick={() => setModal({ type: "notifications" })}
+              onClick={() => area === "master" && recoveryPending > 0 ? setPage("recuperacao") : setModal({ type: "notifications" })}
             >
               <Bell size={20} />
-              {(area === "motorista" ? bookingsPending.length > 0 : totalProposals > 0) && (
+              {(area === "master" ? recoveryPending > 0 : area === "motorista" ? bookingsPending.length > 0 : totalProposals > 0) && (
                 <span className="notification-dot" />
               )}
             </button>
@@ -1059,6 +1069,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </section>
           ) : area === "master" && page === "privacidade" ? (
             <PrivacyMaster />
+          ) : area === "master" && page === "recuperacao" ? (
+            <RecoveryMaster />
           ) : page === "usuarios" ? (
             <section className="panel">
               <h2>Usuários cadastrados</h2>

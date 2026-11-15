@@ -9,6 +9,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import Dashboard from "./App.jsx";
+import { RecoveryRequest, RecoveryReset } from "./PasswordRecovery.jsx";
 import { api } from "./api.js";
 import RoleSwitcher from "./RoleSwitcher.jsx";
 import InstallInvitation from "./InstallInvitation.jsx";
@@ -164,7 +165,7 @@ export default function Entry() {
           <span>Porto Velho, RO</span>
         )}
       </header>
-      {path === "/termos" || path === "/privacidade" ? (
+      {path === "/recuperar-senha" ? <RecoveryReset onBack={() => navigate("/cliente")}/> : (area === "cliente" || area === "motorista") && path.endsWith("/esqueci-senha") ? <RecoveryRequest role={area} onBack={() => navigate(`/${area}`)}/> : path === "/termos" || path === "/privacidade" ? (
         <LegalPage kind={path === "/termos" ? "termos" : "privacidade"} navigate={navigate} />
       ) : path === "/" ? (
         <main className="public-home">
@@ -242,10 +243,7 @@ export default function Entry() {
       )}
       <footer className="public-footer">
         <span>FreteOn · Porto Velho, RO</span>
-        <div className="public-legal-links">
-          <a href="/termos" onClick={event => { event.preventDefault(); navigate("/termos"); }}>Termos de Uso</a>
-          <a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Política de Privacidade</a>
-        </div>
+        <details className="public-legal-links"><summary>Informações legais</summary><div><a href="/termos" onClick={event => { event.preventDefault(); navigate("/termos"); }}>Termos de Uso</a>{" · "}<a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Política de Privacidade</a></div></details>
         <span>Intermediação de fretes · Financeiro em simulação</span>
       </footer>
     </div>
@@ -408,6 +406,7 @@ function AuthForm({
                   </button>
                 </div>
               </label>
+              {!register && area !== "master" && <div style={{textAlign:"right", margin:"-4px 0 12px"}}><button type="button" className="text-button" onClick={() => navigate(`/${area}/esqueci-senha`)}>Esqueci minha senha</button></div>}
               {register && (
                 <label>
                   Confirme sua senha
@@ -466,11 +465,6 @@ function AuthForm({
             </a>
           </p>
         )}
-        <p className="auth-legal-links">
-          <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
-          {" · "}
-          <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
-        </p>
         {area === "master" && (
           <p className="auth-alternative">Acesso exclusivo à administração.</p>
         )}
