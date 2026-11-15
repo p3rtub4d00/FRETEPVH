@@ -243,10 +243,7 @@ export default function Entry() {
       )}
       <footer className="public-footer">
         <span>FreteOn · Porto Velho, RO</span>
-        <div className="public-legal-links">
-          <a href="/termos" onClick={event => { event.preventDefault(); navigate("/termos"); }}>Termos de Uso</a>
-          <a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Política de Privacidade</a>
-        </div>
+        <details className="public-legal-links"><summary>Informações legais</summary><div><a href="/termos" onClick={event => { event.preventDefault(); navigate("/termos"); }}>Termos de Uso</a>{" · "}<a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Política de Privacidade</a></div></details>
         <span>Intermediação de fretes · Financeiro em simulação</span>
       </footer>
     </div>
@@ -409,6 +406,7 @@ function AuthForm({
                   </button>
                 </div>
               </label>
+              {!register && area !== "master" && <div style={{textAlign:"right", margin:"-4px 0 12px"}}><button type="button" className="text-button" onClick={() => navigate(`/${area}/esqueci-senha`)}>Esqueci minha senha</button></div>}
               {register && (
                 <label>
                   Confirme sua senha
@@ -453,7 +451,6 @@ function AuthForm({
             {error}
           </p>
         )}
-        {!user && !register && area !== "master" && <p className="auth-alternative"><button className="text-button" onClick={() => navigate(`/${area}/esqueci-senha`)}>Esqueci minha senha</button></p>}
         {!user && area !== "master" && (
           <p className="auth-alternative">
             {register ? "Já tem uma conta?" : "Ainda não tem conta?"}{" "}
@@ -468,11 +465,6 @@ function AuthForm({
             </a>
           </p>
         )}
-        <p className="auth-legal-links">
-          <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
-          {" · "}
-          <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
-        </p>
         {area === "master" && (
           <p className="auth-alternative">Acesso exclusivo à administração.</p>
         )}
