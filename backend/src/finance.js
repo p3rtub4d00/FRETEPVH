@@ -3,7 +3,7 @@ import { Router } from "express";
 import mongoose from "mongoose";
 import { Account, Freight } from "./models.js";
 import { authorize, fail, text } from "./auth.js";
-import { notifyInBackground } from "./webPush.js";
+import { notifyInBackground, notifyMasters } from "./webPush.js";
 
 export const PAYMENT_METHODS = ["pix_freteon", "card_driver", "cash_driver"];
 import { commissionConfig, commissionForDriver } from "./commissionSettings.js";
@@ -195,6 +195,9 @@ finance.post("/requests/:id/finance", async (req, res) => {
     fail(403, "Ação financeira não autorizada ou inválida.");
   }
   await request.save();
+  if (["request_payout", "notify_commission", "report_issue", "request_refund"].includes(action)) {
+    void notifyMasters({ title: action === "request_payout" ? "Repasse solicitado" : action === "notify_commission" ? "Comissão informada" : action === "report_issue" ? "Contestação recebida" : "Reembolso solicitado", body: "Há uma nova solicitação financeira para análise no painel Master.", id: String(request._id) });
+  }
   if (refundAction) {
     const titles = {
       request_refund: "Cancelamento com reembolso em análise",
