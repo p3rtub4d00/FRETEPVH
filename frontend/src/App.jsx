@@ -839,7 +839,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                       : "Acompanhe a operação em Porto Velho."}
               </p>
             </div>
-            {area === "cliente" && ["inicio", "fretes"].includes(page) && (
+            {area === "cliente" && page === "fretes" && (
               <button
                 className="primary"
                 onClick={() => setModal({ type: "create" })}
