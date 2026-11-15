@@ -38,6 +38,7 @@ import ProfileDetailsEditor from "./ProfileDetailsEditor.jsx";
 import FreightPhotoPicker, { FreightPhotoImage } from "./FreightPhotoPicker.jsx";
 import { pendingDriverBookings } from "./driverBooking.js";
 import PrivacyMaster from "./PrivacyMaster.jsx";
+import { RecoveryMaster } from "./PasswordRecovery.jsx";
 import PushNotificationsPanel from "./PushNotificationsPanel.jsx";
 import DriverVerificationPanel from "./DriverVerificationPanel.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
@@ -65,6 +66,7 @@ const navigation = {
     ["fretes", "Fretes", Package],
     ["financeiro", "Financeiro", FileCheck2],
     ["usuarios", "Usuários", Users],
+    ["recuperacao", "Recuperar senhas", ShieldCheck],
     ["privacidade", "Privacidade LGPD", ShieldCheck],
     ["denuncias", "Denúncias", Flag],
   ],
@@ -1059,6 +1061,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </section>
           ) : area === "master" && page === "privacidade" ? (
             <PrivacyMaster />
+          ) : area === "master" && page === "recuperacao" ? (
+            <RecoveryMaster />
           ) : page === "usuarios" ? (
             <section className="panel">
               <h2>Usuários cadastrados</h2>
