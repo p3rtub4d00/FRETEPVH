@@ -13,10 +13,10 @@ export const finance = Router();
 const own = (user) => String(user._id);
 const cents = (value) => Math.round(value * 100);
 
-export async function bookFinancials(request, proposal, driver) {
+export async function bookFinancials(request, proposal, driver, suppliedConfig = null) {
   if (!PAYMENT_METHODS.includes(request.paymentMethod)) return; // legado sem cobrança.
   const gross = cents(proposal.price);
-  const config = await commissionConfig();
+  const config = suppliedConfig ?? await commissionConfig();
   const { rate } = commissionForDriver(driver, config);
   const commission = Math.round(gross * rate / 100);
   request.agreedPriceCents = gross;
