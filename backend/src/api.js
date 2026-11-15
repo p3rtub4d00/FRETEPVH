@@ -13,7 +13,8 @@ import { pushRouter } from "./pushRoutes.js";
 import { driverVerification } from "./driverVerification.js";
 import { freightCommunication } from "./freightCommunication.js";
 import { validProposalOptions, proposalDescription, hasExternalContact } from "./antiBypass.js";
-import { notifyInBackground } from "./webPush.js";
+import { notifyInBackground, notifyMasters } from "./webPush.js";
+import { commissionRouter } from "./commissionSettings.js";
 
 export const api = Router();
 api.use(authenticate);
@@ -29,6 +30,7 @@ api.use((req, res, next) => {
   next();
 });
 api.use(finance);
+api.use(commissionRouter);
 api.use(pushRouter);
 api.use(driverVerification);
 api.use(freightCommunication);
@@ -252,6 +254,7 @@ api.post("/requests", authorize("cliente"), rateLimit({
   } catch (error) {
     console.warn("Pedido salvo; seleção de destinatários push indisponível:", error?.name || "Erro");
   }
+  notifyMasters({ title: "Novo frete solicitado", body: "Um cliente publicou um pedido no FreteOn.", id: String(request._id) });
   res.status(201).json({ request: presentRequest(request, req.user) });
 });
 // Anexar imagens a pedidos já publicados, sem recriar a contratação.
@@ -377,7 +380,7 @@ api.patch("/requests/:id", async (req, res) => {
         fail(409, "Este motorista não aceita cartão na maquininha.");
       if (await overdueDriver(String(selectedDriver._id)))
         fail(409, "Este motorista está temporariamente impedido de aceitar novos fretes.");
-      bookFinancials(request, proposal);
+      await bookFinancials(request, proposal, selectedDriver);
       request.status = "booked";
       request.selectedId = proposal.id;
       request.driverId = proposal.driverId;
