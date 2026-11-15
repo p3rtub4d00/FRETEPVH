@@ -1403,6 +1403,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 ) : (
                   <CommissionPreview
                     price={selected.agreedPriceCents / 100}
+                    rate={selected.commissionRate}
                     method={selected.paymentMethod}
                   />
                 )
