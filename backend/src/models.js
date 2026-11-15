@@ -86,6 +86,8 @@ const freightSchema = new mongoose.Schema(
     title: { type: String, required: true },
     origin: { type: String, required: true },
     destination: { type: String, required: true },
+    originAddress: { type: new mongoose.Schema({ street: String, number: String, noNumber: Boolean, neighborhood: String, city: String, state: String, complement: String, reference: String }, { _id: false }), default: null },
+    destinationAddress: { type: new mongoose.Schema({ street: String, number: String, noNumber: Boolean, neighborhood: String, city: String, state: String, complement: String, reference: String }, { _id: false }), default: null },
     description: { type: String, required: true },
     // Pedidos antigos preservam seu veículo; novos são livres para qualquer tipo.
     vehicle: { type: String, default: "" },

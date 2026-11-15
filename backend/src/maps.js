@@ -2,7 +2,9 @@ import { Router, json } from "express";
 import { rateLimit } from "express-rate-limit";
 
 export const maps = Router();
-const mapsKey = () => (process.env.GOOGLE_MAPS_API_KEY || "").trim();
+// Integrações pagas ficam desativadas por padrão nesta fase gratuita.
+const mapsKey = () => process.env.PAID_MAPS_ENABLED === "true"
+  ? (process.env.GOOGLE_MAPS_API_KEY || "").trim() : "";
 const center = { latitude: -8.7619, longitude: -63.9039 };
 
 maps.use(

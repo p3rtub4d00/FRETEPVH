@@ -352,3 +352,9 @@ A derivação de chaves AES128GCM, conforme RFC 8291/8188, já usava as separaç
 Em um Pix simulado pago, o cliente abre os detalhes do pedido e usa **Cancelar e solicitar reembolso**. O motivo é obrigatório. Frete e repasse ficam suspensos durante a análise, inclusive se o transporte já começou. O Master encontra a solicitação no início da área **Financeiro**, vê valor, motivo e etapa original e aprova ou recusa com justificativa. Aprovar cancela o frete e dispensa a comissão, mas ainda não marca o valor como devolvido: é preciso **Simular devolução**. Recusar preserva a etapa e a elegibilidade de repasse anteriores. Datas e responsável pela decisão ficam registrados. Cliente e motorista recebem eventos push quando inscritos.
 
 Esta etapa contempla reembolso integral simulado, antes de repasse liquidado e sem contestação paralela. Não permite solicitações repetidas sobre uma decisão já registrada. A futura integração bancária deverá confirmar a devolução do pagamento original antes de concluir um reembolso real; não existe transferência bancária nesta versão.
+
+### Endereços e navegação gratuita
+
+Novos pedidos usam rua, número (ou sem número), bairro, cidade/UF, complemento e referência. Complemento e referência ficam registrados para o motorista; o link do Maps recebe apenas o endereço de navegação. Pedidos anteriores continuam legíveis. Os botões abrem o Google Maps externo para consultar trajeto, distância e tempo, sem chave de API. A publicação não consulta APIs de rotas.
+
+Os antigos endpoints de integração paga ficam desativados por padrão: uma eventual retomada exige a opção explícita `PAID_MAPS_ENABLED=true` e uma `GOOGLE_MAPS_API_KEY` válida. Não é necessário configurar nenhuma delas para o fluxo gratuito atual.

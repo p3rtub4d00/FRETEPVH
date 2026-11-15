@@ -1,3 +1,4 @@
+import { normalizeAddress, formatAddress } from "../../frontend/src/addressFormat.js";
 import { refundBlocks, canRequestRefund } from "./refunds.js";
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
@@ -195,7 +196,15 @@ api.post("/requests", authorize("cliente"), rateLimit({
   legacyHeaders: false,
   message: { error: "Muitos fretes criados em pouco tempo. Tente novamente mais tarde." },
 }), async (req, res) => {
-  const data = req.body;
+  const data = { ...req.body };
+  const addresses = {};
+  for (const field of ["origin", "destination"]) {
+    if (data[field + "Address"] != null) {
+      try { addresses[field + "Address"] = normalizeAddress(data[field + "Address"]); }
+      catch (error) { fail(400, error.message); }
+      data[field] = formatAddress(addresses[field + "Address"]);
+    }
+  }
   if (!PAYMENT_METHODS.includes(data.paymentMethod))
     fail(400, "Escolha Pix pelo FreteOn, cartão ou dinheiro antes de publicar.");
   const fields = {
@@ -216,25 +225,12 @@ api.post("/requests", authorize("cliente"), rateLimit({
   )
     fail(400, "Escolha uma data e um horário futuros de Porto Velho.");
   const photos = validateFreightPhotos(data.photos || []);
-  // Recalcular no servidor: a quilometragem informada pelo navegador não é confiável.
-  let roadEstimate = {};
-  if (process.env.GOOGLE_MAPS_API_KEY) {
-    try {
-      roadEstimate = await calculateRoadRoute(
-        data.originPoint || fields.origin,
-        data.destinationPoint || fields.destination,
-      );
-    } catch {
-      // Um problema temporário no mapa não deve impedir a publicação do frete.
-      console.warn("Não foi possível obter a estimativa de rota deste frete.");
-    }
-  }
   const request = await Freight.create({
     ...fields,
     photos,
     helper: data.helper === true,
     paymentMethod: data.paymentMethod,
-    ...roadEstimate,
+    ...addresses,
     clientId: own(req.user),
   });
   // O pedido já foi salvo. Uma falha auxiliar de notificação nunca deve

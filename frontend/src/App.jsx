@@ -1,3 +1,4 @@
+import { mapsRouteUrl } from "./addressFormat.js";
 import FreightCarousel from "./FreightCarousel.jsx";
 import RefundPanel, { refundBlocked } from "./RefundPanel.jsx";
 import { useEffect, useRef, useState } from "react";
@@ -77,6 +78,8 @@ function Route({ request }) {
         <p>
           <small>Retirada</small>
           {request.origin}
+          {request.originAddress?.complement && <small>Complemento: {request.originAddress.complement}</small>}
+          {request.originAddress?.reference && <small>Referência: {request.originAddress.reference}</small>}
         </p>
       </div>
       <div>
@@ -84,33 +87,22 @@ function Route({ request }) {
         <p>
           <small>Entrega</small>
           {request.destination}
+          {request.destinationAddress?.complement && <small>Complemento: {request.destinationAddress.complement}</small>}
+          {request.destinationAddress?.reference && <small>Referência: {request.destinationAddress.reference}</small>}
         </p>
       </div>
     </div>
   );
 }
-function RouteDistance({ request, onCalculate, busy }) {
-  const mapUrl = "https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=" +
-    encodeURIComponent(request.origin) + "&destination=" + encodeURIComponent(request.destination);
-  return (
-    <div className="freight-distance">
-      {request.distanceMeters != null ? (
-        <span>
-          <MapPin size={16} />
-          {(request.distanceMeters / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km pelas ruas
-          {request.durationMinutes != null && <> · {request.durationMinutes} min estimados</>}
-        </span>
-      ) : (
-        <span><MapPin size={16} /> Distância ainda não calculada</span>
-      )}
-      <a href={mapUrl} target="_blank" rel="noopener noreferrer">Consultar trajeto no Google Maps</a>
-      {request.distanceMeters == null && onCalculate && (
-        <button type="button" className="text-button" disabled={busy}
-          onClick={onCalculate}>Calcular km</button>
-      )}
-    </div>
-  );
+function RouteDistance({ request }) {
+  return <div className="freight-distance">
+    <a className="maps-route-button" href={mapsRouteUrl(request.origin, request.destination)} target="_blank" rel="noopener noreferrer">
+      <MapPin size={18}/> Abrir rota no Google Maps <ArrowRight size={17}/>
+    </a>
+    <small className="maps-route-help">Veja a distância e o tempo estimado no Maps.</small>
+  </div>;
 }
+
 function Empty({ title, children }) {
   return (
     <div className="empty">
@@ -508,10 +500,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     return mutate("/profile/photo", "PATCH", { photo },
       () => setNotice(photo ? "Foto de perfil atualizada." : "Foto removida."));
   }
-  function calculateMissingDistance(id) {
-    return mutate(`/requests/${id}/calculate-route`, "POST", {},
-      () => setNotice("Distância calculada e salva."));
-  }
+
   function savePaymentPreferences(preferences) {
     return mutate("/payment-preferences", "PATCH", preferences, () => {
       setNotice("Preferências de pagamento salvas.");
@@ -1202,8 +1191,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <span className="status booked">{statusLabels[selected.status]}</span>
             </div>
             <Route request={selected} />
-            <RouteDistance request={selected} busy={busy}
-              onCalculate={() => calculateMissingDistance(selected.id)} />
+            <RouteDistance request={selected} busy={busy} />
             <div className="driver-acceptance-info">
               <span><Clock3 size={16} />
                 {selected.date ? new Date(`${selected.date}T12:00:00`).toLocaleDateString("pt-BR") : "Data não definida"}
@@ -1411,8 +1399,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               )}
             </div>
           )}
-          <RouteDistance request={selected} busy={busy}
-            onCalculate={() => calculateMissingDistance(selected.id)} />
+          <RouteDistance request={selected} busy={busy} />
           <p>{selected.description}</p>
           <p className="muted">
             {selected.vehicle ? `${selected.vehicle} · ` : "Tipo de veículo a combinar · "}

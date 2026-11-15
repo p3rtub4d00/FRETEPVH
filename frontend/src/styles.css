@@ -4196,3 +4196,17 @@ dialog.push-invite-dialog::backdrop {
 .driver-proposal-button { background: #ff8a35; color: #10243e; }
 .freight-carousel-hint { text-align: center; color: #617186; font-size: .8rem; margin: 12px 0 0; }
 @media (prefers-reduced-motion: no-preference) { .freight-card-featured { animation: freight-card-appear .18s ease-out; } @keyframes freight-card-appear { from { opacity: .5; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } } }
+
+.manual-route-picker { display: grid; gap: 16px; }
+.manual-address { padding: 16px; border: 1px solid #dbe5ef; border-radius: 16px; background: #f8fafc; display: grid; gap: 12px; }
+.manual-address h3 { display: flex; align-items: center; gap: 8px; margin: 0; color: #10243e; }
+.manual-address label { display: grid; gap: 6px; min-width: 0; }
+.manual-address label.checkbox { display: flex; align-items: center; }
+.manual-address input, .manual-address select { box-sizing: border-box; width: 100%; min-width: 0; }
+.manual-address input[type=checkbox] { width: auto; }
+.manual-address-grid { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); gap: 10px; }
+.manual-address-city { display: grid; grid-template-columns: minmax(0, 1fr) 78px; gap: 10px; }
+a.maps-route-button { display: flex; align-items: center; justify-content: center; gap: 8px; background: #10243e; color: white; border-radius: 12px; padding: 12px; min-height: 44px; box-sizing: border-box; text-decoration: none; font-size: .86rem; font-weight: 700; width: 100%; }
+a.maps-route-button:focus-visible { outline: 3px solid #ff8a35; outline-offset: 3px; }
+.maps-route-help { font-size: .8rem; color: #617186; line-height: 1.5; }
+.freight-distance { flex-wrap: wrap; }

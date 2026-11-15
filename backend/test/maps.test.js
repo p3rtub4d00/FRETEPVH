@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { calculateRoadRoute } from "../src/maps.js";
 
 test("Routes API recebe origem/destino digitados e converte distância e tempo", async () => {
+  const previousEnabled = process.env.PAID_MAPS_ENABLED;
+  process.env.PAID_MAPS_ENABLED = "true";
   const previousFetch = globalThis.fetch;
   const previousKey = process.env.GOOGLE_MAPS_API_KEY;
   let payload;
@@ -25,6 +27,8 @@ test("Routes API recebe origem/destino digitados e converte distância e tempo",
     assert.equal(payload.travelMode, "DRIVE");
     assert.deepEqual(result, { distanceMeters: 15250, durationMinutes: 23 });
   } finally {
+    if (previousEnabled === undefined) delete process.env.PAID_MAPS_ENABLED;
+    else process.env.PAID_MAPS_ENABLED = previousEnabled;
     globalThis.fetch = previousFetch;
     if (previousKey === undefined) delete process.env.GOOGLE_MAPS_API_KEY;
     else process.env.GOOGLE_MAPS_API_KEY = previousKey;
@@ -32,6 +36,8 @@ test("Routes API recebe origem/destino digitados e converte distância e tempo",
 });
 
 test("Coordenadas GPS continuam aceitas", async () => {
+  const previousEnabled = process.env.PAID_MAPS_ENABLED;
+  process.env.PAID_MAPS_ENABLED = "true";
   const previousFetch = globalThis.fetch;
   const previousKey = process.env.GOOGLE_MAPS_API_KEY;
   try {
@@ -53,8 +59,23 @@ test("Coordenadas GPS continuam aceitas", async () => {
       { distanceMeters: 3000, durationMinutes: 10 },
     );
   } finally {
+    if (previousEnabled === undefined) delete process.env.PAID_MAPS_ENABLED;
+    else process.env.PAID_MAPS_ENABLED = previousEnabled;
     globalThis.fetch = previousFetch;
     if (previousKey === undefined) delete process.env.GOOGLE_MAPS_API_KEY;
     else process.env.GOOGLE_MAPS_API_KEY = previousKey;
+  }
+});
+
+test("Modo gratuito não faz chamadas pagas mesmo com chave cadastrada", async t => {
+  const oldKey = process.env.GOOGLE_MAPS_API_KEY;
+  const oldEnabled = process.env.PAID_MAPS_ENABLED;
+  process.env.GOOGLE_MAPS_API_KEY = "fake";
+  delete process.env.PAID_MAPS_ENABLED;
+  t.mock.method(globalThis, "fetch", () => assert.fail("Não deve consultar API paga"));
+  try { await assert.rejects(calculateRoadRoute("Rua Origem, 123", "Rua Destino, 456"), /não foi configurado/); }
+  finally {
+    if (oldKey === undefined) delete process.env.GOOGLE_MAPS_API_KEY; else process.env.GOOGLE_MAPS_API_KEY = oldKey;
+    if (oldEnabled === undefined) delete process.env.PAID_MAPS_ENABLED; else process.env.PAID_MAPS_ENABLED = oldEnabled;
   }
 });
