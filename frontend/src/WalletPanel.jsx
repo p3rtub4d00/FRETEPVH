@@ -364,9 +364,9 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
     <section className="wallet-section">
       <div className="wallet-banner">
         <Wallet size={22} />
-        <div><strong>Carteira FreteOn · Simulação</strong><p>Nenhum Pix ou repasse real será realizado nesta versão.</p></div>
+        <div><strong>{mpEnabled ? "Financeiro FreteOn · Mercado Pago" : "Carteira FreteOn · Simulação"}</strong><p>{mpEnabled ? "Pix reais conciliados pelo Mercado Pago. Os repasses ao motorista ainda são feitos manualmente pela administração." : "Nenhum Pix ou repasse real será realizado nesta versão."}</p></div>
       </div>
-      {role === "master" && all.some(r => ["pending", "approved"].includes(r.refundStatus)) && <p className="wallet-alert" role="status">{all.filter(r => r.refundStatus === "pending").length} reembolso(s) em análise · {all.filter(r => r.refundStatus === "approved").length} aguardando devolução simulada. Solicitações aparecem primeiro no extrato.</p>}
+      {role === "master" && all.some(r => ["pending", "approved"].includes(r.refundStatus)) && <p className="wallet-alert" role="status">{all.filter(r => r.refundStatus === "pending").length} reembolso(s) em análise · {all.filter(r => r.refundStatus === "approved").length} aguardando devolução. Solicitações aparecem primeiro no extrato.</p>}
       <div className="wallet-metrics">
         <div><span>{role === "master" ? "Comissões a receber" : "Comissões a repassar"}</span><strong>{byCents(amount.pendingCents)}</strong></div>
         <div><span>{role === "master" ? "Repasses pendentes" : "Saldo disponível para solicitar"}</span><strong>{byCents(role === "master" ? amount.requestedCents : amount.availableCents)}</strong></div>
@@ -483,7 +483,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
           <ChevronRight size={16}/>
         </button>
       )}
-      <p className="wallet-legal">Valores ilustrativos, sem movimentação bancária. As comissões de dinheiro e cartão vencem 72 horas após a confirmação da entrega e do recebimento. Contestação aberta suspende a cobrança automática.</p>
+      <p className="wallet-legal">{mpEnabled ? "Pagamentos Pix e reembolsos reais são confirmados diretamente pelo Mercado Pago. O repasse ao motorista não é automático: o Master deve transferir o dinheiro e registrar o identificador do comprovante. Comissões vencem em 72 horas após a confirmação da entrega; contestações suspendem a cobrança." : "Valores ilustrativos, sem movimentação bancária. As comissões de dinheiro e cartão vencem 72 horas após a confirmação da entrega e do recebimento. Contestação aberta suspende a cobrança automática."}</p>
     </section>
   );
 }
