@@ -152,14 +152,18 @@ function Modal({ title, onClose, children, error, busy }) {
   );
 }
 
-function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhoto, onReport, onFinanceAction }) {
+function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhoto, onReport, onFinanceAction, testFlowEnabled = false }) {
   const [chatOpen, setChatOpen] = useState(false);
   const accepted = request.proposals.find((proposal) => proposal.id === request.selectedId);
   const gross = Number.isFinite(request.agreedPriceCents) ? request.agreedPriceCents : Math.round(Number(accepted?.price || 0) * 100);
   const rate = Number.isFinite(request.commissionRate) ? request.commissionRate : 10;
   const fee = Number.isFinite(request.commissionCents) ? request.commissionCents : Math.round(gross * rate / 100);
   const net = Number.isFinite(request.driverNetCents) ? request.driverNetCents : gross - fee;
-  const pixWaiting = request.paymentMethod === "pix_freteon" && !["simulated_paid", "paid_mp", "paid_pagbank"].includes(request.paymentStatus);
+  const sandboxApproved = testFlowEnabled && request.paymentMethod === "pix_freteon" &&
+    request.paymentProvider === "pagbank" && request.paymentProviderEnvironment === "sandbox" &&
+    Boolean(request.pagbankTestApprovedAt);
+  const pixWaiting = request.paymentMethod === "pix_freteon" &&
+    !["paid_mp", "paid_pagbank"].includes(request.paymentStatus) && !sandboxApproved;
   const startBlocked = busy || refundBlocked(request) || (request.status === "booked" && pixWaiting);
   const time = accepted?.time || request.time;
   const canAdvance = ["booked", "transit"].includes(request.status);
@@ -180,7 +184,9 @@ function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhot
           <span className="driver-compact-net-label">Após comissão</span><strong className="driver-compact-net">{money(net / 100)}</strong>
         </div>
         {request.paymentMethod === "card_driver" && <small>Valor antes das taxas da sua maquininha.</small>}
-        {request.paymentMethod === "pix_freteon" && <small>Pix do cliente validado pelo banco. Repasse ao motorista após confirmação da entrega.</small>}
+        {request.paymentMethod === "pix_freteon" && <small>{sandboxApproved
+          ? "Pix de teste aprovado no PagBank. Você pode iniciar e concluir este frete de homologação. Não haverá repasse bancário."
+          : "Pix do cliente confirmado pelo banco libera o transporte. Repasse ao motorista após a entrega e confirmação."}</small>}
         {request.paymentMethod === "cash_driver" && <small>Pagamento em dinheiro diretamente ao motorista.</small>}
       </section>
       <div className="driver-compact-meta">
@@ -221,6 +227,9 @@ function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhot
         <div className="driver-compact-footer">
           {request.status === "booked" && pixWaiting && (
             <p className="info">Aguardando confirmação do Pix para iniciar o transporte.</p>
+          )}
+          {request.status === "booked" && sandboxApproved && (
+            <p className="info">PagBank sandbox aprovado. Transporte liberado apenas para teste; nenhum dinheiro real foi recebido.</p>
           )}
           {refundBlocked(request) && <p className="info">Frete suspenso para análise do reembolso.</p>}
           <button type="button" className="primary full" disabled={startBlocked} onClick={onAdvance}>
@@ -1609,6 +1618,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             request={selected}
             currentUserId={user.id}
             busy={busy}
+            testFlowEnabled={state.paymentGateway?.testFlowEnabled}
             onPhoto={(index) => setModal({ type: "photo", id: selected.id, index, returnTo: "driverBooking" })}
             onReport={() => setModal({ type: "report", id: selected.id })}
             onFinanceAction={walletAction}
@@ -1962,6 +1972,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <MercadoPagoPix key={selected.id} requestId={selected.id}
                 kind="freight" gateway={state.paymentGateway} onPaid={refresh}/>
           )}
+          {area === "cliente" && selected.paymentMethod === "pix_freteon" &&
+            Boolean(selected.pagbankTestApprovedAt) && selected.paymentProviderEnvironment === "sandbox" && (
+              <p className="info">Pix de teste aprovado no PagBank. O motorista pode realizar o fluxo de homologação; não há repasse bancário real.</p>
+            )}
           {area === "cliente" && selected.paymentMethod === "pix_freteon" &&
             ["paid_mp", "paid_pagbank"].includes(selected.paymentStatus) && (
               <p className="info">Pix do frete confirmado pelo banco responsável.</p>
