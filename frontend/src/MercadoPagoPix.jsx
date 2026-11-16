@@ -119,7 +119,7 @@ export default function MercadoPagoPix({ requestId, kind, onPaid }) {
             onChange={event => setEmail(event.target.value)}/>
         </label>
         <label>CPF do pagador
-          <input inputMode="numeric" required pattern="[0-9.\\-]{11,14}" maxLength={14}
+          <input inputMode="numeric" required pattern="[0-9]{11}" maxLength={11}
             placeholder="Somente números" value={cpf}
             onChange={event => setCpf(event.target.value)}/>
         </label>
