@@ -4759,3 +4759,69 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
   .wallet-commission-revenue { padding: 12px; }
   .wallet-homologation-balances > div { padding: 10px; }
 }
+
+
+/* Gestão de equipe administrativa · mobile-first */
+.team-panel { display:grid; gap:16px; width:100%; max-width:1100px; min-width:0; }
+.team-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.team-heading h2 { margin:0 0 5px; color:#122b47; font-size:clamp(20px,3vw,25px); }
+.team-heading p { margin:0; color:#637a90; font-size:13px; line-height:1.5; }
+.team-heading > svg { color:#ee842f; flex:0 0 auto; }
+.team-tabs { display:flex; flex-wrap:wrap; gap:8px; }
+.team-tabs button { display:inline-flex; align-items:center; justify-content:center; gap:7px; border:1px solid #dce6ef; border-radius:11px; padding:10px 16px; background:#fff; color:#415a73; font-size:13px; font-weight:650; min-height:43px; }
+.team-tabs button.active { background:#fff0e4; color:#a34a0c; border-color:#f58b35; }
+.team-create-form,.team-list,.team-audit { display:grid; gap:13px; padding:18px; background:#fff; border:1px solid #e0e8f0; border-radius:15px; min-width:0; }
+.team-form-title { display:flex; align-items:center; gap:9px; color:#1c3952; }
+.team-form-title svg { color:#ed8534; }
+.team-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.team-form-grid label:last-child { grid-column:1/-1; }
+.team-form-grid label,.team-member-edit > label { display:grid; gap:6px; color:#314b62; font-size:12px; font-weight:700; }
+.team-form-grid input,.team-form-grid select,.team-member-edit input,.team-member-edit select { box-sizing:border-box; width:100%; min-height:44px; padding:10px 11px; border:1px solid #d9e3ee; border-radius:9px; background:#fff; color:#1e3954; font-size:14px; }
+.team-create-form > .primary,.team-member-edit > .primary { justify-self:start; min-width:155px; min-height:44px; }
+.team-create-form .muted,.team-member-edit .muted { margin:0; font-size:12px; line-height:1.5; }
+.team-list h3 { margin:0; font-size:17px; color:#183652; }
+.team-member-card { border:1px solid #e1e9f1; border-radius:12px; padding:13px; display:grid; gap:12px; min-width:0; }
+.team-member-top { display:flex; align-items:center; gap:10px; min-width:0; }
+.team-avatar { display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; background:#eef4f9; color:#496e8d; flex:0 0 auto; }
+.team-member-name { display:grid; gap:4px; min-width:0; flex:1; }
+.team-member-name strong { color:#203a54; font-size:14px; overflow-wrap:anywhere; }
+.team-member-name small { font-size:11px; color:#698096; overflow-wrap:anywhere; }
+.team-member-active,.team-member-blocked { font-size:11px; font-weight:700; padding:5px 8px; border-radius:50px; flex:0 0 auto; }
+.team-member-active { background:#e9f7ef; color:#237548; }
+.team-member-blocked { background:#f8ecec; color:#a63e3e; }
+.team-member-operations { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.team-member-operations button { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:9px 11px; min-height:38px; font-size:12px; }
+.team-member-edit { display:grid; gap:13px; background:#f8fafc; border:1px solid #e2ebf4; padding:13px; border-radius:11px; min-width:0; }
+.team-permission-list { display:grid; gap:10px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.team-permission-list > strong { grid-column:1/-1; color:#284661; font-size:13px; }
+.team-permission-list label { display:flex; align-items:flex-start; gap:8px; font-size:12px; font-weight:550; line-height:1.45; color:#385269; }
+.team-permission-list input { width:17px; height:17px; min-height:17px; margin:0; flex:0 0 auto; accent-color:#e9822d; }
+.team-temp-secret { background:#fff8eb; border:1px solid #f0d6a2; border-radius:12px; padding:13px; display:grid; gap:8px; }
+.team-temp-secret strong { color:#674318; }
+.team-temp-secret p { font-size:12px; color:#7c5c33; line-height:1.5; margin:0; }
+.team-temp-secret > div { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.team-temp-secret code { overflow-wrap:anywhere; padding:9px 11px; border-radius:7px; background:#fff; font-size:13px; }
+.team-temp-secret button { justify-self:start; display:inline-flex; align-items:center; gap:6px; }
+.team-audit-row { display:grid; gap:4px; padding-bottom:11px; border-bottom:1px solid #e8eef3; }
+.team-audit-row:last-child { border-bottom:0; }
+.team-audit-row span { color:#304960; font-size:13px; overflow-wrap:anywhere; }
+.team-audit-row small { color:#6b7e91; font-size:12px; overflow-wrap:anywhere; }
+.staff-password-shell { min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:18px; background:#f4f7fb; }
+.staff-password-card { box-sizing:border-box; width:100%; max-width:420px; display:grid; gap:14px; background:#fff; border:1px solid #dce7f1; border-radius:16px; padding:24px; box-shadow:0 10px 38px #142c4112; }
+.staff-password-icon { color:#f0832b; }
+.staff-password-card h1 { font-size:21px; color:#183651; margin:0; }
+.staff-password-card p { font-size:13px; color:#576f87; line-height:1.5; margin:0; }
+.staff-password-card form { display:grid; gap:13px; }
+.staff-password-card label { display:grid; gap:6px; font-size:12px; font-weight:700; color:#314d64; }
+.staff-password-card input { box-sizing:border-box; width:100%; border:1px solid #dbe6ef; border-radius:9px; padding:11px; min-height:44px; }
+.staff-password-card form > button { display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; }
+.staff-password-card > .text-button { justify-self:start; }
+@media (max-width:600px) {
+  .team-create-form,.team-list,.team-audit { padding:13px; }
+  .team-form-grid,.team-permission-list { grid-template-columns:minmax(0,1fr); }
+  .team-form-grid label:last-child { grid-column:auto; }
+  .team-member-top { align-items:flex-start; }
+  .team-member-active,.team-member-blocked { align-self:center; }
+  .team-member-operations button { flex:1 1 auto; }
+  .staff-password-card { padding:18px; }
+}
