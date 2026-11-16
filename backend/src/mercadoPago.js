@@ -123,10 +123,25 @@ async function synchronize(order, payment) {
   }
   const nextStatus = String(payment.status || "pending");
   const alreadyApproved = order.status === "approved";
-  if (alreadyApproved && nextStatus !== "approved") return;
+  if (order.status === "refunded" && nextStatus !== "refunded") return;
+  if (alreadyApproved && !["approved", "refunded"].includes(nextStatus)) return;
   const freight = await Freight.findById(order.freightId);
   if (!freight) return;
   let accepted = false;
+  if (nextStatus === "refunded" && order.kind === "freight") {
+    // Reembolso feito no próprio Mercado Pago não pode continuar liberando
+    // repasse ao motorista; se já houver repasse, exigir conciliação manual.
+    const change = await Freight.updateOne({
+      _id: freight._id, paymentStatus: "paid_mp",
+      payoutStatus: { $nin: ["paid_simulated", "paid_manual"] }
+    }, { $set: {
+      paymentStatus: "refunded_mp", refundStatus: "refunded_mp",
+      refundAmountCents: order.amountCents, refundedAt: new Date(),
+      payoutStatus: "none"
+    } });
+    accepted = Boolean(change.modifiedCount);
+    if (!accepted) order.reviewRequired = true;
+  }
   if (nextStatus === "approved") {
     if (order.kind === "commission") {
       const result = await Freight.updateOne({
@@ -147,9 +162,16 @@ async function synchronize(order, payment) {
     }
   }
   order.status = nextStatus;
-  if (nextStatus === "approved") order.verifiedAt ||= new Date();
+  if (["approved", "refunded"].includes(nextStatus)) order.verifiedAt ||= new Date();
   if (nextStatus === "approved" && !accepted && !alreadyApproved) order.reviewRequired = true;
   await order.save();
+  if (nextStatus === "refunded" && !alreadyApproved) {
+    void notifyMasters({
+      title: accepted ? "Estorno Mercado Pago confirmado" : "Estorno exige conciliação",
+      body: accepted ? "Pagamento Pix devolvido. Confira o Financeiro." : "Pagamento estornado com repasse ou situação divergente. Confira manualmente.",
+      category: "financeiro", id: String(order.freightId),
+    });
+  }
   if (nextStatus === "approved" && !alreadyApproved) {
     if (accepted) {
       void notifyMasters({
