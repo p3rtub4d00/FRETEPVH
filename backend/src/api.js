@@ -15,6 +15,7 @@ import { freightCommunication } from "./freightCommunication.js";
 import { validProposalOptions, proposalDescription, hasExternalContact } from "./antiBypass.js";
 import { notifyInBackground, notifyMasters } from "./webPush.js";
 import { commissionRouter } from "./commissionSettings.js";
+import { masterNotifications } from "./masterNotifications.js";
 
 export const api = Router();
 api.use(authenticate);
@@ -31,6 +32,7 @@ api.use((req, res, next) => {
 });
 api.use(finance);
 api.use(commissionRouter);
+api.use(masterNotifications);
 api.use(pushRouter);
 api.use(driverVerification);
 api.use(freightCommunication);
@@ -254,7 +256,7 @@ api.post("/requests", authorize("cliente"), rateLimit({
   } catch (error) {
     console.warn("Pedido salvo; seleção de destinatários push indisponível:", error?.name || "Erro");
   }
-  notifyMasters({ title: "Novo frete solicitado", body: "Um cliente publicou um pedido no FreteOn.", id: String(request._id) });
+  notifyMasters({ title: "Novo frete solicitado", body: "Um cliente publicou um pedido no FreteOn.", category: "fretes", id: String(request._id) });
   res.status(201).json({ request: presentRequest(request, req.user) });
 });
 // Anexar imagens a pedidos já publicados, sem recriar a contratação.
