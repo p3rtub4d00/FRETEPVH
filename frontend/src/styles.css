@@ -4242,3 +4242,18 @@ a.maps-route-button:focus-visible { outline: 3px solid #ff8a35; outline-offset: 
 @media (prefers-reduced-motion: reduce) {
   .master-mobile-drawer, .master-drawer-backdrop { transition: none; }
 }
+
+
+/* Chamada principal para propostas recebidas no card do cliente */
+.client-proposals-cta { display:flex; align-items:center; gap:12px; width:100%; min-height:76px; margin-top:14px; padding:14px 16px; border:1px solid #dce3ea; border-radius:15px; background:#f1f5f9; color:#243e58; text-align:left; transition:background .15s,transform .15s; }
+.client-proposals-cta.has-proposals { background:#fff1e4; border-color:#ffc88f; color:#8b420f; }
+.client-proposals-cta:active { transform:scale(.99); }
+.client-proposals-cta:focus-visible { outline:3px solid #fb923c; outline-offset:3px; }
+.client-proposals-cta-icon { flex:0 0 42px; height:42px; display:grid; place-items:center; border-radius:12px; background:#e1e9f1; }
+.client-proposals-cta.has-proposals .client-proposals-cta-icon { background:#ffdbb8; }
+.client-proposals-cta-copy { flex:1; min-width:0; display:grid; gap:4px; }
+.client-proposals-cta-copy strong { font-size:16px; line-height:1.3; }
+.client-proposals-cta-copy small { color:#66778a; font-size:13px; line-height:1.4; }
+.client-proposals-cta-count { display:grid; place-items:center; flex:0 0 30px; min-width:30px; height:30px; border-radius:50%; background:#f58024; color:#fff; font-weight:800; font-size:14px; }
+.client-proposals-cta-arrow { flex-shrink:0; }
+@media(max-width:390px) { .client-proposals-cta { padding:12px; gap:9px; } .client-proposals-cta-copy strong { font-size:14px; } }
