@@ -178,7 +178,7 @@ api.get("/state", async (req, res) => {
     users,
     requests: requests.map((request) => presentRequest(request, req.user)),
     wallet: req.user.role === "cliente" ? null : walletSummary(requests, req.user, gateway.real),
-    mercadoPagoEnabled: gateway.enabled,
+    mercadoPagoEnabled: gateway.enabled || gateway.anyReady,
     paymentGateway: gateway,
   });
 });
