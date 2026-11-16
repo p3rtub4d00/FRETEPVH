@@ -163,6 +163,59 @@ api.get("/state", async (req, res) => {
         if (result.modifiedCount) request.set(changes);
       }
     }
+    // O PagBank pode ter aprovado uma comissão antes da versão que atualiza
+    // o financeiro no sandbox. Reconciliação somente com pedido aprovado e
+    // verificado, conferindo proprietário, modalidade e centavos.
+    const commissionCandidates = requests.filter(request =>
+      ["cash_driver", "card_driver"].includes(request.paymentMethod) &&
+      request.commissionStatus === "pending" && request.driverId &&
+      request.disputeStatus !== "open" &&
+      !["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_pagbank"].includes(request.refundStatus)
+    );
+    if (commissionCandidates.length) {
+      const approvedCommissions = await PagBankOrder.find({
+        freightId: { $in: commissionCandidates.map(request => request._id) },
+        kind: "commission", environment: "sandbox", status: "approved",
+        verifiedAt: { $ne: null }
+      }).lean();
+      for (const request of commissionCandidates) {
+        const order = approvedCommissions.find(item =>
+          String(item.freightId) === String(request._id) &&
+          item.payerId === request.driverId &&
+          item.amountCents === request.commissionCents);
+        if (!order) continue;
+        const changes = {
+          commissionStatus: "paid",
+          commissionPaidAt: order.verifiedAt,
+          commissionProvider: "pagbank",
+          commissionProviderEnvironment: "sandbox"
+        };
+        const changed = await Freight.updateOne({
+          _id: request._id, commissionStatus: "pending",
+          commissionCents: order.amountCents,
+          disputeStatus: { $ne: "open" },
+          refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_pagbank"] }
+        }, { $set: changes });
+        if (changed.modifiedCount) request.set(changes);
+      }
+    }
+    // Frete de teste concluído em versão anterior: gerar saldo SOMENTE de
+    // homologação após a confirmação da entrega, sem dinheiro real.
+    for (const request of requests.filter(item =>
+      item.paymentMethod === "pix_freteon" &&
+      item.paymentProvider === "pagbank" &&
+      item.paymentProviderEnvironment === "sandbox" &&
+      Boolean(item.pagbankTestApprovedAt) &&
+      item.status === "completed" && item.deliveryConfirmedAt &&
+      item.payoutStatus === "none")) {
+      const changed = await Freight.updateOne({
+        _id: request._id, paymentStatus: "awaiting",
+        paymentProvider: "pagbank", paymentProviderEnvironment: "sandbox",
+        pagbankTestApprovedAt: { $ne: null }, status: "completed",
+        deliveryConfirmedAt: { $ne: null }, payoutStatus: "none"
+      }, { $set: { payoutStatus: "available" } });
+      if (changed.modifiedCount) request.payoutStatus = "available";
+    }
   }
   const driverIds = [
     ...new Set(
