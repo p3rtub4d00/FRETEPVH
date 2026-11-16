@@ -639,10 +639,18 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             onClick={() => setModal({ type: "detail", id: request.id, focusProposal: true })}>
             {request.proposals.some(p => p.driverId === user.id) ? "Editar proposta" : "Enviar proposta"}
           </button>}
-        </div> : <button className="card-link" onClick={() => setModal({ type: "detail", id: request.id })}>
-          {request.status === "open" ? `${request.proposals.length} propostas recebidas` : "Ver detalhes"}
-          <ArrowRight size={18}/>
-        </button>}
+        </div> : request.status === "open" ? (
+          <button type="button" className={`client-proposals-cta${request.proposals.length ? " has-proposals" : ""}`}
+            onClick={() => setModal({ type: "detail", id: request.id })}>
+            <span className="client-proposals-cta-icon"><FileCheck2 size={23}/></span>
+            <span className="client-proposals-cta-copy">
+              <strong>{request.proposals.length ? "Ver propostas dos motoristas" : "Aguardando propostas"}</strong>
+              <small>{request.proposals.length ? `${request.proposals.length} ${request.proposals.length === 1 ? "proposta recebida" : "propostas recebidas"} · Toque para comparar` : "Seu pedido está disponível para os motoristas"}</small>
+            </span>
+            {request.proposals.length > 0 && <span className="client-proposals-cta-count">{request.proposals.length}</span>}
+            <ChevronRight size={21} className="client-proposals-cta-arrow"/>
+          </button>
+        ) : <button className="card-link" onClick={() => setModal({ type: "detail", id: request.id })}>Ver detalhes <ArrowRight size={18}/></button>}
       </article>
     );
   }
