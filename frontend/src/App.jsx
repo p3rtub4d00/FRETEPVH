@@ -159,7 +159,7 @@ function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhot
   const rate = Number.isFinite(request.commissionRate) ? request.commissionRate : 10;
   const fee = Number.isFinite(request.commissionCents) ? request.commissionCents : Math.round(gross * rate / 100);
   const net = Number.isFinite(request.driverNetCents) ? request.driverNetCents : gross - fee;
-  const pixWaiting = request.paymentMethod === "pix_freteon" && !["simulated_paid", "paid_mp"].includes(request.paymentStatus);
+  const pixWaiting = request.paymentMethod === "pix_freteon" && !["simulated_paid", "paid_mp", "paid_pagbank"].includes(request.paymentStatus);
   const startBlocked = busy || refundBlocked(request) || (request.status === "booked" && pixWaiting);
   const time = accepted?.time || request.time;
   const canAdvance = ["booked", "transit"].includes(request.status);
@@ -1265,6 +1265,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               onAction={walletAction}
               onSavePreferences={savePaymentPreferences}
               mpEnabled={state.mercadoPagoEnabled}
+              gateway={state.paymentGateway}
               onPaid={refresh}
             />
           ) : area === "master" && ["inicio", "motoristas"].includes(page) ? (
@@ -1657,7 +1658,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 <p>
                   {selected.paymentMethod === "pix_freteon"
                     ? state.mercadoPagoEnabled
-                      ? "Confirme que recebeu sua carga corretamente. O Pix já foi registrado pelo Mercado Pago."
+                      ? "Confirme que recebeu sua carga corretamente. O Pix já foi registrado pelo provedor de pagamento."
                       : "Confirme que recebeu sua carga corretamente. O pagamento continua em modo simulação."
                     : "Confirme somente se recebeu a carga e efetuou o pagamento combinado diretamente ao motorista."}
                 </p>
@@ -1959,7 +1960,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           {area === "cliente" && selected.paymentMethod === "pix_freteon" &&
              selected.status === "booked" && selected.paymentStatus === "awaiting" && (
             state.mercadoPagoEnabled ? (
-              <MercadoPagoPix key={selected.id} requestId={selected.id} kind="freight" onPaid={refresh}/>
+              <MercadoPagoPix key={selected.id} requestId={selected.id} kind="freight" gateway={state.paymentGateway} onPaid={refresh}/>
             ) : (
               <div className="finance-action">
                 <p className="info">Pagamento Pix ainda em simulação. Nenhum valor real será cobrado.</p>
@@ -1971,8 +1972,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             )
           )}
           {area === "cliente" && selected.paymentMethod === "pix_freteon" &&
-            selected.paymentStatus === "paid_mp" && (
-              <p className="info">Pix do frete confirmado pelo Mercado Pago.</p>
+            ["paid_mp", "paid_pagbank"].includes(selected.paymentStatus) && (
+              <p className="info">Pix do frete confirmado pelo banco responsável.</p>
           )}
           {area === "cliente" && selected.status === "completed" &&
             selected.paymentMethod && !selected.deliveryConfirmedAt &&
@@ -2026,7 +2027,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           )}
           {area === "cliente" &&
             ["open", "booked"].includes(selected.status) && !refundBlocked(selected) &&
-            !(selected.paymentMethod === "pix_freteon" && ["simulated_paid", "paid_mp"].includes(selected.paymentStatus)) && (
+            !(selected.paymentMethod === "pix_freteon" && ["simulated_paid", "paid_mp", "paid_pagbank"].includes(selected.paymentStatus)) && (
               <button
                 className="danger-link"
                 onClick={() => setModal({ type: "cancel", id: selected.id })}
