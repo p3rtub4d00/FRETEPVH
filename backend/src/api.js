@@ -8,7 +8,7 @@ import { Account, Freight, FreightReport, publicUser, isVerifiedDriver } from ".
 import { authenticate, authorize, fail, text } from "./auth.js";
 import { calculateRoadRoute } from "./maps.js";
 import { LEGAL_VERSION } from "./legalVersion.js";
-import { finance, PAYMENT_METHODS, bookFinancials, overdueDriver, walletSummary } from "./finance.js";
+import { finance, PAYMENT_METHODS, bookFinancials, overdueDriver, walletSummary, isRealBankPayment } from "./finance.js";
 import { pushRouter } from "./pushRoutes.js";
 import { driverVerification } from "./driverVerification.js";
 import { freightCommunication } from "./freightCommunication.js";
@@ -426,7 +426,7 @@ api.patch("/requests/:id", async (req, res) => {
   ) {
     if (request.status === "booked" && req.body.status === "transit") {
       if (request.paymentMethod === "pix_freteon" &&
-          !["simulated_paid", "paid_mp", "paid_pagbank"].includes(request.paymentStatus))
+          !isRealBankPayment(request))
         fail(409, "Aguarde a confirmação do pagamento Pix antes de iniciar o transporte.");
       request.status = "transit";
     } else if (request.status === "transit" && req.body.status === "completed") {
