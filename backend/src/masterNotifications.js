@@ -1,0 +1,38 @@
+import mongoose from "mongoose";
+import { Router } from "express";
+import { authorize, fail } from "./auth.js";
+const schema = new mongoose.Schema({
+  title: { type: String, required: true, maxlength: 90 },
+  body: { type: String, required: true, maxlength: 180 },
+  category: { type: String, enum: ["motoristas","fretes","financeiro","recuperacao","denuncias","geral"], default: "geral" },
+  targetId: { type: String, default: "" },
+  readBy: { type: [String], default: [] }
+}, { timestamps: true });
+schema.index({ createdAt: -1 });
+const Event = mongoose.models.FreteOnMasterNotification || mongoose.model("FreteOnMasterNotification", schema);
+export async function recordMasterNotification(message) {
+  const title = String(message.title || "Aviso FreteOn").slice(0,90);
+  const body = String(message.body || "Há uma nova ocorrência.").slice(0,180);
+  const category = ["motoristas","fretes","financeiro","recuperacao","denuncias","geral"].includes(message.category) ? message.category : "geral";
+  return Event.create({ title, body, category, targetId: String(message.id || "").slice(0,80) });
+}
+export const masterNotifications = Router();
+masterNotifications.use(authorize("master"));
+masterNotifications.get("/master/notifications", async (req,res) => {
+  const events = await Event.find().sort({ createdAt:-1 }).limit(100).lean();
+  const userId = String(req.user._id);
+  res.json({ items: events.map(event => ({
+    id: String(event._id), title: event.title, body: event.body,
+    category: event.category, targetId: event.targetId,
+    createdAt: event.createdAt, read: (event.readBy || []).includes(userId)
+  })) });
+});
+masterNotifications.post("/master/notifications/:id/read", async (req,res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) fail(400,"Aviso inválido.");
+  await Event.updateOne({ _id:req.params.id }, { $addToSet: { readBy: String(req.user._id) } });
+  res.json({ ok:true });
+});
+masterNotifications.post("/master/notifications/read-all", async (req,res) => {
+  await Event.updateMany({ readBy: { $ne: String(req.user._id) } }, { $addToSet: { readBy: String(req.user._id) } });
+  res.json({ ok:true });
+});
