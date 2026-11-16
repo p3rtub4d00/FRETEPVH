@@ -243,8 +243,11 @@ export default function Entry() {
       )}
       <footer className="public-footer">
         <span>FreteOn · Porto Velho, RO</span>
-        <details className="public-legal-links"><summary>Informações legais</summary><div><a href="/termos" onClick={event => { event.preventDefault(); navigate("/termos"); }}>Termos de Uso</a>{" · "}<a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Política de Privacidade</a></div></details>
-        <span>Intermediação de fretes · Financeiro em simulação</span>
+        <details className="public-legal-links"><summary>Informações legais</summary><div>
+          <a href="/termos" onClick={event => { event.preventDefault(); navigate("/termos"); }}>Termos de Uso</a>
+          <a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Política de Privacidade</a>
+          <small>Intermediação de fretes · Financeiro em simulação</small>
+        </div></details>
       </footer>
     </div>
     {invitation}
