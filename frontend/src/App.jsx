@@ -1567,7 +1567,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               )}
             </>
           )}
-          {["booked", "transit", "completed"].includes(selected.status) &&
+          {["booked", "transit"].includes(selected.status) &&
             ((area === "cliente" && selected.clientId === user.id) ||
              (area === "motorista" && selected.driverId === user.id)) && (
               <FreightChatPanel requestId={selected.id} currentUserId={user.id}
