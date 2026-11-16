@@ -9,7 +9,7 @@ const reasonText = value => {
 export const refundBlocks = request => ['pending', 'approved', 'refunded_simulated'].includes(request.refundStatus);
 export const canRequestRefund = request => request.paymentMethod === 'pix_freteon' &&
   Number.isSafeInteger(request.agreedPriceCents) && request.agreedPriceCents > 0 &&
-  request.paymentStatus === 'simulated_paid' && ['booked', 'transit', 'completed', 'cancelled'].includes(request.status) &&
+  ['simulated_paid', 'paid_mp'].includes(request.paymentStatus) && ['booked', 'transit', 'completed', 'cancelled'].includes(request.status) &&
   request.payoutStatus !== 'paid_simulated' && request.disputeStatus !== 'open' &&
   (!request.refundStatus || request.refundStatus === 'none');
 
@@ -26,8 +26,8 @@ export function applyRefund(request, user, action, reason) {
     request.refundAmountCents = request.agreedPriceCents;
   } else {
     if (!master) reject(403, 'Somente o Master pode decidir sobre o reembolso.');
-    if (request.paymentMethod !== 'pix_freteon' || request.paymentStatus !== 'simulated_paid' ||
-        request.payoutStatus === 'paid_simulated') reject(409, 'Pagamento indisponível para reembolso.');
+    if (request.paymentMethod !== 'pix_freteon' || !['simulated_paid', 'paid_mp'].includes(request.paymentStatus) ||
+        ['paid_simulated', 'paid_manual'].includes(request.payoutStatus)) reject(409, 'Pagamento indisponível para reembolso.');
     if (['approve_refund', 'reject_refund'].includes(action)) {
       if (request.refundStatus !== 'pending') reject(409, 'Não existe reembolso aguardando análise.');
       request.refundDecisionReason = reasonText(reason);
