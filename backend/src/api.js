@@ -265,6 +265,8 @@ api.post("/requests/:id/photos", authorize("cliente"), async (req, res) => {
   const request = await Freight.findById(req.params.id);
   if (!request || request.clientId !== own(req.user))
     fail(404, "Frete não encontrado.");
+  if (request.proposals?.length > 0)
+    fail(409, "As fotos da carga não podem ser alteradas depois da primeira proposta.");
   if (!["open", "booked"].includes(request.status))
     fail(409, "Só é possível anexar fotos antes de iniciar o transporte.");
   const additional = validateFreightPhotos(req.body.photos);
@@ -280,6 +282,8 @@ api.delete("/requests/:id/photos/:index", authorize("cliente"), async (req, res)
   const request = await Freight.findById(req.params.id);
   if (!request || request.clientId !== own(req.user))
     fail(404, "Frete não encontrado.");
+  if (request.proposals?.length > 0)
+    fail(409, "As fotos da carga não podem ser alteradas depois da primeira proposta.");
   if (!["open", "booked"].includes(request.status))
     fail(409, "Só é possível alterar fotos antes de iniciar o transporte.");
   const index = Number(req.params.index);
