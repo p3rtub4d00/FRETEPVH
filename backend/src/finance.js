@@ -31,6 +31,13 @@ export async function bookFinancials(request, proposal, driver, suppliedConfig =
   request.payoutStatus = "none";
 }
 
+// Um retorno aprovado no sandbox não comprova o recebimento de dinheiro.
+export function isRealBankPayment(request) {
+  return request?.paymentStatus === "paid_mp" ||
+    (request?.paymentStatus === "paid_pagbank" &&
+      request?.paymentProviderEnvironment === "production");
+}
+
 export function confirmDelivery(request) {
   if (refundBlocks(request)) fail(409, "O reembolso bloqueia a confirmação e o repasse deste frete.");
   if (request.status !== "completed" || request.deliveryConfirmedAt)
@@ -38,7 +45,7 @@ export function confirmDelivery(request) {
   if (request.disputeStatus === "open" || request.disputeStatus === "resolved_cancelled")
     fail(409, "A entrega está em análise ou foi cancelada pela administração.");
   if (request.paymentMethod === "pix_freteon") {
-    if (!["simulated_paid", "paid_mp", "paid_pagbank"].includes(request.paymentStatus))
+    if (!isRealBankPayment(request))
       fail(409, "Aguarde a confirmação do pagamento Pix antes de liberar o repasse.");
     request.payoutStatus = "available";
   } else if (["card_driver", "cash_driver"].includes(request.paymentMethod)) {
