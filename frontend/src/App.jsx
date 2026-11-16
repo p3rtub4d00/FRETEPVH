@@ -389,6 +389,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   const [commissionRate, setCommissionRate] = useState(10);
   useEffect(() => { if (area === "motorista") api("/commission/current").then(c => setCommissionRate(c.rate)).catch(() => {}); }, [area]);
   const masterNotifications = useMasterNotifications(area === "master");
+  const masterUnreadByCategory = (key) => masterNotifications.items.filter(item => !item.read && item.category === key).length;
   const [recoveryPending, setRecoveryPending] = useState(0);
   useEffect(() => {
     if (area !== "master") return;
@@ -675,8 +676,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <Icon size={20} />
               {label}
               {area === "master" &&
-                ((key === "motoristas" && pending.length > 0) || (key === "recuperacao" && recoveryPending > 0) || (key === "notificacoes" && masterNotifications.unread > 0)) && (
-                  <span className="count">{key === "recuperacao" ? recoveryPending : key === "notificacoes" ? masterNotifications.unread : pending.length}</span>
+                ((key === "motoristas" && pending.length > 0) || (key === "recuperacao" && recoveryPending > 0) || (key === "notificacoes" && masterNotifications.unread > 0) || (["financeiro", "fretes", "denuncias"].includes(key) && masterUnreadByCategory(key) > 0)) && (
+                  <span className="count">{key === "recuperacao" ? recoveryPending : key === "notificacoes" ? masterNotifications.unread : ["financeiro", "fretes", "denuncias"].includes(key) ? masterUnreadByCategory(key) : pending.length}</span>
                 )}
             </button>
           ))}
