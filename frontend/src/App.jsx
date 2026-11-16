@@ -1849,15 +1849,18 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           ) : (
             <>
               <h3>
-                {selected.status === "open"
-                  ? "Compare as propostas"
-                  : "Proposta escolhida"}
+                {area === "motorista"
+                  ? selected.status === "cancelled" ? "Minha proposta · pedido cancelado"
+                    : selected.driverId !== user.id ? "Minha proposta · não selecionada"
+                    : "Minha proposta"
+                  : selected.status === "open" ? "Compare as propostas" : "Proposta escolhida"}
               </h3>
               {selected.proposals
                 .filter(
                   (proposal) =>
-                    selected.status === "open" ||
-                    proposal.id === selected.selectedId,
+                    area === "motorista"
+                      ? proposal.driverId === user.id
+                      : selected.status === "open" || proposal.id === selected.selectedId,
                 )
                 .map((proposal) => {
                   const person = state.drivers.find(
