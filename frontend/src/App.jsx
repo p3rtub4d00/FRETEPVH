@@ -265,11 +265,11 @@ function RequestForm({ onCreate, onClose, requestError }) {
       setError("Finalize o processamento da foto antes de continuar.");
       return;
     }
-    if (step === 0 && data.origin.trim() === data.destination.trim()) {
+    if (step === 1 && data.origin.trim() === data.destination.trim()) {
       setError("Informe endereços diferentes para retirada e entrega.");
       return;
     }
-    if (step < 2) {
+    if (step < 3) {
       setStep(step + 1);
       return;
     }
@@ -286,8 +286,8 @@ function RequestForm({ onCreate, onClose, requestError }) {
   }
   return (
     <Modal title="Solicitar frete" onClose={onClose} error={requestError}>
-      <div className="steps">
-        {["Trajeto", "Carga", "Agendamento"].map((label, index) => (
+      <div className="steps request-steps" aria-label="Etapas da solicitação">
+        {["Retirada", "Entrega", "Carga", "Agendamento"].map((label, index) => (
           <span key={label} className={index <= step ? "active" : ""}>
             {index + 1}. {label}
           </span>
@@ -297,12 +297,22 @@ function RequestForm({ onCreate, onClose, requestError }) {
         {step === 0 && (
           <RoutePicker
             data={data}
+            mode="origin"
             onChange={(patch) =>
               setData((previous) => ({ ...previous, ...patch }))
             }
           />
         )}
         {step === 1 && (
+          <RoutePicker
+            data={data}
+            mode="destination"
+            onChange={(patch) =>
+              setData((previous) => ({ ...previous, ...patch }))
+            }
+          />
+        )}
+        {step === 2 && (
           <>
             <label>
               O que você vai transportar?
@@ -359,7 +369,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
             />
           </>
         )}
-        {step === 2 && (
+        {step === 3 && (
           <>
             <div className="form-grid">
               <label>
@@ -443,7 +453,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
             </button>
           )}
           <button className="primary" disabled={loading || photoProcessing}>
-            {photoProcessing ? "Preparando fotos..." : step === 2 ? "Publicar pedido" : "Continuar"}
+            {photoProcessing ? "Preparando fotos..." : step === 3 ? "Publicar pedido" : "Continuar"}
             <ArrowRight size={17} />
           </button>
         </div>
