@@ -1195,7 +1195,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         <button type="button" className="master-drawer-backdrop" aria-label="Fechar menu" tabIndex={masterMenuOpen ? 0 : -1} onClick={() => setMasterMenuOpen(false)} />
         <aside id="master-mobile-drawer" className="master-mobile-drawer" aria-label="Menu administrativo" inert={!masterMenuOpen}>
           <div className="master-drawer-heading"><strong>Menu Master</strong><button type="button" aria-label="Fechar menu" onClick={() => setMasterMenuOpen(false)}><X size={23}/></button></div>
-          <nav>{navigation.master.map(([key, label, Icon]) => <button type="button" key={key} className={page === key ? "selected" : ""} onClick={() => { setPage(key); setFilter("all"); setMasterMenuOpen(false); }}><Icon size={21}/><span>{label}</span>{((key === "motoristas" && pending.length > 0) || (key === "recuperacao" && recoveryPending > 0)) && <span className="master-drawer-count">{key === "recuperacao" ? recoveryPending : pending.length}</span>}</button>)}</nav>
+          <nav>{navigation.master.map(([key, label, Icon]) => <button type="button" key={key} className={page === key ? "selected" : ""} onClick={() => { setPage(key); setFilter("all"); setMasterMenuOpen(false); }}><Icon size={21}/><span>{label}</span>{((key === "motoristas" && pending.length > 0) || (key === "recuperacao" && recoveryPending > 0) || (key === "notificacoes" && masterNotifications.unread > 0)) && <span className="master-drawer-count">{key === "recuperacao" ? recoveryPending : key === "notificacoes" ? masterNotifications.unread : pending.length}</span>}</button>)}</nav>
         </aside>
       </div>}
       {modal?.type === "create" && (
