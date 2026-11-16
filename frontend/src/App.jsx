@@ -163,7 +163,9 @@ function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhot
     request.paymentProvider === "pagbank" && request.paymentProviderEnvironment === "sandbox" &&
     Boolean(request.pagbankTestApprovedAt);
   const pixWaiting = request.paymentMethod === "pix_freteon" &&
-    !["paid_mp", "paid_pagbank"].includes(request.paymentStatus) && !sandboxApproved;
+    !(request.paymentStatus === "paid_mp" ||
+      (request.paymentStatus === "paid_pagbank" && request.paymentProviderEnvironment === "production")) &&
+    !sandboxApproved;
   const startBlocked = busy || refundBlocked(request) || (request.status === "booked" && pixWaiting);
   const time = accepted?.time || request.time;
   const canAdvance = ["booked", "transit"].includes(request.status);
