@@ -4352,3 +4352,73 @@ dialog:has(.driver-compact) { max-width: 620px; overscroll-behavior: contain; }
 
 .wallet-row-address { color: #63778a; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; margin-top: 0; margin-bottom: 0; }
 .wallet-item-compact > .wallet-row-address { border-top: 1px solid #edf1f5; padding-top: 12px; }
+
+
+/* Perfil do motorista: informações essenciais visíveis e documentação sob demanda. */
+.driver-profile-compact { max-width: 650px; padding: 18px 18px 20px; }
+.driver-profile-compact .profile-photo-editor { justify-content: center; flex-direction: column; gap: 7px; margin: 0 0 9px; }
+.driver-profile-compact .profile-photo-portrait { width: 150px; height: 150px; }
+.driver-profile-compact .profile-photo-portrait .avatar { font-size: 39px; }
+.driver-profile-compact .profile-photo-edit-badge { width: 35px; height: 35px; right: 3px; bottom: 5px; }
+.driver-profile-compact .profile-photo-edit-badge svg { width: 16px; height: 16px; }
+.driver-profile-compact .profile-photo-hint { margin: 0; font-size: 11px; }
+.driver-profile-compact .profile-photo-overlay { gap: 3px; padding: 25px 8px 8px; }
+.driver-profile-compact .profile-photo-option { width: 106px; min-height: 26px; padding: 4px 6px; font-size: 10px; }
+.driver-profile-compact .profile-photo-overlay-close { top: 7px; right: 17px; }
+.driver-profile-compact .profile-details-editor { gap: 6px; margin-bottom: 14px; }
+.driver-profile-compact .profile-details-editor > h2 { font-size: 19px; margin: 0; }
+.driver-profile-compact .profile-details-editor > p { font-size: 12px; }
+.driver-profile-compact .profile-edit-start { min-height: 36px; margin-top: 4px; }
+.driver-profile-overview { width: 100%; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin: 0 0 12px; text-align: left; }
+.driver-profile-overview > div { display: flex; align-items: flex-start; gap: 9px; min-width: 0; padding: 12px 10px; border-radius: 11px; border: 1px solid #e0e7ef; background: #f8fafc; }
+.driver-profile-overview > div > svg { flex-shrink: 0; color: #607a94; }
+.driver-profile-overview span { display: grid; min-width: 0; gap: 4px; }
+.driver-profile-overview strong { font-size: 12px; line-height: 1.35; }
+.driver-profile-overview small { font-size: 11px; color: #66778a; line-height: 1.4; overflow-wrap: anywhere; }
+.driver-profile-overview .driver-profile-approved { color: #227d50; font-weight: 700; }
+.driver-profile-overview .driver-profile-pending { color: #9d5c19; font-weight: 700; }
+.driver-profile-documents { width: 100%; margin: 0 0 11px; border: 1px solid #dce6f0; border-radius: 13px; background: #fff; overflow: hidden; text-align: left; }
+.driver-profile-documents > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 11px; padding: 14px; min-height: 65px; color: #294560; }
+.driver-profile-documents > summary::-webkit-details-marker { display:none; }
+.driver-profile-documents > summary > svg:first-child { flex-shrink: 0; color:#b86a29; }
+.driver-profile-documents > summary > span { display: grid; gap: 5px; min-width: 0; flex: 1; }
+.driver-profile-documents > summary strong { font-size: 13px; }
+.driver-profile-documents > summary small { color: #677b8d; font-size: 11px; line-height: 1.4; }
+.driver-profile-disclosure-arrow { flex-shrink: 0; color: #8291a2; transition: transform .18s ease; }
+.driver-profile-documents[open] .driver-profile-disclosure-arrow { transform: rotate(90deg); }
+.driver-profile-documents .driver-verification-panel { margin: 0; border: 0; border-top: 1px solid #e1eaf2; border-radius: 0; background: #fbfcfe; padding: 15px 12px; }
+.driver-profile-documents > summary:focus-visible { outline: 3px solid #fa8e35; outline-offset: -4px; border-radius: 13px; }
+.driver-profile-compact > .secondary:last-child { width: 100%; min-height: 43px; margin-top: 1px; color: #596d80; }
+@media (max-width: 370px) {
+  .driver-profile-compact { padding: 15px 12px; }
+  .driver-profile-overview { gap: 6px; }
+  .driver-profile-overview > div { padding: 11px 7px; gap: 6px; }
+  .driver-profile-overview strong { font-size: 11px; }
+}
+
+/* Links legais no aplicativo: permanecem acessíveis sem ocupar uma seção grande. */
+.dashboard-footer-compact { position: relative; display: flex; justify-content: flex-start; gap: 8px 17px; align-items: center; flex-wrap: wrap; padding: 12px 0 10px; margin-top: 8px; color: #8792a0; font-size: 10px; }
+.dashboard-footer-compact > span { margin-right: auto; }
+.dashboard-footer-compact > button { color: #718092; font-size: 11px; min-height: 34px; padding: 4px 3px; }
+.dashboard-legal-disclosure { position: relative; }
+.dashboard-legal-disclosure > summary { color: #718092; font-size: 11px; cursor: pointer; list-style: none; min-height: 34px; display: flex; align-items: center; }
+.dashboard-legal-disclosure > summary::-webkit-details-marker { display: none; }
+.dashboard-legal-disclosure > summary::after { content: "⌄"; font-size: 12px; margin-left: 5px; }
+.dashboard-legal-disclosure[open] > summary::after { transform: rotate(180deg); }
+.dashboard-legal-disclosure > div { position: absolute; right: 0; bottom: calc(100% + 3px); z-index: 8; display: grid; gap: 11px; width: max-content; max-width: 260px; padding: 14px 16px; border: 1px solid #dde5ef; border-radius: 11px; background: #fff; box-shadow: 0 8px 22px #0b27401c; }
+.dashboard-legal-disclosure a { color: #5b6980; font-size: 12px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.public-footer { display: flex; align-items: center; gap: 6px 18px; padding-top: 13px; padding-bottom: 13px; font-size: 10px; }
+.public-footer .public-legal-links { position: relative; display: block; }
+.public-footer .public-legal-links > summary { cursor: pointer; list-style: none; font-size: 11px; color: #708093; }
+.public-footer .public-legal-links > summary::-webkit-details-marker { display: none; }
+.public-footer .public-legal-links > summary::after { content:"⌄"; margin-left: 5px; }
+.public-footer .public-legal-links[open] > summary::after { content:"⌃"; }
+.public-footer .public-legal-links > div { position: absolute; bottom: calc(100% + 6px); right: 0; z-index: 8; display: grid; gap: 9px; min-width: 190px; padding: 12px; background: #fff; border: 1px solid #dce5ef; border-radius: 10px; box-shadow: 0 8px 22px #0b27401c; }
+.public-footer .public-legal-links a { color: #63758a; font-size: 12px; font-weight: 600; }
+.public-footer .public-legal-links small { font-size: 10px; color: #8b97a5; line-height: 1.5; }
+@media (max-width: 600px) {
+  .dashboard-footer-compact { gap: 6px 13px; }
+  .dashboard-legal-disclosure > div { right: 0; }
+  .public-footer { justify-content: space-between; gap: 6px 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .driver-profile-disclosure-arrow { transition:none; } }
