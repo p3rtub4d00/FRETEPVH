@@ -19,6 +19,7 @@ import { masterNotifications } from "./masterNotifications.js";
 import { mercadoPagoPrivate } from "./mercadoPago.js";
 import { paymentGatewayRouter } from "./paymentGateway.js";
 import { getPaymentProvider, paymentProviderSettingsRouter } from "./paymentProviderSettings.js";
+import { PagBankOrder } from "./pagBank.js";
 
 export const api = Router();
 api.use(authenticate);
@@ -128,6 +129,41 @@ api.get("/state", async (req, res) => {
     query = { $or: conditions };
   }
   const requests = await Freight.find(query).sort({ createdAt: -1 });
+  // Reconciliação retroativa: Pix do sandbox aprovado ANTES da atualização
+  // pode liberar o ciclo de homologação sem exigir que o cliente reabra o Pix.
+  // Nunca alterar pagamento real, comissão ou valores disponíveis para saque.
+  if (gateway.testFlowEnabled) {
+    const candidates = requests.filter(request =>
+      ["booked", "transit", "completed"].includes(request.status) &&
+      request.paymentMethod === "pix_freteon" &&
+      request.paymentStatus === "awaiting" && !request.pagbankTestApprovedAt
+    );
+    if (candidates.length) {
+      const approvedOrders = await PagBankOrder.find({
+        freightId: { $in: candidates.map(request => request._id) },
+        kind: "freight", environment: "sandbox", status: "approved",
+        verifiedAt: { $ne: null }
+      }).lean();
+      for (const request of candidates) {
+        const order = approvedOrders.find(item =>
+          String(item.freightId) === String(request._id) &&
+          item.payerId === request.clientId &&
+          item.amountCents === request.agreedPriceCents);
+        if (!order) continue;
+        const changes = {
+          pagbankTestApprovedAt: order.verifiedAt,
+          paymentProvider: "pagbank",
+          paymentProviderEnvironment: "sandbox"
+        };
+        const result = await Freight.updateOne({
+          _id: request._id,
+          paymentStatus: "awaiting",
+          pagbankTestApprovedAt: null
+        }, { $set: changes });
+        if (result.modifiedCount) request.set(changes);
+      }
+    }
+  }
   const driverIds = [
     ...new Set(
       requests.flatMap((request) =>
