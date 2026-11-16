@@ -11,7 +11,7 @@ const labels = {
 const stages = { booked: 'Contratado', transit: 'Em transporte', completed: 'Concluído', cancelled: 'Cancelado' };
 const date = value => value ? new Date(value).toLocaleString('pt-BR', { timeZone: 'America/Porto_Velho' }) : '';
 
-export default function RefundPanel({ request, role, busy, onAction }) {
+export default function RefundPanel({ request, role, busy, onAction, canManage = true }) {
   const [editing, setEditing] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
@@ -44,7 +44,7 @@ export default function RefundPanel({ request, role, busy, onAction }) {
       {request.refundedAt && <p>Devolução registrada anteriormente em {date(request.refundedAt)}. Confira o comprovante bancário.</p>}
     </>}
     {canAsk && !editing && <button type="button" className="secondary full" disabled={busy} onClick={() => setEditing(true)}>Cancelar e solicitar reembolso</button>}
-    {(canAsk && editing || role === 'master' && status === 'pending') && <form onSubmit={event => { event.preventDefault(); submit(role === 'master' ? 'approve_refund' : 'request_refund'); }}>
+    {(canAsk && editing || role === 'master' && canManage && status === 'pending') && <form onSubmit={event => { event.preventDefault(); submit(role === 'master' ? 'approve_refund' : 'request_refund'); }}>
       <label>{role === 'master' ? 'Justificativa da decisão' : 'Motivo do cancelamento'}
         <textarea required minLength={10} maxLength={500} rows={3} value={reason} onChange={event => setReason(event.target.value)} placeholder="Descreva em pelo menos 10 caracteres" />
       </label>
