@@ -123,7 +123,7 @@ export function masterFinancialAction(request) {
   if (request.payoutStatus === "requested" || request.commissionStatus === "pending") return true;
   return request.status === "completed" && !request.deliveryConfirmedAt &&
     request.disputeStatus !== "resolved_cancelled" &&
-    (request.paymentMethod !== "pix_freteon" || request.paymentStatus === "simulated_paid");
+    (request.paymentMethod !== "pix_freteon" || ["simulated_paid", "paid_mp"].includes(request.paymentStatus));
 }
 function masterSettled(request) {
   if (masterFinancialAction(request) || !["completed", "cancelled"].includes(request.status)) return false;
@@ -139,7 +139,7 @@ export function masterFinancialBucket(request, tab) {
   if (tab === "commissions") return ["cash_driver", "card_driver"].includes(request.paymentMethod) &&
     Number(request.commissionCents || 0) > 0;
   if (tab === "payouts") return request.paymentMethod === "pix_freteon" &&
-    ["available", "requested", "paid_simulated"].includes(request.payoutStatus);
+    ["available", "requested", "paid_simulated", "paid_manual"].includes(request.payoutStatus);
   if (tab === "refunds") return refundCases(request);
   if (tab === "history") return masterSettled(request);
   return tab === "all";
@@ -179,6 +179,7 @@ function masterFinanceAmount(request, tab) {
 
 function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = false, masterTab = "pending", mpEnabled = false, onPaid }) {
   const [expanded, setExpanded] = useState(false);
+  const [payoutReference, setPayoutReference] = useState("");
   const driver = drivers.find((person) => person.id === request.driverId);
   const isDriver = role === "motorista";
   const isMaster = role === "master";
@@ -274,9 +275,20 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
       {isMaster && !refundBlocked(request) && request.payoutStatus === "requested" && request.disputeStatus !== "open" && (
         <div className="wallet-transfer">
           <p>Chave Pix do motorista: <strong className="wallet-pix-key">{driver?.pixKey || "Não cadastrada"}</strong></p>
-          <button className="primary full" disabled={busy || !driver?.pixKey}
-            onClick={() => onAction(request.id, "confirm_payout_master")}>
-            Confirmar repasse manual (simulação)
+          {request.paymentStatus === "paid_mp" && (
+            <>
+              <p className="info">O FreteOn recebeu o Pix real do cliente. Faça primeiro o repasse no seu banco. Este botão apenas registra a transferência realizada.</p>
+              <label>Identificador do comprovante de repasse
+                <input value={payoutReference} onChange={event => setPayoutReference(event.target.value)}
+                  minLength={6} maxLength={100} placeholder="Identificador bancário ou comprovante"/>
+              </label>
+            </>
+          )}
+          <button className="primary full" disabled={busy || !driver?.pixKey ||
+            (request.paymentStatus === "paid_mp" && payoutReference.trim().length < 6)}
+            onClick={() => onAction(request.id, "confirm_payout_master",
+              request.paymentStatus === "paid_mp" ? { reference: payoutReference.trim() } : {})}>
+            {request.paymentStatus === "paid_mp" ? "Registrar repasse real já efetuado" : "Confirmar repasse manual (simulação)"}
           </button>
         </div>
       )}
