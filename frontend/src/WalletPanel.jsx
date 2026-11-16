@@ -201,12 +201,13 @@ function masterFinanceAmount(request, tab) {
   return request.agreedPriceCents;
 }
 
-function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = false, masterTab = "pending", mpEnabled = false, gateway, onPaid }) {
+function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = false, masterTab = "pending", mpEnabled = false, gateway, onPaid, adminRole, adminPermissions = [] }) {
   const [expanded, setExpanded] = useState(false);
   const [payoutReference, setPayoutReference] = useState("");
   const driver = drivers.find((person) => person.id === request.driverId);
   const isDriver = role === "motorista";
   const isMaster = role === "master";
+  const may = permission => !isMaster || adminRole === "owner" || adminPermissions.includes(permission);
   const amount = request.agreedPriceCents;
   const realTransfer = request.paymentStatus === "paid_mp" ||
     (request.paymentStatus === "paid_pagbank" && request.paymentProviderEnvironment === "production");
@@ -252,7 +253,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
         </div>
       )}
       <PaymentLabel method={request.paymentMethod} />
-      <RefundPanel request={request} role={role} busy={busy} onAction={onAction} />
+      <RefundPanel request={request} role={role} busy={busy} onAction={onAction} canManage={may("finance.refund")}/>
       {!refundBlocked(request) && <StatusText request={request} />}
       <div className="wallet-item-values">
         <span>Comissão: <strong>{byCents(request.commissionCents)}</strong></span>
@@ -277,7 +278,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
           <MercadoPagoPix requestId={request.id} kind="commission" gateway={gateway} onPaid={onPaid}/>
         )}
       
-      {isMaster && !refundBlocked(request) && request.status === "completed" &&
+      {isMaster && may("freights.manage") && !refundBlocked(request) && request.status === "completed" &&
         !request.deliveryConfirmedAt && request.disputeStatus !== "open" &&
         request.disputeStatus !== "resolved_cancelled" &&
         (request.paymentMethod !== "pix_freteon" || ["paid_mp", "paid_pagbank"].includes(request.paymentStatus)) && (
@@ -290,7 +291,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
         request.disputeStatus !== "open" && (
           <p className="wallet-note">Comissão pendente. A quitação ocorre automaticamente após aprovação do Pix pelo provedor responsável.</p>
         )}
-      {isMaster && !refundBlocked(request) && request.payoutStatus === "requested" && request.disputeStatus !== "open" && (
+      {isMaster && may("finance.payout") && !refundBlocked(request) && request.payoutStatus === "requested" && request.disputeStatus !== "open" && (
         <div className="wallet-transfer">
           <p>Chave Pix do motorista: <strong className="wallet-pix-key">{driver?.pixKey || "Não cadastrada"}</strong></p>
           {pagBankSandbox && <p className="wallet-note">Saldo de homologação. A confirmação abaixo é manual e encerra apenas o registro de teste, sem transferir dinheiro ou usar a chave Pix.</p>}
@@ -318,7 +319,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
           </button>
         </div>
       )}
-      {isMaster && !refundBlocked(request) && request.disputeStatus === "open" && (
+      {isMaster && may("finance.dispute") && !refundBlocked(request) && request.disputeStatus === "open" && (
         <div className="wallet-review-actions">
           <button className="secondary" disabled={busy}
             onClick={() => onAction(request.id, "resolve_dispute_accept_master")}>Reconhecer entrega</button>
@@ -388,7 +389,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
   const amount = wallet || {};
   return (
     <section className="wallet-section">
-      {role === "master" && <PaymentProviderAdmin initial={gateway} onSaved={onPaid}/>}
+      {role === "master" && <PaymentProviderAdmin initial={gateway} onSaved={onPaid} readOnly={user.adminRole !== "owner"}/>}
       <div className="wallet-banner">
         <Wallet size={22} />
         <div><strong>{mpEnabled && !gateway?.enabled ? "Financeiro FreteOn · Banco indisponível" : mpEnabled ? `Financeiro FreteOn · ${gateway?.preferred === "pagbank" ? gateway?.real ? "PagBank" : "PagBank (teste)" : "Mercado Pago"}` : "Financeiro FreteOn · Aguardando banco"}</strong><p>{mpEnabled && !gateway?.enabled ? "O banco escolhido não está configurado para novos Pix. O Master deve concluir a configuração no Render." : mpEnabled ? gateway?.real ? `Pix conciliado pelo ${gateway?.preferred === "pagbank" ? "PagBank" : "Mercado Pago"}. Os repasses ao motorista continuam manuais.` : "Banco de homologação configurado." : "Para receber por Pix, configure e habilite o provedor selecionado no Master."}</p></div>
@@ -499,6 +500,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
           {rows.map((request) =>
             <FreightFinanceRow key={request.id} request={request} role={role}
               drivers={drivers} busy={busy} onAction={onAction} mpEnabled={mpEnabled} gateway={gateway} onPaid={onPaid}
+              adminRole={user.adminRole} adminPermissions={user.adminPermissions || []}
               compact={role === "motorista" || role === "master"} masterTab={masterTab}/>
           )}
         </div>
