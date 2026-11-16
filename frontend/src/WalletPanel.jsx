@@ -57,7 +57,7 @@ function StatusText({ request }) {
     if (request.payoutStatus === "available") return <span className="wallet-status success">Repasse disponível para solicitar</span>;
     return <span className="wallet-status">Aguardando conclusão e confirmação do cliente</span>;
   }
-  if (request.commissionStatus === "paid") return <span className="wallet-status success">Comissão quitada</span>;
+  if (request.commissionStatus === "paid") return <span className="wallet-status success">{request.commissionProviderEnvironment === "sandbox" ? "Comissão quitada (teste PagBank)" : "Comissão quitada"}</span>;
   if (request.commissionStatus === "waived") return <span className="wallet-status">Comissão dispensada</span>;
   if (request.commissionStatus === "pending") {
     const overdue = request.commissionDueAt && new Date(request.commissionDueAt).getTime() <= Date.now();
@@ -187,6 +187,9 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
   const isDriver = role === "motorista";
   const isMaster = role === "master";
   const amount = request.agreedPriceCents;
+  const realTransfer = request.paymentStatus === "paid_mp" ||
+    (request.paymentStatus === "paid_pagbank" && request.paymentProviderEnvironment === "production");
+  const pagBankSandbox = request.paymentStatus === "paid_pagbank" && request.paymentProviderEnvironment === "sandbox";
   const due = request.commissionDueAt
     ? new Date(request.commissionDueAt).toLocaleString("pt-BR", { timeZone: "America/Porto_Velho", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
     : null;
@@ -278,7 +281,8 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
       {isMaster && !refundBlocked(request) && request.payoutStatus === "requested" && request.disputeStatus !== "open" && (
         <div className="wallet-transfer">
           <p>Chave Pix do motorista: <strong className="wallet-pix-key">{driver?.pixKey || "Não cadastrada"}</strong></p>
-          {["paid_mp", "paid_pagbank"].includes(request.paymentStatus) && (
+          {pagBankSandbox && <p className="wallet-note">Pix gerado em sandbox PagBank. Não transfira dinheiro real ao motorista nesta etapa de teste.</p>}
+          {realTransfer && (
             <>
               <p className="info">O FreteOn recebeu o Pix real do cliente. Faça primeiro o repasse no seu banco. Este botão apenas registra a transferência realizada.</p>
               <label>Identificador do comprovante de repasse
@@ -288,10 +292,10 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
             </>
           )}
           <button className="primary full" disabled={busy || !driver?.pixKey ||
-            (["paid_mp", "paid_pagbank"].includes(request.paymentStatus) && payoutReference.trim().length < 6)}
+            (realTransfer && payoutReference.trim().length < 6)}
             onClick={() => onAction(request.id, "confirm_payout_master",
-              ["paid_mp", "paid_pagbank"].includes(request.paymentStatus) ? { reference: payoutReference.trim() } : {})}>
-            {["paid_mp", "paid_pagbank"].includes(request.paymentStatus) ? "Registrar repasse real já efetuado" : "Confirmar repasse manual (simulação)"}
+              realTransfer ? { reference: payoutReference.trim() } : {})}>
+            {realTransfer ? "Registrar repasse real já efetuado" : "Confirmar repasse manual (simulação)"}
           </button>
         </div>
       )}
@@ -368,7 +372,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
       {role === "master" && <PaymentProviderAdmin initial={gateway} onSaved={onPaid}/>}
       <div className="wallet-banner">
         <Wallet size={22} />
-        <div><strong>{mpEnabled ? `Financeiro FreteOn · ${gateway?.preferred === "pagbank" ? "PagBank" : "Mercado Pago"}` : "Carteira FreteOn · Simulação"}</strong><p>{mpEnabled ? `Pix conciliado pelo ${gateway?.preferred === "pagbank" ? "PagBank" : "Mercado Pago"}. Os repasses ao motorista continuam manuais.` : "Nenhum Pix ou repasse real será realizado nesta versão."}</p></div>
+        <div><strong>{mpEnabled ? `Financeiro FreteOn · ${gateway?.preferred === "pagbank" ? gateway?.real ? "PagBank" : "PagBank (teste)" : "Mercado Pago"}` : "Carteira FreteOn · Simulação"}</strong><p>{mpEnabled ? gateway?.real ? `Pix conciliado pelo ${gateway?.preferred === "pagbank" ? "PagBank" : "Mercado Pago"}. Os repasses ao motorista continuam manuais.` : "PagBank em sandbox: transações de teste sem movimentação real." : "Nenhum Pix ou repasse real será realizado nesta versão."}</p></div>
       </div>
       {role === "master" && all.some(r => ["pending", "approved"].includes(r.refundStatus)) && <p className="wallet-alert" role="status">{all.filter(r => r.refundStatus === "pending").length} reembolso(s) em análise · {all.filter(r => r.refundStatus === "approved").length} aguardando devolução. Solicitações aparecem primeiro no extrato.</p>}
       <div className="wallet-metrics">
