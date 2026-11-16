@@ -124,13 +124,17 @@ finance.post("/requests/:id/finance", async (req, res) => {
   const isMaster = req.user.role === "master";
   if (!isClient && !isDriver && !isMaster)
     fail(403, "Você não tem acesso a este frete.");
+  // Nunca registrar cobrança, devolução ou quitação sem retorno do provedor.
+  // Comandos antigos de teste não podem modificar registros na versão operacional.
+  if (["simulate_pix_payment", "simulate_refund", "notify_commission", "confirm_commission_master"].includes(action))
+    fail(409, "Este procedimento foi descontinuado. Utilize o pagamento Pix confirmado pelo banco.");
 
   const refundAction = ["request_refund", "approve_refund", "reject_refund", "simulate_refund"].includes(action);
   if (!refundAction && refundBlocks(request))
     fail(409, "Este frete está bloqueado por uma solicitação de reembolso.");
   if (refundAction) {
-    if (action === "simulate_refund" && ["paid_mp", "paid_pagbank"].includes(request.paymentStatus))
-      fail(409, "Reembolsos reais devem ser confirmados pelo Mercado Pago.");
+    if (action === "simulate_refund")
+      fail(409, "Devoluções exigem confirmação do provedor de pagamento.");
     const realRefund = action === "approve_refund" &&
       ["paid_mp", "paid_pagbank"].includes(request.paymentStatus);
     const provider = request.paymentStatus;
@@ -200,13 +204,13 @@ finance.post("/requests/:id/finance", async (req, res) => {
     const realTransfer = request.paymentStatus === "paid_mp" ||
       (request.paymentStatus === "paid_pagbank" &&
         request.paymentProviderEnvironment === "production");
-    if (realTransfer) {
-      const ref = String(req.body.reference || "").trim();
-      if (ref.length < 6 || ref.length > 100)
-        fail(400, "Informe o identificador do comprovante do repasse real.");
-      request.payoutStatus = "paid_manual";
-      request.payoutReference = ref;
-    } else request.payoutStatus = "paid_simulated";
+    if (!realTransfer)
+      fail(409, "Repasse bancário só pode ser registrado após recebimento Pix real e conferido.");
+    const ref = String(req.body.reference || "").trim();
+    if (ref.length < 6 || ref.length > 100)
+      fail(400, "Informe o identificador do comprovante do repasse real.");
+    request.payoutStatus = "paid_manual";
+    request.payoutReference = ref;
     request.payoutPaidAt = new Date();
   } else if (action === "resolve_dispute_accept_master" && isMaster) {
     if (request.disputeStatus !== "open")
@@ -227,9 +231,10 @@ finance.post("/requests/:id/finance", async (req, res) => {
     request.commissionStatus = "waived";
     request.commissionDueAt = null;
     request.payoutStatus = "none";
-    request.paymentStatus = request.paymentMethod === "pix_freteon"
-      ? ["paid_mp", "paid_pagbank"].includes(request.paymentStatus) ? request.paymentStatus : "refunded_simulated"
-      : "none";
+    // Resolver uma contestação não devolve dinheiro automaticamente.
+    // A situação de recebimento existente fica registrada até conciliação ou estorno real.
+    if (request.paymentMethod !== "pix_freteon")
+      request.paymentStatus = "none";
   } else {
     fail(403, "Ação financeira não autorizada ou inválida.");
   }
@@ -260,7 +265,7 @@ finance.post("/requests/:id/finance", async (req, res) => {
     confirm_delivery: {
       to: [request.driverId], role: "motorista",
       title: "Entrega confirmada pelo cliente",
-      body: "Consulte sua carteira para acompanhar comissão ou repasse simulado.",
+      body: "Consulte sua carteira para acompanhar comissão ou repasse.",
     },
     confirm_delivery_master: {
       to: [request.driverId], role: "motorista",
