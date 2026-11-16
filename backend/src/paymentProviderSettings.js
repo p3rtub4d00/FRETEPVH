@@ -19,7 +19,6 @@ export function providerReady(provider) {
     /^https:\/\/[^/]+$/.test(process.env.MP_PUBLIC_URL?.trim() || "");
   if (provider === "pagbank") return process.env.PAGBANK_ENABLED === "true" &&
     Boolean(process.env.PAGBANK_TOKEN?.trim()) &&
-    Boolean(process.env.PAGBANK_WEBHOOK_PUBLIC_KEY?.trim()) &&
     /^https:\/\/[^/]+$/.test(process.env.PAGBANK_PUBLIC_URL?.trim() || "") &&
     ["sandbox", "production"].includes(process.env.PAGBANK_ENV) &&
     (process.env.PAGBANK_ENV !== "production" || process.env.PAGBANK_PRODUCTION_ALLOWED === "true");
