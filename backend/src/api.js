@@ -16,7 +16,9 @@ import { validProposalOptions, proposalDescription, hasExternalContact } from ".
 import { notifyInBackground, notifyMasters } from "./webPush.js";
 import { commissionRouter } from "./commissionSettings.js";
 import { masterNotifications } from "./masterNotifications.js";
-import { mercadoPagoPrivate, mercadoPagoEnabled } from "./mercadoPago.js";
+import { mercadoPagoPrivate } from "./mercadoPago.js";
+import { paymentGatewayRouter } from "./paymentGateway.js";
+import { getPaymentProvider, paymentProviderSettingsRouter } from "./paymentProviderSettings.js";
 
 export const api = Router();
 api.use(authenticate);
@@ -33,6 +35,8 @@ api.use((req, res, next) => {
 });
 api.use(finance);
 api.use(mercadoPagoPrivate);
+api.use(paymentGatewayRouter);
+api.use(paymentProviderSettingsRouter);
 api.use(commissionRouter);
 api.use(masterNotifications);
 api.use(pushRouter);
@@ -114,6 +118,7 @@ function presentRequest(request, user) {
   return result;
 }
 api.get("/state", async (req, res) => {
+  const gateway = await getPaymentProvider();
   const userId = own(req.user);
   let query = {};
   if (req.user.role === "cliente") query = { clientId: userId };
@@ -172,8 +177,9 @@ api.get("/state", async (req, res) => {
     drivers: people,
     users,
     requests: requests.map((request) => presentRequest(request, req.user)),
-    wallet: req.user.role === "cliente" ? null : walletSummary(requests, req.user),
-    mercadoPagoEnabled: mercadoPagoEnabled(),
+    wallet: req.user.role === "cliente" ? null : walletSummary(requests, req.user, gateway.enabled),
+    mercadoPagoEnabled: gateway.enabled,
+    paymentGateway: gateway,
   });
 });
 api.patch("/profile/photo", authorize("cliente", "motorista"), async (req, res) => {
@@ -397,7 +403,7 @@ api.patch("/requests/:id", async (req, res) => {
       req.body.status === "cancelled" &&
       ["open", "booked"].includes(request.status)
     ) {
-      if (request.paymentMethod === "pix_freteon" && ["simulated_paid", "paid_mp"].includes(request.paymentStatus))
+      if (request.paymentMethod === "pix_freteon" && ["simulated_paid", "paid_mp", "paid_pagbank"].includes(request.paymentStatus))
         fail(409, "Use Cancelar e solicitar reembolso para o Master analisar o Pix pago.");
       request.status = "cancelled";
       request.payoutStatus = "none";
@@ -420,7 +426,7 @@ api.patch("/requests/:id", async (req, res) => {
   ) {
     if (request.status === "booked" && req.body.status === "transit") {
       if (request.paymentMethod === "pix_freteon" &&
-          !["simulated_paid", "paid_mp"].includes(request.paymentStatus))
+          !["simulated_paid", "paid_mp", "paid_pagbank"].includes(request.paymentStatus))
         fail(409, "Aguarde a confirmação do pagamento Pix antes de iniciar o transporte.");
       request.status = "transit";
     } else if (request.status === "transit" && req.body.status === "completed") {
