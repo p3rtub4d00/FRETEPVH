@@ -152,6 +152,97 @@ function Modal({ title, onClose, children, error, busy }) {
   );
 }
 
+// Checkout Pix do cliente: pagamento em primeiro plano; rota e conversa ficam
+// disponíveis sem ocupar toda a altura do modal na abertura.
+function ClientPixCheckoutCompact({
+  request, currentUserId, drivers, gateway, busy, onPaid,
+  onPhoto, onReport, onFinanceAction, onCancel,
+}) {
+  const proposal = request.proposals?.find(item => item.id === request.selectedId);
+  const driver = drivers.find(person => person.id === request.driverId) ||
+    drivers.find(person => person.id === proposal?.driverId);
+  const awaitingPix = request.paymentStatus === "awaiting";
+  const sandboxApproved = request.paymentProvider === "pagbank" &&
+    request.paymentProviderEnvironment === "sandbox" && Boolean(request.pagbankTestApprovedAt);
+  const bankPaid = ["paid_mp", "paid_pagbank"].includes(request.paymentStatus) && !sandboxApproved;
+
+  return (
+    <div className="client-pix-compact">
+      <section className="client-pix-overview" aria-label="Resumo do frete contratado">
+        <div className="client-pix-overview-head">
+          <span className="status booked">Contratado</span>
+          <div className="client-pix-total">
+            <small>Valor do frete</small>
+            <strong>{money((request.agreedPriceCents || 0) / 100)}</strong>
+          </div>
+        </div>
+        <div className="client-pix-mini-route">
+          <div><MapPin size={15}/><span><small>Retirada</small><strong title={request.origin}>{request.origin}</strong></span></div>
+          <div><MapPin size={15}/><span><small>Entrega</small><strong title={request.destination}>{request.destination}</strong></span></div>
+        </div>
+        <div className="client-pix-driver-summary">
+          <Truck size={16}/>
+          <span>Motorista: <strong>{driver?.name || "Contratado"}</strong>
+            {proposal?.time ? ` · Retirada às ${proposal.time}` : ""}
+          </span>
+        </div>
+      </section>
+
+      {awaitingPix && (
+        <MercadoPagoPix requestId={request.id} kind="freight"
+          gateway={gateway} onPaid={onPaid} compact />
+      )}
+      {sandboxApproved && (
+        <p className="client-pix-test-note" role="status">
+          <CheckCircle2 size={17}/> Pix aprovado no PagBank sandbox. Este frete pode seguir em homologação, sem movimentar dinheiro real.
+        </p>
+      )}
+      {bankPaid && (
+        <p className="client-pix-test-note" role="status">
+          <CheckCircle2 size={17}/> Pagamento Pix confirmado pelo banco. O motorista pode prosseguir com o transporte.
+        </p>
+      )}
+
+      <details className="client-pix-disclosure">
+        <summary><Package size={18}/><span>Ver detalhes, fotos e rota</span><ChevronRight size={18}/></summary>
+        <div className="client-pix-disclosure-content">
+          <Route request={request}/>
+          <RouteDistance request={request}/>
+          {request.description && <p>{request.description}</p>}
+          <p className="muted">{request.vehicle || "Veículo a combinar"} · {request.helper ? "Com ajudante" : "Sem ajudante"} · {request.time}</p>
+          {proposal?.note && <p className="muted">Observação do motorista: {proposal.note}</p>}
+          {request.photos?.length > 0 && (
+            <div className="freight-gallery">
+              <h3>Fotos da carga ({request.photos.length})</h3>
+              <div className="freight-gallery-images">
+                {request.photos.map((photo, index) => (
+                  <button type="button" key={index} onClick={() => onPhoto(index)}>
+                    <FreightPhotoImage src={photo} alt={`Abrir foto ${index + 1} da carga`}/>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <RefundPanel request={request} role="cliente" busy={busy} onAction={onFinanceAction}/>
+        </div>
+      </details>
+
+      <details className="client-pix-disclosure">
+        <summary><MessageSquare size={18}/><span>Conversa com o motorista</span><ChevronRight size={18}/></summary>
+        <div className="client-pix-disclosure-content">
+          <FreightChatPanel requestId={request.id} currentUserId={currentUserId} onReport={onReport}/>
+        </div>
+      </details>
+
+      {!refundBlocked(request) && !bankPaid && !sandboxApproved && (
+        <button type="button" className="client-pix-cancel" onClick={onCancel}>
+          Cancelar pedido
+        </button>
+      )}
+    </div>
+  );
+}
+
 function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhoto, onReport, onFinanceAction, testFlowEnabled = false }) {
   const [chatOpen, setChatOpen] = useState(false);
   const accepted = request.proposals.find((proposal) => proposal.id === request.selectedId);
@@ -1761,6 +1852,21 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   setNotice("Proposta enviada ao cliente.");
                 })
               }
+            />
+          ) : area === "cliente" && selected.status === "booked" &&
+              selected.paymentMethod === "pix_freteon" ? (
+            <ClientPixCheckoutCompact
+              key={selected.id}
+              request={selected}
+              currentUserId={user.id}
+              drivers={state.drivers}
+              gateway={state.paymentGateway}
+              busy={busy}
+              onPaid={refresh}
+              onFinanceAction={walletAction}
+              onPhoto={index => setModal({ type: "photo", id: selected.id, index, returnTo: "detail" })}
+              onReport={() => setModal({ type: "report", id: selected.id })}
+              onCancel={() => setModal({ type: "cancel", id: selected.id })}
             />
           ) : (
             <>
