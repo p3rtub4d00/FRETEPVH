@@ -173,11 +173,28 @@ async function synchronize(order, payment) {
   }
 }
 async function refreshOrder(order) {
-  if (order.paymentId && !["approved", "cancelled", "rejected"].includes(order.status)) {
+  if (order.paymentId && !["cancelled", "rejected", "refunded"].includes(order.status)) {
     const payment = await mpRequest("GET", `/v1/payments/${encodeURIComponent(order.paymentId)}`);
     await synchronize(order, payment);
   }
   return order;
+}
+
+// Reembolso real: exclusivo de Pix já confirmado e previamente autorizado pelo Master.
+export async function refundMercadoPagoPayment(freight) {
+  if (!mercadoPagoEnabled() || freight.paymentStatus !== "paid_mp")
+    fail(409, "Reembolso real indisponível para este frete.");
+  const order = await MercadoPagoOrder.findOne({ freightId: freight._id, kind: "freight", status: "approved" });
+  if (!order?.paymentId || order.amountCents !== freight.agreedPriceCents)
+    fail(409, "Pagamento não conciliado. Verifique o Mercado Pago antes de reembolsar.");
+  const result = await mpRequest("POST", `/v1/payments/${encodeURIComponent(order.paymentId)}/refunds`, {},
+    `refund-${order.idempotencyKey}`);
+  if (!result?.id || !["approved", "processed"].includes(String(result.status || "")))
+    fail(409, "A devolução ainda não foi confirmada pelo Mercado Pago. Consulte o painel de pagamentos.");
+  order.status = "refunded";
+  order.verifiedAt = new Date();
+  await order.save();
+  return result;
 }
 
 export const mercadoPagoPrivate = Router();
@@ -224,12 +241,13 @@ mercadoPagoPrivate.post("/mercadopago/orders/:id/:kind", async (req, res) => {
       body.notification_url = `${publicUrl}/api/mercadopago/webhook`;
     const payment = await mpRequest("POST", "/v1/payments", body, order.idempotencyKey);
     order.paymentId = String(payment.id);
-    order.status = String(payment.status || "pending");
+    // Reconciliar aprovação antes de gravar o status, para não ignorar a primeira confirmação.
+    order.status = "pending";
     order.qrCode = payment.point_of_interaction?.transaction_data?.qr_code || "";
     order.qrCodeBase64 = payment.point_of_interaction?.transaction_data?.qr_code_base64 || "";
     order.expiresAt = payment.date_of_expiration ? new Date(payment.date_of_expiration) : null;
     await order.save();
-    if (order.status === "approved") await synchronize(order, payment);
+    await synchronize(order, payment);
   } else await refreshOrder(order);
   return res.json(publicOrder(order));
 });
