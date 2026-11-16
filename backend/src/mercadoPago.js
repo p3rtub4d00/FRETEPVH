@@ -294,7 +294,7 @@ export async function mercadoPagoGetOrder(req, res) {
   await refreshOrder(order);
   res.json(publicOrder(order));
 }
-mercadoPagoPrivate.post("/mercadopago/orders/:id/:kind", mercadoPagoCreateOrder);
+// Novos Pix só podem ser criados na rota unificada /payments/orders, que impede duplicidade entre bancos.
 mercadoPagoPrivate.get("/mercadopago/orders/:id/:kind", mercadoPagoGetOrder);
 export const mercadoPagoPublic = Router();
 mercadoPagoPublic.post("/webhook", async (req, res) => {
