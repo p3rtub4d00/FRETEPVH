@@ -196,7 +196,7 @@ finance.post("/requests/:id/finance", async (req, res) => {
   }
   await request.save();
   if (["request_payout", "notify_commission", "report_issue", "request_refund"].includes(action)) {
-    void notifyMasters({ title: action === "request_payout" ? "Repasse solicitado" : action === "notify_commission" ? "Comissão informada" : action === "report_issue" ? "Contestação recebida" : "Reembolso solicitado", body: "Há uma nova solicitação financeira para análise no painel Master.", id: String(request._id) });
+    void notifyMasters({ title: action === "request_payout" ? "Repasse solicitado" : action === "notify_commission" ? "Comissão informada" : action === "report_issue" ? "Contestação recebida" : "Reembolso solicitado", body: "Há uma nova solicitação financeira para análise no painel Master.", category: "financeiro", id: String(request._id) });
   }
   if (refundAction) {
     const titles = {
