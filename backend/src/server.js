@@ -10,6 +10,7 @@ import { api } from "./api.js";
 import { maps } from "./maps.js";
 import { Account, Session, Freight, PrivacyRequest, PushSubscription } from "./models.js";
 import { privacyRouter } from "./privacyChannel.js";
+import { mercadoPagoPublic, MercadoPagoOrder } from "./mercadoPago.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -34,6 +35,8 @@ app.use(
   }),
 );
 app.use(cookieParser());
+// Webhook público: a assinatura HMAC do Mercado Pago substitui a sessão/cabeçalhos do PWA.
+app.use("/api/mercadopago", express.json({ limit: "50kb" }), mercadoPagoPublic);
 // As consultas de mapas não dependem do MongoDB; a sessão e os fretes continuam protegidos.
 app.use("/api/maps", maps);
 app.get("/api/health", (req, res) =>
@@ -132,7 +135,7 @@ let startupStage = "conexão MongoDB";
 try {
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
   startupStage = "criação de índices";
-  await Promise.all([Account.init(), Session.init(), Freight.init(), PrivacyRequest.init(), PushSubscription.init()]);
+  await Promise.all([Account.init(), Session.init(), Freight.init(), PrivacyRequest.init(), PushSubscription.init(), MercadoPagoOrder.init()]);
   startupStage = "criação do Master";
   await bootstrapAdmin();
   console.log("MongoDB conectado.");
