@@ -44,7 +44,7 @@ export function safeChatMessage(value) {
 }
 
 export function canChat(request, userId, role) {
-  if (!request || !["booked", "transit", "completed"].includes(request.status)) return false;
+  if (!request || !["booked", "transit"].includes(request.status)) return false;
   return role === "cliente" && request.clientId === userId ||
     role === "motorista" && request.driverId === userId;
 }
