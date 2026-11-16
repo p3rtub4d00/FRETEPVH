@@ -1,6 +1,6 @@
 import RefundPanel, { refundBlocked } from "./RefundPanel.jsx";
 import { useEffect, useState } from "react";
-import { AlertCircle, Banknote, CheckCircle2, Clock3, CreditCard, QrCode, Wallet } from "lucide-react";
+import { AlertCircle, Banknote, CheckCircle2, Clock3, CreditCard, QrCode, Wallet, ChevronDown, ChevronRight, History, Truck } from "lucide-react";
 import { money } from "./format.js";
 
 export const paymentLabels = {
@@ -61,7 +61,45 @@ function StatusText({ request }) {
   return <span className="wallet-status">Aguardando conclusão e confirmação do cliente</span>;
 }
 
-function FreightFinanceRow({ request, role, drivers, busy, onAction }) {
+
+// A carteira do motorista distingue pendências financeiras, fretes em curso e histórico já encerrado.
+// O status de execução "completed" não significa que a comissão ou o repasse foi quitado.
+export function driverWalletBucket(request) {
+  if (["pending", "approved"].includes(request.refundStatus) ||
+      request.disputeStatus === "open" ||
+      request.commissionStatus === "pending" ||
+      ["available", "requested"].includes(request.payoutStatus)) return "pending";
+  if (["booked", "transit"].includes(request.status)) return "active";
+  if (request.status === "completed" && !request.deliveryConfirmedAt &&
+      request.commissionStatus !== "paid" && request.commissionStatus !== "waived" &&
+      request.payoutStatus !== "paid_simulated" &&
+      request.paymentStatus !== "refunded_simulated" &&
+      request.disputeStatus !== "resolved_cancelled") return "pending";
+  return "history";
+}
+const driverTabLabels = {
+  pending: { label: "Pendências", subtitle: "Comissões e repasses que ainda exigem acompanhamento." },
+  active: { label: "Em andamento", subtitle: "Fretes contratados ou em transporte." },
+  history: { label: "Histórico", subtitle: "Fretes encerrados e sem pendências financeiras." }
+};
+function driverEntryLabel(request) {
+  if (["pending", "approved"].includes(request.refundStatus)) return "Reembolso em análise";
+  if (request.disputeStatus === "open") return "Em contestação";
+  if (request.commissionStatus === "pending") return request.commissionPaymentRequestedAt ? "Comissão informada ao Master" : "Comissão a repassar";
+  if (request.payoutStatus === "available") return "Repasse Pix disponível";
+  if (request.payoutStatus === "requested") return "Repasse solicitado";
+  if (request.status === "booked") return "Frete contratado";
+  if (request.status === "transit") return "Em transporte";
+  if (request.status === "completed" && !request.deliveryConfirmedAt) return "Aguardando confirmação da entrega";
+  if (request.commissionStatus === "paid") return "Comissão quitada";
+  if (request.commissionStatus === "waived") return "Comissão dispensada";
+  if (request.payoutStatus === "paid_simulated") return "Repasse concluído";
+  if (request.status === "cancelled") return "Cancelado";
+  return "Concluído";
+}
+
+function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = false }) {
+  const [expanded, setExpanded] = useState(false);
   const driver = drivers.find((person) => person.id === request.driverId);
   const isDriver = role === "motorista";
   const isMaster = role === "master";
@@ -70,7 +108,24 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction }) {
     ? new Date(request.commissionDueAt).toLocaleString("pt-BR", { timeZone: "America/Porto_Velho", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
     : null;
   return (
-    <article className="wallet-item">
+    <article className={`wallet-item${compact ? " wallet-item-compact" : ""}`}>
+      {compact && (
+        <button type="button" className="wallet-row-toggle" aria-expanded={expanded}
+          onClick={() => setExpanded(value => !value)}>
+          <span className="wallet-row-main">
+            <strong>{request.title}</strong>
+            <small>{driverEntryLabel(request)}</small>
+            {request.commissionStatus === "pending" && (
+              <small className="wallet-row-commission">Comissão: {byCents(request.commissionCents)}</small>
+            )}
+          </span>
+          <span className="wallet-row-side">
+            <strong>{byCents(amount)}</strong>
+            <ChevronDown size={19} className={expanded ? "wallet-row-open" : ""} />
+          </span>
+        </button>
+      )}
+      {(!compact || expanded) && <>
       <div className="wallet-item-heading">
         <div>
           <strong>{request.title}</strong>
@@ -138,6 +193,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction }) {
             onClick={() => onAction(request.id, "resolve_dispute_cancel_master")}>Dispensar valores</button>
         </div>
       )}
+      </>}
     </article>
   );
 }
@@ -145,6 +201,8 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction }) {
 export default function WalletPanel({ role, user, wallet, requests, drivers, busy, onAction, onSavePreferences }) {
   const [pixKey, setPixKey] = useState("");
   const [acceptsCard, setAcceptsCard] = useState(false);
+  const [activeTab, setActiveTab] = useState("pending");
+  const [visibleCount, setVisibleCount] = useState(5);
   useEffect(() => {
     if (role === "motorista") {
       setPixKey(wallet?.pixKey || "");
@@ -162,7 +220,14 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
       request.payoutStatus === "requested" ? 1 :
         request.commissionStatus === "pending" ? 2 :
           request.payoutStatus === "available" ? 3 : 4;
-  const sorted = [...all].sort((a, b) => priority(a) - priority(b));
+  const sorted = [...all].sort((a, b) =>
+    priority(a) - priority(b) ||
+    (new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+  );
+  const groups = { pending: [], active: [], history: [] };
+  if (role === "motorista") sorted.forEach(request => groups[driverWalletBucket(request)].push(request));
+  const driverRows = groups[activeTab] || [];
+  const rows = role === "motorista" ? driverRows.slice(0, visibleCount) : sorted;
   const amount = wallet || {};
   return (
     <section className="wallet-section">
@@ -183,7 +248,9 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
         </p>
       )}
       {role === "motorista" && (
-        <form className="wallet-preferences" onSubmit={(event) => {
+        <details className="wallet-preferences-disclosure">
+          <summary><Wallet size={18}/> Configurar Pix e maquininha <ChevronDown size={17}/></summary>
+          <form className="wallet-preferences" onSubmit={(event) => {
           event.preventDefault();
           onSavePreferences({ pixKey: pixKey.trim(), acceptsCard });
         }}>
@@ -198,18 +265,49 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
               maxLength={150} placeholder="CPF, celular, e-mail ou chave aleatória" />
           </label>
           <button className="secondary" type="submit" disabled={busy}>Salvar preferências</button>
-        </form>
+          </form>
+        </details>
       )}
-      <div className="section-heading"><h2>{role === "master" ? "Controle de pagamentos e repasses" : "Extrato por frete"}</h2></div>
-      {sorted.length ? (
-        <div className="wallet-history">
-          {sorted.map((request) =>
+      <div className="section-heading"><h2>{role === "master" ? "Controle de pagamentos e repasses" : "Fretes e comissões"}</h2></div>
+      {role === "motorista" && (
+        <>
+          <div className="wallet-driver-tabs" role="tablist" aria-label="Filtrar extrato por situação">
+            {Object.entries(driverTabLabels).map(([key, item]) => (
+              <button type="button" role="tab" key={key} id={`wallet-tab-${key}`}
+                className={`wallet-driver-tab${activeTab === key ? " active" : ""}`}
+                aria-selected={activeTab === key} aria-controls="wallet-driver-results"
+                onClick={() => { setActiveTab(key); setVisibleCount(5); }}>
+                <span>{item.label}</span>
+                <strong>{groups[key].length}</strong>
+              </button>
+            ))}
+          </div>
+          <p className="wallet-driver-help">{driverTabLabels[activeTab].subtitle}</p>
+        </>
+      )}
+      {rows.length ? (
+        <div id="wallet-driver-results" className={`wallet-history${role === "motorista" ? " wallet-driver-history" : ""}`}
+          role={role === "motorista" ? "tabpanel" : undefined} aria-labelledby={role === "motorista" ? `wallet-tab-${activeTab}` : undefined}>
+          {rows.map((request) =>
             <FreightFinanceRow key={request.id} request={request} role={role}
-              drivers={drivers} busy={busy} onAction={onAction} />
+              drivers={drivers} busy={busy} onAction={onAction} compact={role === "motorista"} />
           )}
         </div>
       ) : (
-        <div className="panel"><p className="muted">Nenhum frete contratado com pagamento simulado ainda.</p></div>
+        <div id="wallet-driver-results" role={role === "motorista" ? "tabpanel" : undefined}
+          aria-labelledby={role === "motorista" ? `wallet-tab-${activeTab}` : undefined}
+          className="panel"><p className="muted">{role === "motorista"
+            ? activeTab === "pending" ? "Nenhuma comissão ou repasse pendente."
+              : activeTab === "active" ? "Nenhum frete em andamento."
+              : "Seu histórico de fretes quitados aparecerá aqui."
+            : "Nenhum frete contratado com pagamento simulado ainda."}</p></div>
+      )}
+      {role === "motorista" && visibleCount < driverRows.length && (
+        <button type="button" className="secondary wallet-load-more"
+          onClick={() => setVisibleCount(count => count + 5)}>
+          Mostrar mais {Math.min(5, driverRows.length - visibleCount)} frete(s)
+          <ChevronRight size={16}/>
+        </button>
       )}
       <p className="wallet-legal">Valores ilustrativos, sem movimentação bancária. As comissões de dinheiro e cartão vencem 72 horas após a confirmação da entrega e do recebimento. Contestação aberta suspende a cobrança automática.</p>
     </section>
