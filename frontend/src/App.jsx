@@ -544,6 +544,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   const [notice, setNotice] = useState("");
   const [install, setInstall] = useState(null);
   const [filter, setFilter] = useState("all");
+  const [driverProposalView, setDriverProposalView] = useState("pending");
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const mounted = useRef(true);
@@ -709,12 +710,21 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     (sum, request) => sum + request.proposals.length,
     0,
   );
+  // Propostas em análise ficam separadas dos fretes contratados/concluídos.
+  // As não escolhidas e as canceladas continuam acessíveis em Encerradas.
+  const myProposals = area === "motorista"
+    ? state.requests.filter(request =>
+        request.proposals?.some(proposal => proposal.driverId === user.id))
+    : [];
+  const proposalPending = myProposals.filter(request => request.status === "open");
+  const proposalClosed = myProposals.filter(request =>
+    request.status === "cancelled" ||
+    (["booked", "transit", "completed"].includes(request.status) &&
+      request.driverId !== user.id));
   let requests = state.requests;
   if (page === "historico")
     requests = state.requests.filter((request) =>
-      (area === "cliente"
-        ? request.status === "completed"
-        : ["completed", "cancelled"].includes(request.status)) &&
+      request.status === "completed" &&
       (area !== "motorista" || request.driverId === user.id),
     );
   else if (area === "cliente" && page === "fretes")
@@ -725,9 +735,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   else if (area === "motorista")
     requests =
       page === "propostas"
-        ? state.requests.filter((request) =>
-            request.proposals.some((proposal) => proposal.driverId === user.id),
-          )
+        ? driverProposalView === "pending" ? proposalPending : proposalClosed
         : state.requests.filter(
             (request) =>
               request.status === "open" ||
@@ -861,6 +869,42 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           className={`driver-history-details${isOpen && proposalCount > 0 ? " client-freight-action-highlight" : ""}`}
           onClick={() => setModal({ type: "detail", id: request.id })}>
           {actionLabel} <ArrowRight size={18}/>
+        </button>
+      </article>
+    );
+  }
+
+  function driverProposalCard(request) {
+    const proposal = request.proposals.find(item => item.driverId === user.id);
+    const isOpen = request.status === "open";
+    const wasCancelled = request.status === "cancelled";
+    const statusText = isOpen ? "Aguardando decisão do cliente" :
+      wasCancelled ? "Pedido cancelado" : "Outra proposta foi escolhida";
+    const date = proposal?.createdAt || request.createdAt;
+    const dateLabel = date && !Number.isNaN(new Date(date).getTime())
+      ? new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+      : "Data não informada";
+    return (
+      <article className="driver-history-card driver-proposal-card" key={request.id}>
+        <div className="driver-history-heading">
+          <span className={`driver-proposal-status ${isOpen ? "waiting" : "closed"}`}>
+            <FileCheck2 size={15}/> {statusText}
+          </span>
+          <span className="driver-history-date"><Clock3 size={14}/> {dateLabel}</span>
+        </div>
+        <h3>{request.title}</h3>
+        <div className="driver-history-addresses">
+          <div><span>Retirada</span><strong>{request.origin}</strong></div>
+          <div><span>Entrega</span><strong>{request.destination}</strong></div>
+        </div>
+        {proposal && <div className="driver-history-price">
+          <span>Valor da sua proposta</span>
+          <strong>{money(proposal.price)}</strong>
+        </div>}
+        <button type="button" className="driver-history-details"
+          onClick={() => setModal({ type: "detail", id: request.id })}>
+          {isOpen ? "Ver ou atualizar proposta" : "Ver detalhes do pedido"}
+          <ArrowRight size={18}/>
         </button>
       </article>
     );
@@ -1380,12 +1424,14 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <div className="section-heading">
                 <h2>
                   {page === "historico"
-                    ? "Seus fretes anteriores"
-                    : area === "motorista"
-                      ? "Encontre seu próximo frete"
-                      : page === "inicio"
-                        ? "Acompanhe seus fretes"
-                        : "Todos os fretes"}
+                    ? "Fretes concluídos"
+                    : area === "motorista" && page === "propostas"
+                      ? "Minhas propostas"
+                      : area === "motorista"
+                        ? "Encontre seu próximo frete"
+                        : page === "inicio"
+                          ? "Acompanhe seus fretes"
+                          : "Todos os fretes"}
                 </h2>
                 {page === "inicio" && area === "cliente" && (
                   <button
@@ -1423,6 +1469,20 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   ))}
                 </div>
               )}
+              {area === "motorista" && page === "propostas" && (
+                <div className="driver-proposal-filters" role="group" aria-label="Filtrar propostas enviadas">
+                  <button type="button" className={driverProposalView === "pending" ? "active" : ""}
+                    aria-pressed={driverProposalView === "pending"}
+                    onClick={() => setDriverProposalView("pending")}>
+                    Aguardando resposta <span>{proposalPending.length}</span>
+                  </button>
+                  <button type="button" className={driverProposalView === "closed" ? "active" : ""}
+                    aria-pressed={driverProposalView === "closed"}
+                    onClick={() => setDriverProposalView("closed")}>
+                    Encerradas <span>{proposalClosed.length}</span>
+                  </button>
+                </div>
+              )}
               {area === "motorista" && page === "inicio" ? <>
                 <FreightCarousel requests={requests.filter(request => request.status === "open")} renderCard={requestCard}/>
                 {!requests.some(request => request.status === "open") && <Empty title="Nenhum chamado disponível">Novos pedidos aparecerão aqui assim que forem publicados.</Empty>}
@@ -1430,7 +1490,18 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   <div className="section-heading"><h2>Seus fretes contratados</h2></div>
                   <div className="cards">{requests.filter(request => request.status !== "open").map(request => requestCard(request))}</div>
                 </>}
-              </> : area === "motorista" && page === "historico" ? (
+              </> : area === "motorista" && page === "propostas" ? (
+                <div className="driver-history-carousel">
+                  <FreightCarousel
+                    key={`motorista-propostas-${driverProposalView}`}
+                    requests={[...requests].sort((a, b) =>
+                      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())}
+                    renderCard={driverProposalCard}
+                    ariaLabel={driverProposalView === "pending" ? "Propostas aguardando resposta" : "Propostas encerradas"}
+                    itemName="frete"
+                  />
+                </div>
+              ) : area === "motorista" && page === "historico" ? (
                 <div className="driver-history-carousel">
                   <FreightCarousel
                     requests={[...requests].sort((a, b) =>
@@ -1454,15 +1525,24 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 </div>
               ) : <div className="cards">{requests.map(request => requestCard(request))}</div>}
               {!requests.length && !(area === "motorista" && page === "inicio") && (
-                <Empty title={area === "cliente" && page === "historico"
+                <Empty title={area === "motorista" && page === "propostas"
+                  ? driverProposalView === "pending" ? "Nenhuma proposta aguardando" : "Nenhuma proposta encerrada"
+                  : area === "motorista" && page === "historico" ? "Nenhum frete concluído"
+                  : area === "cliente" && page === "historico"
                   ? "Nenhum frete concluído"
                   : area === "cliente" && page === "fretes" && filter === "cancelled"
                     ? "Nenhum frete cancelado"
                     : area === "cliente" && page === "fretes"
                       ? "Nenhum frete nesta situação"
                       : "Nenhum frete por aqui"}>
-                  {area === "cliente" && page === "historico"
-                    ? "Os fretes finalizados aparecerão aqui."
+                  {area === "motorista" && page === "propostas"
+                    ? driverProposalView === "pending"
+                      ? "As propostas enviadas a pedidos abertos aparecerão aqui."
+                      : "Ofertas não escolhidas e pedidos cancelados aparecerão aqui."
+                    : area === "motorista" && page === "historico"
+                      ? "Seus fretes concluídos aparecerão aqui."
+                      : area === "cliente" && page === "historico"
+                        ? "Os fretes finalizados aparecerão aqui."
                     : area === "cliente" && page === "fretes"
                       ? "Consulte as outras situações ou solicite um novo frete."
                       : "Novos pedidos e atualizações aparecerão nesta área."}
