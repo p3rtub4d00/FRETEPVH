@@ -406,11 +406,11 @@ Configure as variáveis abaixo no ambiente do serviço, **nunca no GitHub**:
 | `PAGBANK_ENABLED` | `false` inicialmente. Mude para `true` após configurar credenciais e webhook |
 | `PAGBANK_ENV` | `sandbox` para homologação; `production` para pagamentos reais |
 | `PAGBANK_TOKEN` | Token privado fornecido pelo PagBank para o ambiente escolhido |
-| `PAGBANK_WEBHOOK_PUBLIC_KEY` | Chave pública **X.509 DER em Base64** de autenticação de webhook |
+| `PAGBANK_WEBHOOK_PUBLIC_KEY` | Chave pública **X.509 DER em Base64** para notificações ECDSA; opcional para o webhook Order que usa `x-authenticity-token` |
 | `PAGBANK_PUBLIC_URL` | URL HTTPS do FreteOn, sem barra final |
 | `PAGBANK_PRODUCTION_ALLOWED` | Mantenha `false` em homologação. Use `true` **somente quando decidir liberar produção** |
 
-O PagBank deve notificar `https://DOMINIO-DO-FRETEON/api/pagbank/webhook`. A integração recebe os **bytes brutos** da notificação para verificar `x-payload-signature` usando a chave pública do PagBank, antes de consultar o pedido por API. Conforme a documentação oficial, consulte a chave pública específica para webhook em `GET /public-keys?type=webhook` no ambiente correspondente e renove a chave em caso de rotação. A API de Pedidos em **produção pode exigir liberação/homologação da conta**, inclusive quando os testes de sandbox estiverem funcionando.
+O PagBank deve notificar `https://DOMINIO-DO-FRETEON/api/pagbank/webhook`. A integração recebe os **bytes brutos** da notificação e verifica `x-authenticity-token` com SHA-256 (API Order) ou `x-payload-signature` com ECDSA e a chave pública PagBank (nova API de Notificações), antes de consultar o pedido por API. Conforme a documentação oficial, consulte a chave pública específica para webhook em `GET /public-keys?type=webhook` no ambiente correspondente e renove a chave em caso de rotação. A API de Pedidos em **produção pode exigir liberação/homologação da conta**, inclusive quando os testes de sandbox estiverem funcionando.
 
 O ambiente de **sandbox não movimenta dinheiro real**: os registros são identificados como testes, e o Master não deve efetuar repasses bancários verdadeiros para fretes de homologação. Em produção, recebimentos por Pix reais continuam seguindo a regra de **repasse manual ao motorista**, com identificação do comprovante.
 
