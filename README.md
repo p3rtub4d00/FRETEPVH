@@ -389,3 +389,35 @@ A cobrança real fica **desativada por padrão**. Enquanto não for ativada, o s
 
 O pagamento Pix não elimina custos do intermediador. Tarifas do Mercado Pago e eventuais obrigações fiscais devem ser verificadas na conta da plataforma antes da operação comercial. **Não inicie movimentação real sem validar os termos da conta e o procedimento operacional de repasses e reembolsos.**
 
+
+
+## Seleção de banco recebedor: Mercado Pago ou PagBank
+
+O **Master → Financeiro** possui a seção **Banco preferencial para receber Pix**, que permite selecionar **Mercado Pago** ou **PagBank**. A escolha é persistida no MongoDB e vale **somente para novos Pix** gerados pela plataforma. Cada cobrança criada conserva seu provedor para conciliação, mesmo que o Master mude a instituição posteriormente. Caso uma cobrança para o mesmo frete apareça em dois bancos, a geração é bloqueada para conferência administrativa.
+
+**PagBank:** utiliza a API de Pedidos (Orders), cobrança `charges.payment_method.type=PIX`, QR Code com Pix copia-e-cola e assinatura ECDSA/SHA-256 no webhook. Os pagamentos só atualizam o financeiro depois de uma consulta autenticada ao pedido, conferindo referência, valor, moeda, método e identificadores. O estorno integral de Pix PagBank utiliza `POST /charges/{charge_id}/cancel`; o Master deve autorizar a devolução e o sistema verifica o valor estornado no retorno.
+
+### Ativando PagBank (Render)
+
+Configure as variáveis abaixo no ambiente do serviço, **nunca no GitHub**:
+
+| Variável | Valor |
+| --- | --- |
+| `PAGBANK_ENABLED` | `false` inicialmente. Mude para `true` após configurar credenciais e webhook |
+| `PAGBANK_ENV` | `sandbox` para homologação; `production` para pagamentos reais |
+| `PAGBANK_TOKEN` | Token privado fornecido pelo PagBank para o ambiente escolhido |
+| `PAGBANK_WEBHOOK_PUBLIC_KEY` | Chave pública **X.509 DER em Base64** de autenticação de webhook |
+| `PAGBANK_PUBLIC_URL` | URL HTTPS do FreteOn, sem barra final |
+| `PAGBANK_PRODUCTION_ALLOWED` | Mantenha `false` em homologação. Use `true` **somente quando decidir liberar produção** |
+
+O PagBank deve notificar `https://DOMINIO-DO-FRETEON/api/pagbank/webhook`. A integração recebe os **bytes brutos** da notificação para verificar `x-payload-signature` usando a chave pública do PagBank, antes de consultar o pedido por API. Conforme a documentação oficial, consulte a chave pública específica para webhook em `GET /public-keys?type=webhook` no ambiente correspondente e renove a chave em caso de rotação. A API de Pedidos em **produção pode exigir liberação/homologação da conta**, inclusive quando os testes de sandbox estiverem funcionando.
+
+O ambiente de **sandbox não movimenta dinheiro real**: os registros são identificados como testes, e o Master não deve efetuar repasses bancários verdadeiros para fretes de homologação. Em produção, recebimentos por Pix reais continuam seguindo a regra de **repasse manual ao motorista**, com identificação do comprovante.
+
+### Conservação de cobranças anteriores
+
+Uma cobrança Pix já criada no Mercado Pago continua sendo reconciliada pelo Mercado Pago; uma cobrança do PagBank permanece no PagBank. A API unificada `/api/payments/orders/:id/:kind` identifica automaticamente o provedor do registro persistido. Não use a função de simular Pix quando houver cobrança real criada. O bloqueio também é verificado no backend.
+
+Para ativar o PagBank, confirme ainda que a conta tenha uma chave Pix ativa. Não inclua tokens, segredos, dados de pagadores ou a URI MongoDB em commits ou mensagens de suporte.
+
+Documentação oficial: https://developer.pagbank.com.br/reference/criar-pedido-com-qr-code-pix-v2 , https://developer.pagbank.com.br/reference/validacao-de-autenticidade e https://developer.pagbank.com.br/docs/ambientes-disponiveis .
