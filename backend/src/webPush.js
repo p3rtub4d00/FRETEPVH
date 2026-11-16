@@ -8,6 +8,7 @@ import {
   sign,
 } from "node:crypto";
 import { PushSubscription, Account } from "./models.js";
+import { recordMasterNotification } from "./masterNotifications.js";
 
 const enc = (buffer) => Buffer.from(buffer).toString("base64url");
 const dec = (value) => Buffer.from(value, "base64url");
@@ -143,6 +144,7 @@ function safeMessage(msg) {
 
 export async function notifyMasters(message) {
   try {
+    await recordMasterNotification(message);
     const masters = await Account.find({ role: "master" }).select("_id").lean();
     return await notifyAccounts(masters.map(x => String(x._id)), { ...message, role: "master" });
   } catch (error) {
