@@ -48,6 +48,7 @@ import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx"
 import MercadoPagoPix from "./MercadoPagoPix.jsx";
 import FreightChatPanel from "./FreightChatPanel.jsx";
 import MasterFreightReports, { ReportFreightForm } from "./MasterFreightReports.jsx";
+import TeamManagement from "./TeamManagement.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
 const navigation = {
@@ -72,12 +73,25 @@ const navigation = {
     ["financeiro", "Financeiro", FileCheck2],
     ["comissoes", "Taxas de comissão", FileCheck2],
     ["usuarios", "Usuários", Users],
+    ["equipe", "Gestão de equipe", ShieldCheck],
+    ["auditoria", "Auditoria", History],
     ["recuperacao", "Recuperar senhas", ShieldCheck],
     ["privacidade", "Privacidade LGPD", ShieldCheck],
     ["denuncias", "Denúncias", Flag],
   ],
 };
 
+const masterPagePermissions = {
+  inicio: "dashboard.view", notificacoes: "notifications.view",
+  motoristas: "drivers.view", fretes: "freights.view",
+  financeiro: "finance.view", comissoes: "finance.view",
+  usuarios: "users.view", denuncias: "support.view", auditoria: "audit.view"
+};
+function visibleNavigation(area, user) {
+  if (area !== "master" || user.adminRole === "owner") return navigation[area];
+  const permissions = user.adminPermissions || [];
+  return navigation.master.filter(([key]) => permissions.includes(masterPagePermissions[key]));
+}
 function Route({ request }) {
   return (
     <div className="route">
@@ -618,6 +632,8 @@ function RequestForm({ onCreate, onClose, requestError }) {
 
 export default function App({ user, onLogout, onExpired, sessions, onSwitchRole }) {
   const area = user.role;
+  const masterOwner = area === "master" && user.adminRole === "owner";
+  const menu = visibleNavigation(area, user);
   const [state, setState] = useState({
     requests: [],
     drivers: [],
@@ -632,17 +648,17 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   useEffect(() => { if (!masterMenuOpen) return; const onKey = (event) => { if (event.key === "Escape") setMasterMenuOpen(false); }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [masterMenuOpen]);
   const [commissionRate, setCommissionRate] = useState(10);
   useEffect(() => { if (area === "motorista") api("/commission/current").then(c => setCommissionRate(c.rate)).catch(() => {}); }, [area]);
-  const masterNotifications = useMasterNotifications(area === "master");
+  const masterNotifications = useMasterNotifications(area === "master" && (masterOwner || user.adminPermissions?.includes("notifications.view")));
   const masterUnreadByCategory = (key) => masterNotifications.items.filter(item => !item.read && item.category === key).length;
   const [recoveryPending, setRecoveryPending] = useState(0);
   useEffect(() => {
-    if (area !== "master") return;
+    if (!masterOwner) return;
     let active = true;
     const check = () => api("/recovery/master").then(data => { if (active) setRecoveryPending(data.items.filter(x => x.status === "pending").length); }).catch(() => {});
     check();
     const timer = setInterval(check, 15000);
     return () => { active = false; clearInterval(timer); };
-  }, [area, page]);
+  }, [area, page, masterOwner]);
   const [modal, setModal] = useState(null);
   const [notice, setNotice] = useState("");
   const [install, setInstall] = useState(null);
@@ -1073,7 +1089,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           {area === "master" ? "ADMINISTRADOR" : areas[area].toUpperCase()}
         </div>
         <nav>
-          {navigation[area].map(([key, label, Icon]) => (
+          {menu.map(([key, label, Icon]) => (
             <button
               key={key}
               className={page === key ? "selected" : ""}
@@ -1141,7 +1157,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         </header>
         <div className="account-bar">
           <span>
-            {state.user.name} · {areas[area]}
+            {state.user.name} · {area === "master" ? (masterOwner ? "Master Principal" : user.adminRole === "financeiro" ? "Financeiro" : user.adminRole === "operacional" ? "Operacional" : user.adminRole === "atendimento" ? "Atendimento" : "Auditor") : areas[area]}
           </span>
           <RoleSwitcher
             activeRole={area}
@@ -1245,7 +1261,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                     : area === "motorista"
                       ? `Olá, ${state.user.name.split(" ")[0]}.`
                       : "Visão geral"
-                  : navigation[area].find((item) => item[0] === page)?.[1]}
+                  : menu.find((item) => item[0] === page)?.[1]}
               </h1>
               <p className="subtitle">
                 {page === "perfil"
@@ -1500,8 +1516,12 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           ) : area === "master" && page === "notificacoes" ? (
             <MasterNotifications notifications={masterNotifications} accountId={user.id} onNavigate={setPage}/>
           ) : area === "master" && page === "comissoes" ? (
-            <CommissionSettings />
-          ) : area === "master" && page === "privacidade" ? (
+            <CommissionSettings readOnly={!masterOwner}/>
+          ) : area === "master" && page === "equipe" && masterOwner ? (
+             <TeamManagement />
+           ) : area === "master" && page === "auditoria" ? (
+             <TeamManagement auditOnly />
+           ) : area === "master" && page === "privacidade" ? (
             <PrivacyMaster />
           ) : area === "master" && page === "recuperacao" ? (
             <RecoveryMaster />
@@ -1669,7 +1689,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           </footer>
         </main>
         {area !== "master" && <nav className="mobile-nav" aria-label="Navegação principal">
-          {navigation[area].map(([key, label, Icon]) => (
+          {menu.map(([key, label, Icon]) => (
             <button
               key={key}
               className={page === key ? "selected" : ""}
