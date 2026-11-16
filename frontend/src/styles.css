@@ -4602,3 +4602,22 @@ dialog:has(.driver-open-layout) { width: calc(100% - 24px); max-width: 890px; ma
   .wallet-master-tabs { gap: 5px; }
   .wallet-master-tabs button { padding: 8px 3px; font-size: 11px; }
 }
+
+
+/* Pix Mercado Pago: pagamento real na carteira ou no detalhe do cliente. */
+.mp-pix-panel { display: grid; gap: 12px; padding: 14px; border-radius: 13px; border: 1px solid #d9e4ef; background: #f8fbfe; min-width: 0; }
+.mp-pix-head { display:flex; align-items:center; gap:9px; color:#1c4164; }
+.mp-pix-head > svg { color: #e87926; }
+.mp-pix-panel form, .mp-pix-payment { display:grid; gap: 11px; min-width:0; }
+.mp-pix-panel form > p, .mp-pix-payment > p { font-size: 12px; line-height: 1.5; margin: 0; }
+.mp-pix-panel label { display:grid; gap: 6px; margin:0; color: #42576d; font-size: 12px; font-weight:650; }
+.mp-pix-panel label input, .mp-pix-panel label textarea { font-size: 15px; width:100%; margin:0; }
+.mp-pix-payment > strong { font-size: 21px; color:#11324d; }
+.mp-pix-qr { display:block; justify-self:center; width:min(240px,80%); height:auto; background:#fff; border-radius:9px; border:7px solid #fff; }
+.mp-pix-payment textarea { font-size:12px; overflow-wrap:anywhere; resize:vertical; min-height:82px; }
+.mp-pix-panel .primary, .mp-pix-panel .secondary { display:flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:10px 13px; white-space:normal; }
+.mp-pix-success { display:flex; align-items:flex-start; gap:10px; color:#1d754c; background:#edf8f1; border:1px solid #cae7d3; border-radius:10px; padding:13px; font-size:13px; line-height:1.45; }
+.mp-pix-success > svg { flex-shrink:0; }
+.wallet-master-history .wallet-transfer label { margin: 7px 0; }
+.wallet-master-history .wallet-transfer input { margin-top: 6px; }
+@media(max-width:420px){ .mp-pix-panel{padding:12px;} .mp-pix-qr{width:min(210px,77%);} }
