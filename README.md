@@ -358,3 +358,34 @@ Esta etapa contempla reembolso integral simulado, antes de repasse liquidado e s
 Novos pedidos usam rua, número (ou sem número), bairro, cidade/UF, complemento e referência. Complemento e referência ficam registrados para o motorista; o link do Maps recebe apenas o endereço de navegação. Pedidos anteriores continuam legíveis. Os botões abrem o Google Maps externo para consultar trajeto, distância e tempo, sem chave de API. A publicação não consulta APIs de rotas.
 
 Os antigos endpoints de integração paga ficam desativados por padrão: uma eventual retomada exige a opção explícita `PAID_MAPS_ENABLED=true` e uma `GOOGLE_MAPS_API_KEY` válida. Não é necessário configurar nenhuma delas para o fluxo gratuito atual.
+
+
+## Mercado Pago — Pix real para clientes e comissões
+
+A cobrança real fica **desativada por padrão**. Enquanto não for ativada, o sistema continua com os pagamentos simulados existentes. A integração usa exclusivamente o Access Token da conta **FreteOn** que receberá os valores; OAuth de vendedores é necessário apenas se futuramente clubes/transportadoras/terceiros precisarem autorizar suas próprias contas.
+
+### Ativação no Render
+
+1. Crie/configure a aplicação Mercado Pago na conta que deverá receber os pagamentos do FreteOn.
+2. Em **Render > FreteOn > Environment**, configure **somente no servidor**:
+   - `MP_ACCESS_TOKEN`: token privado da aplicação Mercado Pago (conta recebedora do FreteOn).
+   - `MP_WEBHOOK_SECRET`: assinatura secreta do webhook da mesma aplicação.
+   - `MP_PUBLIC_URL`: endereço público **HTTPS** correto do FreteOn, sem barra no final.
+   - `MP_PAYMENTS_ENABLED`: mantenha `false` até testar as credenciais e o webhook; depois altere para `true`.
+3. Em **Mercado Pago Developers > Suas integrações > Webhooks**, cadastre a URL `<MP_PUBLIC_URL>/api/mercadopago/webhook`, escolha o evento **payment** e confirme que a chave secreta corresponde a `MP_WEBHOOK_SECRET`.
+4. Faça testes com credenciais/ambiente de teste, um pedido de valor reduzido e notificações validadas. Não reutilize credenciais de testes em produção. Só depois habilite cobranças reais com a conta definitiva.
+
+**Não coloque tokens, assinaturas secretas, CPF ou e-mail de pagadores no GitHub nem em capturas públicas.** O e-mail e o CPF informados no formulário são enviados somente à API do Mercado Pago para geração do Pix e não são persistidos na cobrança local.
+
+### Fluxos implementados
+
+- **Cliente / Frete:** após escolher a proposta de um motorista, gera Pix no valor total contratado. O navegador apresenta QR Code e Pix copia e cola. A API valida a cobrança por ID, referência, valor, moeda e método; somente status aprovado informado pelo Mercado Pago libera o transporte.
+- **Motorista / Comissão:** após a entrega confirmada de frete recebido em dinheiro/cartão na própria maquininha, gera Pix pelo valor de comissão já definido na contratação (inclusive promoção). O status de comissão é quitado automaticamente após a confirmação do Mercado Pago; o Master recebe um aviso na central financeira.
+- **Master / Financeiro:** acompanha comissões, Pix dos fretes e solicitações. O botão de confirmar comissão manualmente não aparece no modo real. Sem credenciais válidas, o botão legado de confirmação só aparece após o motorista informar o pagamento simulado.
+- **Reembolso de Pix real:** cliente solicita análise; ao aprovar, o Master aciona o reembolso integral através da API Mercado Pago. O sistema só registra devolução efetiva após retorno aprovado, sem confundir com simulação.
+- **Repasse ao motorista:** **ainda é manual**, via banco/Pix operado pelo FreteOn. Depois da transferência bancária, o Master registra a referência de comprovante. Este botão não transfere valores por conta própria.
+- **Cartão e dinheiro do cliente:** continuam sendo recebidos diretamente pelo motorista conforme a modalidade escolhida; nesta integração, o Mercado Pago gera **Pix**, não checkout de cartão.
+- **Conciliação:** notificações webhook precisam de assinatura HMAC válida; a API consulta o Mercado Pago novamente, usa identificadores idempotentes e mantém o histórico da cobrança no MongoDB. Um pagamento aprovado após cancelamento é sinalizado ao Master, sem liberação automática de repasse.
+
+O pagamento Pix não elimina custos do intermediador. Tarifas do Mercado Pago e eventuais obrigações fiscais devem ser verificadas na conta da plataforma antes da operação comercial. **Não inicie movimentação real sem validar os termos da conta e o procedimento operacional de repasses e reembolsos.**
+
