@@ -126,6 +126,7 @@ export async function syncPagBankOrder(order, remote) {
       await order.save();
     }
     if (status === "approved" && order.kind === "freight") {
+      const approvedAt = order.verifiedAt || new Date();
       await Freight.updateOne({
         _id: order.freightId,
         clientId: order.payerId,
@@ -135,10 +136,39 @@ export async function syncPagBankOrder(order, remote) {
         pagbankTestApprovedAt: null,
         status: { $in: ["booked", "transit", "completed"] }
       }, { $set: {
-        pagbankTestApprovedAt: order.verifiedAt || new Date(),
+        pagbankTestApprovedAt: approvedAt,
         paymentProvider: "pagbank",
         paymentProviderEnvironment: "sandbox"
       } });
+      // Entregas confirmadas antes desta versão devem liberar somente saldo de teste.
+      await Freight.updateOne({
+        _id: order.freightId, clientId: order.payerId,
+        paymentMethod: "pix_freteon", paymentStatus: "awaiting",
+        agreedPriceCents: order.amountCents,
+        pagbankTestApprovedAt: { $ne: null },
+        deliveryConfirmedAt: { $ne: null }, status: "completed",
+        payoutStatus: "none"
+      }, { $set: { payoutStatus: "available" } });
+    } else if (status === "approved" && order.kind === "commission") {
+      const change = await Freight.updateOne({
+        _id: order.freightId,
+        driverId: order.payerId,
+        paymentMethod: { $in: ["cash_driver", "card_driver"] },
+        commissionStatus: "pending",
+        commissionCents: order.amountCents,
+        disputeStatus: { $ne: "open" },
+        refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_pagbank"] }
+      }, { $set: {
+        commissionStatus: "paid",
+        commissionPaidAt: order.verifiedAt || new Date(),
+        commissionProvider: "pagbank",
+        commissionProviderEnvironment: "sandbox"
+      } });
+      if (change.modifiedCount) void notifyMasters({
+        title: "Comissão aprovada no PagBank Sandbox",
+        body: "Quitação de homologação registrada no Financeiro. Nenhum dinheiro real recebido.",
+        category: "financeiro", id: String(order.freightId)
+      });
     }
     return true;
   }
