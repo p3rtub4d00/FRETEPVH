@@ -116,6 +116,16 @@ export async function syncPagBankOrder(order, remote) {
   const previous = order.status;
   if (previous === "refunded" && status !== "refunded") return false;
   if (previous === "approved" && !["approved", "refunded"].includes(status)) return false;
+  // Sandbox comprova apenas o teste da integração. Nunca altera o pagamento
+  // real, libera um transporte, quita comissão ou autoriza repasse.
+  if (order.environment !== "production") {
+    if (previous !== status) {
+      order.status = status;
+      if (["approved", "refunded"].includes(status)) order.verifiedAt ||= new Date();
+      await order.save();
+    }
+    return true;
+  }
   if (previous === status) return true;
   const freight = await Freight.findById(order.freightId);
   if (!freight) return false;
