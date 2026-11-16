@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import { Account, Freight } from "./models.js";
 import { authorize, fail, text } from "./auth.js";
 import { notifyInBackground, notifyMasters } from "./webPush.js";
+import { mercadoPagoEnabled, refundMercadoPagoPayment } from "./mercadoPago.js";
 
 export const PAYMENT_METHODS = ["pix_freteon", "card_driver", "cash_driver"];
 import { commissionConfig, commissionForDriver } from "./commissionSettings.js";
@@ -35,8 +36,8 @@ export function confirmDelivery(request) {
   if (request.disputeStatus === "open" || request.disputeStatus === "resolved_cancelled")
     fail(409, "A entrega está em análise ou foi cancelada pela administração.");
   if (request.paymentMethod === "pix_freteon") {
-    if (request.paymentStatus !== "simulated_paid")
-      fail(409, "Simule o pagamento Pix antes de liberar o repasse.");
+    if (!["simulated_paid", "paid_mp"].includes(request.paymentStatus))
+      fail(409, "Aguarde a confirmação do pagamento Pix antes de liberar o repasse.");
     request.payoutStatus = "available";
   } else if (["card_driver", "cash_driver"].includes(request.paymentMethod)) {
     request.paymentStatus = "received_driver";
@@ -79,11 +80,11 @@ export function walletSummary(requests, user) {
     }
     if (!refundBlocks(request) && request.disputeStatus !== "open" && request.payoutStatus === "available") availableCents += request.driverNetCents || 0;
     if (!refundBlocks(request) && request.disputeStatus !== "open" && request.payoutStatus === "requested") requestedCents += request.driverNetCents || 0;
-    if (request.payoutStatus === "paid_simulated") paidOutCents += request.driverNetCents || 0;
+    if (["paid_simulated", "paid_manual"].includes(request.payoutStatus)) paidOutCents += request.driverNetCents || 0;
     if (request.commissionStatus === "paid") commissionsPaidCents += request.commissionCents || 0;
   }
   return {
-    simulated: true,
+    simulated: !mercadoPagoEnabled(),
     pendingCents,
     overdueCents,
     availableCents,
@@ -123,8 +124,19 @@ finance.post("/requests/:id/finance", async (req, res) => {
   if (!refundAction && refundBlocks(request))
     fail(409, "Este frete está bloqueado por uma solicitação de reembolso.");
   if (refundAction) {
+    if (action === "simulate_refund" && request.paymentStatus === "paid_mp")
+      fail(409, "Reembolsos reais devem ser confirmados pelo Mercado Pago.");
+    const realRefund = action === "approve_refund" && request.paymentStatus === "paid_mp";
     applyRefund(request, req.user, action, req.body.reason);
+    if (realRefund) {
+      await refundMercadoPagoPayment(request);
+      request.refundStatus = "refunded_mp";
+      request.paymentStatus = "refunded_mp";
+      request.refundedAt = new Date();
+      request.refundedBy = own(req.user);
+    }
   } else if (action === "simulate_pix_payment" && isClient) {
+    if (mercadoPagoEnabled()) fail(409, "O pagamento Pix deve ser confirmado pelo Mercado Pago.");
     if (request.paymentMethod !== "pix_freteon" ||
         request.status !== "booked" || request.paymentStatus !== "awaiting")
       fail(409, "O pagamento simulado só pode ser confirmado após contratar o motorista.");
@@ -133,7 +145,7 @@ finance.post("/requests/:id/finance", async (req, res) => {
     confirmDelivery(request);
   } else if (action === "report_issue" && isClient) {
     if (request.status !== "completed" ||
-        request.payoutStatus === "paid_simulated" ||
+        ["paid_simulated", "paid_manual"].includes(request.payoutStatus) ||
         request.commissionStatus === "paid" ||
         request.disputeStatus !== "none")
       fail(409, "Esta entrega não permite nova contestação.");
@@ -151,6 +163,7 @@ finance.post("/requests/:id/finance", async (req, res) => {
     request.payoutStatus = "requested";
     request.payoutRequestedAt = new Date();
   } else if (action === "notify_commission" && isDriver) {
+    if (mercadoPagoEnabled()) fail(409, "Gere o Pix da comissão pelo Mercado Pago.");
     if (request.commissionStatus !== "pending" || request.disputeStatus === "open" ||
         !["cash_driver", "card_driver"].includes(request.paymentMethod))
       fail(409, "Esta comissão não está pendente.");
@@ -158,8 +171,10 @@ finance.post("/requests/:id/finance", async (req, res) => {
   } else if (action === "confirm_delivery_master" && isMaster) {
     confirmDelivery(request);
   } else if (action === "confirm_commission_master" && isMaster) {
-    if (request.commissionStatus !== "pending" || request.disputeStatus === "open")
-      fail(409, "Não existe comissão pendente para confirmar.");
+    if (mercadoPagoEnabled()) fail(409, "A quitação deve ser confirmada automaticamente pelo Mercado Pago.");
+    if (request.commissionStatus !== "pending" || request.disputeStatus === "open" ||
+        !request.commissionPaymentRequestedAt)
+      fail(409, "Aguarde o motorista informar o pagamento da comissão.");
     request.commissionStatus = "paid";
     request.commissionPaidAt = new Date();
   } else if (action === "confirm_payout_master" && isMaster) {
@@ -167,7 +182,13 @@ finance.post("/requests/:id/finance", async (req, res) => {
       fail(409, "Não existe repasse solicitado para confirmar.");
     const driver = await Account.findById(request.driverId);
     if (!driver?.pixKey) fail(409, "Motorista não cadastrou chave Pix.");
-    request.payoutStatus = "paid_simulated";
+    if (request.paymentStatus === "paid_mp") {
+      const ref = String(req.body.reference || "").trim();
+      if (ref.length < 6 || ref.length > 100)
+        fail(400, "Informe o identificador do comprovante do repasse real.");
+      request.payoutStatus = "paid_manual";
+      request.payoutReference = ref;
+    } else request.payoutStatus = "paid_simulated";
     request.payoutPaidAt = new Date();
   } else if (action === "resolve_dispute_accept_master" && isMaster) {
     if (request.disputeStatus !== "open")
@@ -189,7 +210,7 @@ finance.post("/requests/:id/finance", async (req, res) => {
     request.commissionDueAt = null;
     request.payoutStatus = "none";
     request.paymentStatus = request.paymentMethod === "pix_freteon"
-      ? "refunded_simulated"
+      ? request.paymentStatus === "paid_mp" ? "paid_mp" : "refunded_simulated"
       : "none";
   } else {
     fail(403, "Ação financeira não autorizada ou inválida.");
@@ -207,7 +228,7 @@ finance.post("/requests/:id/finance", async (req, res) => {
     };
     for (const [id, role] of [[request.clientId, "cliente"], [request.driverId, "motorista"]]) {
       notifyInBackground([id], {
-        role, title: titles[action], body: "Confira os detalhes e a decisão no FreteOn. Nenhum Pix real foi movimentado.",
+        role, title: titles[action], body: "Confira os detalhes e a decisão do pagamento no FreteOn.",
         id: `refund-${action}-${request._id}`,
       });
     }
@@ -235,8 +256,8 @@ finance.post("/requests/:id/finance", async (req, res) => {
     },
     confirm_payout_master: {
       to: [request.driverId], role: "motorista",
-      title: "Repasse registrado (simulação)",
-      body: "O Master confirmou o repasse fictício. Nenhum Pix real foi enviado.",
+      title: "Repasse registrado",
+      body: "O Master registrou o repasse. Confira a situação na carteira.",
     },
     report_issue: {
       to: [request.driverId], role: "motorista",
