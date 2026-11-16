@@ -391,26 +391,35 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
       {role === "master" && <PaymentProviderAdmin initial={gateway} onSaved={onPaid}/>}
       <div className="wallet-banner">
         <Wallet size={22} />
-        <div><strong>{mpEnabled && !gateway?.enabled ? "Financeiro FreteOn · Banco indisponível" : mpEnabled ? `Financeiro FreteOn · ${gateway?.preferred === "pagbank" ? gateway?.real ? "PagBank" : "PagBank (teste)" : "Mercado Pago"}` : "Financeiro FreteOn · Aguardando banco"}</strong><p>{mpEnabled && !gateway?.enabled ? "O banco escolhido não está configurado para novos Pix. O Master deve concluir a configuração no Render." : mpEnabled ? gateway?.real ? `Pix conciliado pelo ${gateway?.preferred === "pagbank" ? "PagBank" : "Mercado Pago"}. Os repasses ao motorista continuam manuais.` : "PagBank em sandbox: transações de teste sem movimentação real." : "Para receber por Pix, configure e habilite o provedor selecionado no Master."}</p></div>
+        <div><strong>{mpEnabled && !gateway?.enabled ? "Financeiro FreteOn · Banco indisponível" : mpEnabled ? `Financeiro FreteOn · ${gateway?.preferred === "pagbank" ? gateway?.real ? "PagBank" : "PagBank (teste)" : "Mercado Pago"}` : "Financeiro FreteOn · Aguardando banco"}</strong><p>{mpEnabled && !gateway?.enabled ? "O banco escolhido não está configurado para novos Pix. O Master deve concluir a configuração no Render." : mpEnabled ? gateway?.real ? `Pix conciliado pelo ${gateway?.preferred === "pagbank" ? "PagBank" : "Mercado Pago"}. Os repasses ao motorista continuam manuais.` : "Banco de homologação configurado." : "Para receber por Pix, configure e habilite o provedor selecionado no Master."}</p></div>
       </div>
       {role === "master" && all.some(r => ["pending", "approved"].includes(r.refundStatus)) && <p className="wallet-alert" role="status">{all.filter(r => r.refundStatus === "pending").length} reembolso(s) em análise · {all.filter(r => r.refundStatus === "approved").length} aguardando devolução. Solicitações aparecem primeiro no extrato.</p>}
+      {role === "master" && (
+        <section className="wallet-commission-revenue" aria-label="Total histórico de comissões recebidas">
+          <div>
+            <span>Comissões recebidas</span>
+            <strong>{byCents(amount.commissionRevenueCents)}</strong>
+            <small>Acumulado de comissões confirmadas pelos bancos, incluindo Pix de fretes concluídos.</small>
+          </div>
+          {Number(amount.testCommissionRevenueCents || 0) > 0 && (
+            <p className="wallet-commission-revenue-test">Homologação, fora do faturamento: {byCents(amount.testCommissionRevenueCents)}</p>
+          )}
+        </section>
+      )}
       <div className="wallet-metrics">
         <div><span>{role === "master" ? "Comissões a receber" : "Comissões a repassar"}</span><strong>{byCents(amount.pendingCents)}</strong></div>
         <div><span>{role === "master" ? "Repasses pendentes" : "Saldo disponível para solicitar"}</span><strong>{byCents(role === "master" ? amount.requestedCents : amount.availableCents)}</strong></div>
         <div><span>Comissões vencidas</span><strong>{byCents(amount.overdueCents)}</strong></div>
         <div><span>Repasses registrados</span><strong>{byCents(amount.paidOutCents)}</strong></div>
       </div>
-      {["testAvailableCents", "testRequestedCents", "testPaidOutCents", "testCommissionsPaidCents"].some(key => Number(amount[key] || 0) > 0) && (
-        <section className="wallet-sandbox-ledger" aria-label="Financeiro de homologação PagBank">
-          <strong><CheckCircle2 size={18}/> PagBank Sandbox · valores somente para teste</strong>
-          <p>Estas quantias não representam dinheiro recebido nem podem ser transferidas pelo banco.</p>
-          <div className="wallet-sandbox-metrics">
-            <div><span>Saldo de teste disponível</span><strong>{byCents(amount.testAvailableCents)}</strong></div>
-            <div><span>Repasses de teste solicitados</span><strong>{byCents(amount.testRequestedCents)}</strong></div>
-            <div><span>Repasses de teste concluídos</span><strong>{byCents(amount.testPaidOutCents)}</strong></div>
-            <div><span>Comissões quitadas em teste</span><strong>{byCents(amount.testCommissionsPaidCents)}</strong></div>
-          </div>
-        </section>
+      {role === "motorista" &&
+       ["testAvailableCents", "testRequestedCents", "testPaidOutCents", "testCommissionsPaidCents"].some(key => Number(amount[key] || 0) > 0) && (
+        <div className="wallet-homologation-balances" aria-label="Saldos de homologação">
+          <div><span>Saldo de homologação</span><strong>{byCents(amount.testAvailableCents)}</strong></div>
+          <div><span>Repasse solicitado</span><strong>{byCents(amount.testRequestedCents)}</strong></div>
+          <div><span>Repasse concluído</span><strong>{byCents(amount.testPaidOutCents)}</strong></div>
+          <div><span>Comissão quitada</span><strong>{byCents(amount.testCommissionsPaidCents)}</strong></div>
+        </div>
       )}
       {role === "motorista" && amount.blocked && (
         <p className="wallet-alert" role="alert">
