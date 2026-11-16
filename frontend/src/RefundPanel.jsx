@@ -16,7 +16,9 @@ export default function RefundPanel({ request, role, busy, onAction }) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
   const status = request.refundStatus || 'none';
-  const realPix = ['paid_mp', 'refunded_mp', 'paid_pagbank', 'refunded_pagbank'].includes(request.paymentStatus);
+  const gatewayPix = ['paid_mp', 'refunded_mp', 'paid_pagbank', 'refunded_pagbank'].includes(request.paymentStatus);
+  const sandboxPix = ['paid_pagbank', 'refunded_pagbank'].includes(request.paymentStatus) && request.paymentProviderEnvironment === 'sandbox';
+  const realPix = gatewayPix && !sandboxPix;
   const canAsk = role === 'cliente' && request.canRequestRefund;
   if (status === 'none' && !canAsk) return null;
   async function submit(action) {
@@ -29,7 +31,7 @@ export default function RefundPanel({ request, role, busy, onAction }) {
     <h3>{labels[status] || 'Cancelamento e reembolso Pix'}</h3>
     <p className="muted">{realPix
       ? "Pagamento real. O Master analisa o pedido e a devolução é processada pelo banco responsável, sem confirmação fictícia."
-      : "Somente simulação. Nenhum dinheiro será devolvido ou movimentado nesta versão."}</p>
+      : sandboxPix ? "Ambiente de homologação PagBank: qualquer devolução será apenas de teste." : "Somente simulação. Nenhum dinheiro será devolvido ou movimentado nesta versão."}</p>
     {status !== 'none' && <>
       <p><strong>Valor integral: {money(request.refundAmountCents / 100)}</strong></p>
       <p>Solicitado em {date(request.refundRequestedAt)} · Etapa: {stages[request.refundStage] || request.refundStage}</p>
@@ -47,7 +49,7 @@ export default function RefundPanel({ request, role, busy, onAction }) {
       </label>
       {role === 'master' ? <>
         <p>Analise a etapa do transporte e o motivo. A aprovação cancela o frete e autoriza o reembolso integral simulado.</p>
-        <button className="primary full" disabled={busy}>{realPix ? `Aprovar e devolver via ${request.paymentStatus === "paid_pagbank" ? "PagBank" : "Mercado Pago"}` : "Aprovar reembolso integral (simulação)"}</button>
+        <button className="primary full" disabled={busy}>{gatewayPix ? `Aprovar e devolver via ${request.paymentStatus === "paid_pagbank" ? "PagBank" : "Mercado Pago"}${sandboxPix ? " (teste)" : ""}` : "Aprovar reembolso integral (simulação)"}</button>
         <button type="button" className="secondary full" disabled={busy || reason.trim().length < 10} onClick={() => submit('reject_refund')}>Recusar com justificativa</button>
       </> : <>
         <p>Solicitação de {money(request.agreedPriceCents / 100)}. O pedido ficará suspenso para análise; não há aprovação automática.</p>
@@ -55,7 +57,7 @@ export default function RefundPanel({ request, role, busy, onAction }) {
         <button type="button" className="secondary full" disabled={busy} onClick={() => setEditing(false)}>Voltar</button>
       </>}
     </form>}
-    {role === 'master' && status === 'approved' && !realPix && <button className="primary full" disabled={busy} onClick={() => submit('simulate_refund')}>Simular devolução de {money(request.refundAmountCents / 100)}</button>}
+    {role === 'master' && status === 'approved' && !gatewayPix && <button className="primary full" disabled={busy} onClick={() => submit('simulate_refund')}>Simular devolução de {money(request.refundAmountCents / 100)}</button>}
     {error && <p className="error" role="alert">{error}</p>}
   </section>;
 }
