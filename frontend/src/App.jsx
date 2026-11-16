@@ -655,7 +655,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   }
   function walletAction(id, action, extras = {}) {
     return mutate(`/requests/${id}/finance`, "POST", { action, ...extras }, () => {
-      setNotice(state.mercadoPagoEnabled ? "Registro financeiro atualizado." : "Registro financeiro atualizado (simulação).");
+      setNotice("Registro financeiro atualizado.");
     });
   }
   function addFreightPhotos(id, photos) {
@@ -774,7 +774,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           </button>
         )}
         {request.paymentMethod && <PaymentLabel method={request.paymentMethod} />}
-        {request.refundStatus && request.refundStatus !== "none" && <p className="wallet-status warning">{{pending: "Reembolso em análise · frete suspenso", approved: "Reembolso aprovado", rejected: "Reembolso recusado — veja a justificativa", refunded_simulated: "Reembolsado (simulação)"}[request.refundStatus]}</p>}
+        {request.refundStatus && request.refundStatus !== "none" && <p className="wallet-status warning">{{pending: "Reembolso em análise · frete suspenso", approved: "Reembolso aprovado", rejected: "Reembolso recusado — veja a justificativa", refunded_simulated: "Registro antigo: devolução não conciliada com banco"}[request.refundStatus]}</p>}
         <div className="card-meta">
           <span>
             <Clock3 size={15} />
@@ -1959,17 +1959,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             )}
           {area === "cliente" && selected.paymentMethod === "pix_freteon" &&
              selected.status === "booked" && selected.paymentStatus === "awaiting" && (
-            state.mercadoPagoEnabled ? (
-              <MercadoPagoPix key={selected.id} requestId={selected.id} kind="freight" gateway={state.paymentGateway} onPaid={refresh}/>
-            ) : (
-              <div className="finance-action">
-                <p className="info">Pagamento Pix ainda em simulação. Nenhum valor real será cobrado.</p>
-                <button className="primary full" disabled={busy}
-                  onClick={() => walletAction(selected.id, "simulate_pix_payment")}>
-                  Simular pagamento Pix de {money(selected.agreedPriceCents / 100)}
-                </button>
-              </div>
-            )
+              <MercadoPagoPix key={selected.id} requestId={selected.id}
+                kind="freight" gateway={state.paymentGateway} onPaid={refresh}/>
           )}
           {area === "cliente" && selected.paymentMethod === "pix_freteon" &&
             ["paid_mp", "paid_pagbank"].includes(selected.paymentStatus) && (
