@@ -20,6 +20,7 @@ import { mercadoPagoPrivate } from "./mercadoPago.js";
 import { paymentGatewayRouter } from "./paymentGateway.js";
 import { getPaymentProvider, paymentProviderSettingsRouter } from "./paymentProviderSettings.js";
 import { PagBankOrder } from "./pagBank.js";
+import { teamManagement } from "./teamManagement.js";
 
 export const api = Router();
 api.use(authenticate);
@@ -34,6 +35,7 @@ api.use((req, res, next) => {
   ) fail(428, "Leia e aceite os Termos de Uso e a Política de Privacidade para continuar.");
   next();
 });
+api.use(teamManagement);
 api.use(finance);
 api.use(mercadoPagoPrivate);
 api.use(paymentGatewayRouter);
@@ -257,8 +259,11 @@ api.get("/state", async (req, res) => {
     return result;
   });
   const users =
-    req.user.role === "master"
-      ? (await Account.find().sort({ createdAt: -1 })).map(publicUser)
+    req.user.role === "master" &&
+    (!req.user.staffAccountId || req.user.staffPermissions?.includes("users.view"))
+      ? (await Account.find(req.user.staffAccountId
+          ? { role: { $in: ["cliente", "motorista"] } } : {}
+        ).sort({ createdAt: -1 })).map(publicUser)
       : [];
   res.json({
     user: publicUser(req.user),
