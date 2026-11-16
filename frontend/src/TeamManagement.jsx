@@ -86,12 +86,12 @@ function MemberCard({ item, presets, descriptions, onRefresh, onTemporary }) {
   </article>;
 }
 
-export default function TeamManagement() {
+export default function TeamManagement({ auditOnly = false }) {
   const [data,setData] = useState({items:[],presets:{},descriptions:{}});
   const [loading,setLoading] = useState(true);
   const [busy,setBusy] = useState(false);
   const [error,setError] = useState("");
-  const [tab,setTab] = useState("team");
+  const [tab,setTab] = useState(auditOnly ? "audit" : "team");
   const [events,setEvents] = useState([]);
   const [form,setForm] = useState({name:"",phone:"",teamRole:"operacional",permissions:[]});
   const [secret,setSecret] = useState(null);
@@ -100,8 +100,12 @@ export default function TeamManagement() {
     setData(result);
     return result;
   }
-  useEffect(()=>{let alive=true;load().catch(e=>{if(alive)setError(e.message)})
-    .finally(()=>{if(alive)setLoading(false)});return ()=>{alive=false};},[]);
+  useEffect(()=>{let alive=true;
+    const task = auditOnly ? api("/master/audit").then(result=>{if(alive)setEvents(result.items);}) : load();
+    task.catch(e=>{if(alive)setError(e.message)})
+      .finally(()=>{if(alive)setLoading(false)});
+    return ()=>{alive=false};
+  },[auditOnly]);
   async function create(e){
     e.preventDefault();setBusy(true);setError("");setSecret(null);
     try {
@@ -121,14 +125,14 @@ export default function TeamManagement() {
     catch(e){setError(e.message);}
   }
   return <section className="team-panel">
-    <div className="team-heading"><div><h2>Gestão de equipe</h2>
-      <p>Somente o Master Principal cadastra funcionários e define permissões.</p></div>
+    <div className="team-heading"><div><h2>{auditOnly ? "Auditoria administrativa" : "Gestão de equipe"}</h2>
+      <p>{auditOnly ? "Histórico das alterações realizadas pela equipe." : "Somente o Master Principal cadastra funcionários e define permissões."}</p></div>
       <ShieldCheck size={29}/>
     </div>
-    <div className="team-tabs" role="group" aria-label="Seção da equipe">
+    {!auditOnly && <div className="team-tabs" role="group" aria-label="Seção da equipe">
       <button type="button" className={tab==="team"?"active":""} onClick={()=>changeTab("team")}><Users size={17}/> Equipe ({data.items.length})</button>
       <button type="button" className={tab==="audit"?"active":""} onClick={()=>changeTab("audit")}><History size={17}/> Atividades</button>
-    </div>
+    </div>}
     {error && <p className="error" role="alert">{error}</p>}
     {tab==="audit"?<div className="team-audit">
       {events.length ? events.map(entry=><div className="team-audit-row" key={entry.id}>
