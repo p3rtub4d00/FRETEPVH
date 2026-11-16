@@ -101,6 +101,8 @@ export function walletSummary(requests, user, realEnabled = false) {
   let testRequestedCents = 0;
   let testPaidOutCents = 0;
   let testCommissionsPaidCents = 0;
+  let commissionRevenueCents = 0;
+  let testCommissionRevenueCents = 0;
   const now = Date.now();
   for (const request of selected) {
     const sandbox = request.paymentProviderEnvironment === "sandbox" &&
@@ -127,6 +129,34 @@ export function walletSummary(requests, user, realEnabled = false) {
       if (request.commissionProviderEnvironment === "sandbox") testCommissionsPaidCents += request.commissionCents || 0;
       else commissionsPaidCents += request.commissionCents || 0;
     }
+
+    // Receita efetivamente confirmada: comissão paga pelo motorista
+    // ou comissão retida em Pix real após a entrega. Não incluir
+    // reembolsos, disputas abertas, registros legados sem provedor
+    // nem pagamentos do PagBank Sandbox.
+    const eligible = Number.isSafeInteger(request.commissionCents) &&
+      request.commissionCents > 0 &&
+      !refundBlocks(request) &&
+      !["open", "resolved_cancelled"].includes(request.disputeStatus);
+    if (!eligible) continue;
+
+    if (["cash_driver", "card_driver"].includes(request.paymentMethod) &&
+        request.commissionStatus === "paid") {
+      if (request.commissionProviderEnvironment === "sandbox") {
+        testCommissionRevenueCents += request.commissionCents;
+      } else if (["mercadopago", "pagbank"].includes(request.commissionProvider) &&
+        request.commissionProviderEnvironment !== "sandbox") {
+        commissionRevenueCents += request.commissionCents;
+      }
+    }
+    if (request.paymentMethod === "pix_freteon" &&
+        request.status === "completed" && request.deliveryConfirmedAt) {
+      if (sandbox && request.paymentStatus === "awaiting") {
+        testCommissionRevenueCents += request.commissionCents;
+      } else if (isRealBankPayment(request)) {
+        commissionRevenueCents += request.commissionCents;
+      }
+    }
   }
   return {
     simulated: !realEnabled,
@@ -140,6 +170,8 @@ export function walletSummary(requests, user, realEnabled = false) {
     testRequestedCents,
     testPaidOutCents,
     testCommissionsPaidCents,
+    commissionRevenueCents,
+    testCommissionRevenueCents,
     blocked: user.role === "motorista" && overdueCents > 0,
     pixKey: user.role === "motorista" ? user.pixKey || "" : undefined,
   };
