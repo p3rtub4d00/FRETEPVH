@@ -45,6 +45,7 @@ import MasterNotifications, { useMasterNotifications } from "./MasterNotificatio
 import PushNotificationsPanel from "./PushNotificationsPanel.jsx";
 import DriverVerificationPanel from "./DriverVerificationPanel.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
+import MercadoPagoPix from "./MercadoPagoPix.jsx";
 import FreightChatPanel from "./FreightChatPanel.jsx";
 import MasterFreightReports, { ReportFreightForm } from "./MasterFreightReports.jsx";
 
@@ -158,7 +159,7 @@ function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhot
   const rate = Number.isFinite(request.commissionRate) ? request.commissionRate : 10;
   const fee = Number.isFinite(request.commissionCents) ? request.commissionCents : Math.round(gross * rate / 100);
   const net = Number.isFinite(request.driverNetCents) ? request.driverNetCents : gross - fee;
-  const pixWaiting = request.paymentMethod === "pix_freteon" && request.paymentStatus !== "simulated_paid";
+  const pixWaiting = request.paymentMethod === "pix_freteon" && !["simulated_paid", "paid_mp"].includes(request.paymentStatus);
   const startBlocked = busy || refundBlocked(request) || (request.status === "booked" && pixWaiting);
   const time = accepted?.time || request.time;
   const canAdvance = ["booked", "transit"].includes(request.status);
@@ -219,7 +220,7 @@ function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhot
       {canAdvance && (
         <div className="driver-compact-footer">
           {request.status === "booked" && pixWaiting && (
-            <p className="info">Aguardando o cliente confirmar o Pix de teste para iniciar o transporte.</p>
+            <p className="info">Aguardando confirmação do Pix para iniciar o transporte.</p>
           )}
           {refundBlocked(request) && <p className="info">Frete suspenso para análise do reembolso.</p>}
           <button type="button" className="primary full" disabled={startBlocked} onClick={onAdvance}>
@@ -654,7 +655,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   }
   function walletAction(id, action, extras = {}) {
     return mutate(`/requests/${id}/finance`, "POST", { action, ...extras }, () => {
-      setNotice("Registro financeiro atualizado (somente simulação).");
+      setNotice(state.mercadoPagoEnabled ? "Registro financeiro atualizado." : "Registro financeiro atualizado (simulação).");
     });
   }
   function addFreightPhotos(id, photos) {
@@ -1263,6 +1264,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               busy={busy}
               onAction={walletAction}
               onSavePreferences={savePaymentPreferences}
+              mpEnabled={state.mercadoPagoEnabled}
+              onPaid={refresh}
             />
           ) : area === "master" && ["inicio", "motoristas"].includes(page) ? (
             <section>
@@ -1653,7 +1656,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 <h3>Confirme a entrega</h3>
                 <p>
                   {selected.paymentMethod === "pix_freteon"
-                    ? "Confirme que recebeu sua carga corretamente. O pagamento continua em modo simulação."
+                    ? state.mercadoPagoEnabled
+                      ? "Confirme que recebeu sua carga corretamente. O Pix já foi registrado pelo Mercado Pago."
+                      : "Confirme que recebeu sua carga corretamente. O pagamento continua em modo simulação."
                     : "Confirme somente se recebeu a carga e efetuou o pagamento combinado diretamente ao motorista."}
                 </p>
                 <button className="primary full" disabled={busy}
@@ -1953,13 +1958,21 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             )}
           {area === "cliente" && selected.paymentMethod === "pix_freteon" &&
              selected.status === "booked" && selected.paymentStatus === "awaiting" && (
-            <div className="finance-action">
-              <p className="info">Frete contratado. Simule o Pix para liberar o início do transporte. Não existe pagamento real nesta versão.</p>
-              <button className="primary full" disabled={busy}
-                onClick={() => walletAction(selected.id, "simulate_pix_payment")}>
-                Simular pagamento Pix de {money(selected.agreedPriceCents / 100)}
-              </button>
-            </div>
+            state.mercadoPagoEnabled ? (
+              <MercadoPagoPix key={selected.id} requestId={selected.id} kind="freight" onPaid={refresh}/>
+            ) : (
+              <div className="finance-action">
+                <p className="info">Pagamento Pix ainda em simulação. Nenhum valor real será cobrado.</p>
+                <button className="primary full" disabled={busy}
+                  onClick={() => walletAction(selected.id, "simulate_pix_payment")}>
+                  Simular pagamento Pix de {money(selected.agreedPriceCents / 100)}
+                </button>
+              </div>
+            )
+          )}
+          {area === "cliente" && selected.paymentMethod === "pix_freteon" &&
+            selected.paymentStatus === "paid_mp" && (
+              <p className="info">Pix do frete confirmado pelo Mercado Pago.</p>
           )}
           {area === "cliente" && selected.status === "completed" &&
             selected.paymentMethod && !selected.deliveryConfirmedAt &&
@@ -1970,7 +1983,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               {selected.paymentMethod !== "pix_freteon" ? " e efetuar o pagamento diretamente ao motorista." : "."}</p>
               <button className="primary full" disabled={busy || refundBlocked(selected)}
                 onClick={() => walletAction(selected.id, "confirm_delivery")}>
-                Confirmar entrega {selected.paymentMethod === "pix_freteon" ? "(simulação)" : "e pagamento"}
+                Confirmar entrega {selected.paymentMethod === "pix_freteon" ? "" : "e pagamento"}
               </button>
               <button className="secondary full" disabled={busy}
                 onClick={() => setModal({ type: "issue", id: selected.id })}>
@@ -2013,7 +2026,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           )}
           {area === "cliente" &&
             ["open", "booked"].includes(selected.status) && !refundBlocked(selected) &&
-            !(selected.paymentMethod === "pix_freteon" && selected.paymentStatus === "simulated_paid") && (
+            !(selected.paymentMethod === "pix_freteon" && ["simulated_paid", "paid_mp"].includes(selected.paymentStatus)) && (
               <button
                 className="danger-link"
                 onClick={() => setModal({ type: "cancel", id: selected.id })}
