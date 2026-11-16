@@ -366,7 +366,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
         <div><span>{role === "master" ? "Comissões a receber" : "Comissões a repassar"}</span><strong>{byCents(amount.pendingCents)}</strong></div>
         <div><span>{role === "master" ? "Repasses pendentes" : "Saldo disponível para solicitar"}</span><strong>{byCents(role === "master" ? amount.requestedCents : amount.availableCents)}</strong></div>
         <div><span>Comissões vencidas</span><strong>{byCents(amount.overdueCents)}</strong></div>
-        <div><span>Repasses realizados (simulação)</span><strong>{byCents(amount.paidOutCents)}</strong></div>
+        <div><span>Repasses registrados</span><strong>{byCents(amount.paidOutCents)}</strong></div>
       </div>
       {role === "motorista" && amount.blocked && (
         <p className="wallet-alert" role="alert">
@@ -381,7 +381,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
           onSavePreferences({ pixKey: pixKey.trim(), acceptsCard });
         }}>
           <h3>Como você recebe?</h3>
-          <p className="muted">O Pix é necessário para solicitar repasses simulados. Cartão só aparece nas propostas se você aceitar sua própria maquininha.</p>
+          <p className="muted">O Pix é necessário para solicitar repasses. Cartão só aparece nas propostas se você aceitar sua própria maquininha.</p>
           <label className="checkbox"><input type="checkbox" checked={acceptsCard}
             onChange={(event) => setAcceptsCard(event.target.checked)} />
             Aceito cartão na minha própria maquininha
