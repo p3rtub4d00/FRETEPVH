@@ -93,9 +93,11 @@ export default function MercadoPagoPix({ requestId, kind, onPaid, gateway }) {
     ) : approved ? (
       <div className="mp-pix-success" role="status">
         <CheckCircle2 size={22}/>
-        <span>{order?.reviewRequired
-          ? `Pagamento identificado no ${providerName}, aguardando conferência do Master.`
-          : `Pagamento confirmado pelo ${providerName}. O financeiro do FreteOn foi atualizado.`}</span>
+        <span>{sandbox
+          ? "Pix de teste aprovado no PagBank. A homologação do transporte pode continuar, sem movimentação de dinheiro real."
+          : order?.reviewRequired
+            ? `Pagamento identificado no ${providerName}, aguardando conferência do Master.`
+            : `Pagamento confirmado pelo ${providerName}. O financeiro do FreteOn foi atualizado.`}</span>
       </div>
     ) : order?.qrCode ? (
       <div className="mp-pix-payment">
