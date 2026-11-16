@@ -189,7 +189,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
           <span className="wallet-row-main">
             <strong>{request.title}</strong>
             <small>{isMaster ? masterFinanceLabel(request) : driverEntryLabel(request)}</small>
-            {isMaster && <small>Motorista: {driver?.name || "Cadastro não encontrado"}</small>
+            {isMaster && <small>Motorista: {driver?.name || "Cadastro não encontrado"}</small>}
             {request.commissionStatus === "pending" && (
               <small className="wallet-row-commission">Comissão: {byCents(request.commissionCents)}</small>
             )}
