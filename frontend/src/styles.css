@@ -4621,3 +4621,31 @@ dialog:has(.driver-open-layout) { width: calc(100% - 24px); max-width: 890px; ma
 .wallet-master-history .wallet-transfer label { margin: 7px 0; }
 .wallet-master-history .wallet-transfer input { margin-top: 6px; }
 @media(max-width:420px){ .mp-pix-panel{padding:12px;} .mp-pix-qr{width:min(210px,77%);} }
+
+
+/* Master: banco de recebimento selecionável, com estado de configuração visível. */
+.payment-provider-admin { display: grid; gap: 12px; padding: 17px; margin-bottom: 17px; background: #fff; border: 1px solid #dce5ef; border-radius: 14px; box-shadow: 0 4px 16px #0a234010; }
+.payment-provider-heading { display: flex; align-items: flex-start; gap: 10px; }
+.payment-provider-heading > svg { color: #e88435; flex-shrink: 0; margin-top: 2px; }
+.payment-provider-heading strong { color: #233d57; font-size: 16px; }
+.payment-provider-heading p { margin: 5px 0 0; font-size: 12px; color: #667c91; line-height: 1.5; }
+.payment-provider-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+.payment-provider-options button { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 68px; padding: 12px; text-align: left; background: #f9fbfd; border: 1px solid #dae5ef; border-radius: 11px; }
+.payment-provider-options button.selected { border: 2px solid #ec8737; background: #fff4e9; padding: 11px; }
+.payment-provider-options button span { display: grid; gap: 5px; min-width: 0; }
+.payment-provider-options button strong { font-size: 13px; color: #284259; }
+.payment-provider-options button small { color: #688097; font-size: 11px; line-height: 1.4; }
+.payment-provider-options button svg { color: #e5812c; flex-shrink: 0; }
+.payment-provider-options button:focus-visible { outline: 3px solid #fb8e36; outline-offset: 3px; }
+.payment-provider-ready, .payment-provider-warning { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 10px; font-size: 12px; line-height: 1.5; }
+.payment-provider-ready { color: #22754d; background: #eef8f1; }
+.payment-provider-warning { color: #80541d; background: #fff4e5; }
+.payment-provider-ready svg, .payment-provider-warning svg { flex-shrink: 0; margin-top: 1px; }
+.payment-provider-admin > .muted { font-size: 12px; margin: 0; }
+@media (max-width: 410px) {
+  .payment-provider-admin { padding: 13px; }
+  .payment-provider-options { gap: 7px; }
+  .payment-provider-options button { padding: 10px 8px; gap: 5px; }
+  .payment-provider-options button.selected { padding: 9px 7px; }
+  .payment-provider-options button strong { font-size: 12px; }
+}
