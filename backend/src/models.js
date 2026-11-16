@@ -133,7 +133,7 @@ const freightSchema = new mongoose.Schema(
     commissionPaidAt: { type: Date, default: null },
     payoutStatus: {
       type: String,
-      enum: ["none", "available", "requested", "paid_simulated", "paid_manual"],
+      enum: ["none", "available", "requested", "paid_simulated", "paid_manual", "paid_sandbox"],
       default: "none",
     },
     payoutRequestedAt: { type: Date, default: null },
