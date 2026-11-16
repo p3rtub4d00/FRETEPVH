@@ -47,9 +47,14 @@ async function pagbankRequest(method, endpoint, payload, idempotencyKey, binary 
       },
       ...(payload !== undefined ? { body: JSON.stringify(payload) } : {})
     });
-    if (!response.ok) fail(502, response.status === 403
-      ? "PagBank recusou o acesso. Verifique a liberação da API de Pedidos."
-      : "PagBank indisponível ou cobrança não autorizada.");
+    if (!response.ok) {
+      const error = new Error(response.status === 403
+        ? "PagBank recusou o acesso. Verifique a liberação da API de Pedidos."
+        : "PagBank indisponível ou cobrança não autorizada.");
+      error.status = 502;
+      error.pagbankDefinitiveRejection = [400, 401, 403, 422].includes(response.status);
+      throw error;
+    }
     if (binary) {
       const bytes = Buffer.from(await response.arrayBuffer());
       return bytes.length > 10 && bytes.length < 150000 ? bytes.toString("base64") : "";
@@ -262,7 +267,17 @@ export async function pagBankCreate(req, res) {
     }],
     notification_urls: [`${process.env.PAGBANK_PUBLIC_URL.trim()}/api/pagbank/webhook`]
   };
-  const result = await pagbankRequest("POST", "/orders", payload, order.idempotencyKey);
+  let result;
+  try {
+    result = await pagbankRequest("POST", "/orders", payload, order.idempotencyKey);
+  } catch (error) {
+    // HTTP 4xx definitivos indicam que não houve pedido. Um timeout ou 5xx
+    // pode ter criado cobrança: nesse caso nunca liberar nova tentativa às cegas.
+    if (error.pagbankDefinitiveRejection)
+      await PagBankOrder.updateOne({ _id: order._id, orderId: "" },
+        { $set: { attemptedAt: null } });
+    throw error;
+  }
   const charge = result?.charges?.[0];
   if (!/^ORDE_[A-Za-z0-9-]+$/.test(String(result?.id || "")) ||
       !/^CHAR_[A-Za-z0-9-]+$/.test(String(charge?.id || "")) ||
