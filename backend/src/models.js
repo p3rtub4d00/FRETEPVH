@@ -133,6 +133,7 @@ const freightSchema = new mongoose.Schema(
     },
     payoutRequestedAt: { type: Date, default: null },
     payoutPaidAt: { type: Date, default: null },
+    payoutReference: { type: String, default: "", maxlength: 100 },
     completedAt: { type: Date, default: null },
     deliveryConfirmedAt: { type: Date, default: null },
     disputeStatus: {
