@@ -36,11 +36,20 @@ test("Dinheiro/cartão: comissão só vence após entrega confirmada, em 72 hora
 test("Pix simulado: repasse fica disponível após a entrega confirmada", async () => {
   const freight = await request("pix_freteon", 200);
   freight.status = "completed";
-  assert.throws(() => confirmDelivery(freight), /Simule o pagamento Pix/);
+  assert.throws(() => confirmDelivery(freight), /Aguarde a confirmação do pagamento Pix/);
   freight.paymentStatus = "simulated_paid";
   confirmDelivery(freight);
   assert.equal(freight.payoutStatus, "available");
   assert.equal(freight.driverNetCents, 18000);
+});
+
+test("Pix real: confirmação do Mercado Pago libera repasse apenas após entrega", async () => {
+  const freight = await request("pix_freteon", 200);
+  freight.status = "completed";
+  freight.paymentStatus = "paid_mp";
+  confirmDelivery(freight);
+  assert.equal(freight.payoutStatus, "available");
+  assert.ok(freight.deliveryConfirmedAt instanceof Date);
 });
 
 test("Comissão vencida bloqueia novas propostas e contestação suspende o bloqueio", async () => {
