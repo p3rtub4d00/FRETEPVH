@@ -260,7 +260,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
                 checked={data.helper}
                 onChange={update}
               />
-              Preciso de ajuda para carregar
+              <span>Preciso de ajudante para carregar <small className="muted" style={{ display: "block", marginTop: 4 }}>O ajudante tem custo. O motorista deve incluir esse serviço no valor total da proposta.</small></span>
             </label>
             <FreightPhotoPicker
               photos={data.photos}
