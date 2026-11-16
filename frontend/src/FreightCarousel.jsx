@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
-export default function FreightCarousel({ requests, renderCard }) {
+export default function FreightCarousel({ requests, renderCard, ariaLabel = "Chamados disponíveis", itemName = "chamado" }) {
   const [selectedId, setSelectedId] = useState(() => requests[0]?.id || null);
   const touch = useRef(null);
   const swiped = useRef(false);
@@ -15,11 +15,11 @@ export default function FreightCarousel({ requests, renderCard }) {
     const next = Math.min(requests.length - 1, Math.max(0, index + delta));
     setSelectedId(requests[next].id);
   };
-  return <div className="freight-carousel" role="region" aria-roledescription="carrossel" aria-label="Chamados disponíveis">
+  return <div className="freight-carousel" role="region" aria-roledescription="carrossel" aria-label={ariaLabel}>
     <div className="freight-carousel-nav">
-      <button type="button" aria-label="Chamado anterior" disabled={index === 0} onClick={() => move(-1)}><ArrowLeft size={20}/></button>
-      <span role="status" aria-live="polite"><strong>{index + 1}</strong> de {requests.length} chamado{requests.length === 1 ? '' : 's'}</span>
-      <button type="button" aria-label="Próximo chamado" disabled={index === requests.length - 1} onClick={() => move(1)}><ArrowRight size={20}/></button>
+      <button type="button" aria-label={`${itemName === "frete" ? "Frete" : "Chamado"} anterior`} disabled={index === 0} onClick={() => move(-1)}><ArrowLeft size={20}/></button>
+      <span role="status" aria-live="polite"><strong>{index + 1}</strong> de {requests.length} {itemName}{requests.length === 1 ? '' : 's'}</span>
+      <button type="button" aria-label={`Próximo ${itemName}`} disabled={index === requests.length - 1} onClick={() => move(1)}><ArrowRight size={20}/></button>
     </div>
     <div className="freight-carousel-stage" tabIndex={0} aria-label="Use as setas do teclado ou deslize para navegar"
       onKeyDown={event => {
@@ -47,6 +47,6 @@ export default function FreightCarousel({ requests, renderCard }) {
       }}>
       {renderCard(requests[index], true)}
     </div>
-    {requests.length > 1 && <p className="freight-carousel-hint">Deslize para o lado ou use as setas para ver outro chamado.</p>}
+    {requests.length > 1 && <p className="freight-carousel-hint">Deslize para o lado ou use as setas para ver outro {itemName}.</p>}
   </div>;
 }
