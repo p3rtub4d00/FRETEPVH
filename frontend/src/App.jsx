@@ -15,6 +15,7 @@ import {
   FileCheck2,
   Home,
   MapPin,
+  Menu,
   Package,
   Plus,
   ShieldCheck,
@@ -380,6 +381,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     user,
   });
   const [page, setPage] = useState("inicio");
+  const [masterMenuOpen, setMasterMenuOpen] = useState(false);
+  useEffect(() => { setMasterMenuOpen(false); }, [area]);
+  useEffect(() => { if (!masterMenuOpen) return; const onKey = (event) => { if (event.key === "Escape") setMasterMenuOpen(false); }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [masterMenuOpen]);
   const [commissionRate, setCommissionRate] = useState(10);
   useEffect(() => { if (area === "motorista") api("/commission/current").then(c => setCommissionRate(c.rate)).catch(() => {}); }, [area]);
   const [recoveryPending, setRecoveryPending] = useState(0);
@@ -688,6 +692,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
       </aside>
       <div className="workspace">
         <header className="topbar">
+          {area === "master" && <button type="button" className="master-menu-toggle" aria-label="Abrir menu administrativo" aria-expanded={masterMenuOpen} aria-controls="master-mobile-drawer" onClick={() => setMasterMenuOpen(true)}><Menu size={24} /></button>}
           <div className="mobile-logo">
             <img src="/assets/logo.png" alt="FreteOn" />
           </div>
@@ -1165,7 +1170,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </button>
           </footer>
         </main>
-        <nav className="mobile-nav" aria-label="Navegação principal">
+        {area !== "master" && <nav className="mobile-nav" aria-label="Navegação principal">
           {navigation[area].map(([key, label, Icon]) => (
             <button
               key={key}
@@ -1179,8 +1184,15 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <span>{label}</span>
             </button>
           ))}
-        </nav>
+        </nav>}
       </div>
+      {area === "master" && <div className={`master-drawer-layer${masterMenuOpen ? " open" : ""}`} aria-hidden={!masterMenuOpen}>
+        <button type="button" className="master-drawer-backdrop" aria-label="Fechar menu" tabIndex={masterMenuOpen ? 0 : -1} onClick={() => setMasterMenuOpen(false)} />
+        <aside id="master-mobile-drawer" className="master-mobile-drawer" aria-label="Menu administrativo" inert={!masterMenuOpen}>
+          <div className="master-drawer-heading"><strong>Menu Master</strong><button type="button" aria-label="Fechar menu" onClick={() => setMasterMenuOpen(false)}><X size={23}/></button></div>
+          <nav>{navigation.master.map(([key, label, Icon]) => <button type="button" key={key} className={page === key ? "selected" : ""} onClick={() => { setPage(key); setFilter("all"); setMasterMenuOpen(false); }}><Icon size={21}/><span>{label}</span>{((key === "motoristas" && pending.length > 0) || (key === "recuperacao" && recoveryPending > 0)) && <span className="master-drawer-count">{key === "recuperacao" ? recoveryPending : pending.length}</span>}</button>)}</nav>
+        </aside>
+      </div>}
       {modal?.type === "create" && (
         <RequestForm
           requestError={notice}
