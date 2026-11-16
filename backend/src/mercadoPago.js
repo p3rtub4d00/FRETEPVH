@@ -27,7 +27,8 @@ export const MercadoPagoOrder = mongoose.models.FreteOnMercadoPagoOrder ||
 export function mercadoPagoEnabled() {
   return process.env.MP_PAYMENTS_ENABLED === "true" &&
     Boolean(process.env.MP_ACCESS_TOKEN?.trim()) &&
-    Boolean(process.env.MP_WEBHOOK_SECRET?.trim());
+    Boolean(process.env.MP_WEBHOOK_SECRET?.trim()) &&
+    /^https:\/\/[^/]+$/.test(process.env.MP_PUBLIC_URL?.trim() || "");
 }
 
 const cleanId = value => String(value || "").trim();
@@ -132,16 +133,17 @@ async function synchronize(order, payment) {
         _id: freight._id, commissionStatus: "pending",
         commissionCents: order.amountCents, driverId: order.payerId,
         disputeStatus: { $ne: "open" },
-        refundStatus: { $nin: ["pending", "approved", "refunded_simulated"] }
+        refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp"] }
       }, { $set: { commissionStatus: "paid", commissionPaidAt: new Date() } });
       accepted = Boolean(result.modifiedCount);
     } else {
       const result = await Freight.updateOne({
         _id: freight._id, clientId: order.payerId,
         paymentMethod: "pix_freteon", paymentStatus: "awaiting",
-        agreedPriceCents: order.amountCents, status: { $in: ["booked", "transit", "completed"] }
+        agreedPriceCents: order.amountCents, status: { $in: ["booked", "transit", "completed", "cancelled"] }
       }, { $set: { paymentStatus: "paid_mp" } });
-      accepted = Boolean(result.modifiedCount);
+      // Se o Pix chegou após o cancelamento, registre o recebimento sem liberar repasse.
+      accepted = Boolean(result.modifiedCount) && freight.status !== "cancelled";
     }
   }
   order.status = nextStatus;
@@ -160,11 +162,11 @@ async function synchronize(order, payment) {
         role: "motorista", title: order.kind === "freight" ? "Pix do frete confirmado" : "Comissão quitada",
         body: "Pagamento confirmado pelo Mercado Pago. Confira sua carteira.",
         id: String(order.freightId),
-      });
+      }).catch(() => {});
       if (order.kind === "freight") void notifyAccounts([freight.clientId], {
         role: "cliente", title: "Pagamento Pix confirmado",
         body: "O Mercado Pago confirmou o pagamento do frete.", id: String(order.freightId)
-      });
+      }).catch(() => {});
     } else void notifyMasters({
       title: "Pagamento Pix requer conferência",
       body: "Pagamento aprovado após mudança de situação do frete. Não efetue repasse sem conciliar.",
@@ -184,9 +186,12 @@ async function refreshOrder(order) {
 export async function refundMercadoPagoPayment(freight) {
   if (!mercadoPagoEnabled() || freight.paymentStatus !== "paid_mp")
     fail(409, "Reembolso real indisponível para este frete.");
-  const order = await MercadoPagoOrder.findOne({ freightId: freight._id, kind: "freight", status: "approved" });
-  if (!order?.paymentId || order.amountCents !== freight.agreedPriceCents)
+  const order = await MercadoPagoOrder.findOne({ freightId: freight._id, kind: "freight" });
+  if (!order?.paymentId || order.amountCents !== freight.agreedPriceCents ||
+      !["approved", "refunded"].includes(order.status))
     fail(409, "Pagamento não conciliado. Verifique o Mercado Pago antes de reembolsar.");
+  // Se o provedor confirmou a devolução antes de uma falha de rede, concluir a gravação local.
+  if (order.status === "refunded") return { id: order.paymentId, status: "approved" };
   const result = await mpRequest("POST", `/v1/payments/${encodeURIComponent(order.paymentId)}/refunds`, {},
     `refund-${order.idempotencyKey}`);
   if (!result?.id || !["approved", "processed"].includes(String(result.status || "")))
@@ -236,10 +241,10 @@ mercadoPagoPrivate.post("/mercadopago/orders/:id/:kind", async (req, res) => {
       payment_method_id: "pix", external_reference: order.externalReference,
       payer: { email, identification: { type: "CPF", number: cpf } },
     };
-    const publicUrl = process.env.MP_PUBLIC_URL?.trim();
-    if (publicUrl && /^https:\/\/[^/]+$/.test(publicUrl))
-      body.notification_url = `${publicUrl}/api/mercadopago/webhook`;
+    body.notification_url = `${process.env.MP_PUBLIC_URL.trim()}/api/mercadopago/webhook`;
     const payment = await mpRequest("POST", "/v1/payments", body, order.idempotencyKey);
+    if (!/^\d+$/.test(String(payment.id || "")))
+      fail(502, "O Mercado Pago não retornou um identificador de pagamento válido.");
     order.paymentId = String(payment.id);
     // Reconciliar aprovação antes de gravar o status, para não ignorar a primeira confirmação.
     order.status = "pending";
