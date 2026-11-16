@@ -19,16 +19,46 @@ function AddressFields({ title, value, onChange, prefix }) {
     <label>Ponto de referência <small>(opcional)</small><input value={value.reference} onChange={e=>update('reference',e.target.value)} maxLength={120} placeholder="Ex.: ao lado da farmácia"/></label>
   </section>;
 }
-export default function RoutePicker({data,onChange}) {
+export default function RoutePicker({ data, onChange, mode = "both" }) {
   const origin = data.originAddress || emptyAddress();
   const destination = data.destinationAddress || emptyAddress();
-  const update = (field,value) => onChange({[field+'Address']:value,[field]:formatAddress(value),[field+'Point']:null,routeEstimate:null});
-  const ready = a => a.street.trim().length >= 3 && a.neighborhood.trim().length >= 2 && a.city.trim().length >= 2 && (a.noNumber || a.number.trim());
+  const update = (field, value) => onChange({
+    [field + "Address"]: value,
+    [field]: formatAddress(value),
+    [field + "Point"]: null,
+    routeEstimate: null
+  });
+  const ready = a => a.street.trim().length >= 3 && a.neighborhood.trim().length >= 2 &&
+    a.city.trim().length >= 2 && (a.noNumber || a.number.trim());
   return <div className="manual-route-picker">
-    <p className="muted">Informe os endereços completos. Número, complemento e referência ajudam o motorista a encontrar o local.</p>
-    <AddressFields title="Onde retirar?" prefix="origin" value={origin} onChange={a=>update('origin',a)}/>
-    <AddressFields title="Onde entregar?" prefix="destination" value={destination} onChange={a=>update('destination',a)}/>
-    {ready(origin) && ready(destination) && <a className="maps-route-button" href={mapsRouteUrl(formatAddress(origin),formatAddress(destination))} target="_blank" rel="noopener noreferrer"><Navigation2 size={19}/> Conferir rota no Google Maps <ExternalLink size={16}/></a>}
-    <p className="maps-route-help">O trajeto, a distância e o tempo estimado serão exibidos no Google Maps. Confira se os locais encontrados estão corretos.</p>
+    <p className="muted">
+      {mode === "origin"
+        ? "Primeiro, informe onde o motorista deverá retirar a carga."
+        : mode === "destination"
+          ? "Agora informe para onde a carga será transportada."
+          : "Informe os endereços completos. Número, complemento e referência ajudam o motorista a encontrar o local."}
+    </p>
+    {mode !== "destination" && (
+      <AddressFields title="Onde retirar?" prefix="origin" value={origin}
+        onChange={a => update("origin", a)}/>
+    )}
+    {mode === "destination" && ready(origin) && (
+      <p className="request-route-origin-summary">
+        <MapPin size={16}/> <span><strong>Retirada:</strong> {formatAddress(origin)}</span>
+      </p>
+    )}
+    {mode !== "origin" && (
+      <AddressFields title="Onde entregar?" prefix="destination" value={destination}
+        onChange={a => update("destination", a)}/>
+    )}
+    {mode !== "origin" && ready(origin) && ready(destination) && (
+      <a className="maps-route-button" href={mapsRouteUrl(formatAddress(origin),formatAddress(destination))}
+        target="_blank" rel="noopener noreferrer">
+        <Navigation2 size={19}/> Conferir rota no Google Maps <ExternalLink size={16}/>
+      </a>
+    )}
+    {mode !== "origin" && (
+      <p className="maps-route-help">A distância e o tempo estimado poderão ser consultados no Google Maps. Confira se os locais encontrados estão corretos.</p>
+    )}
   </div>;
 }
