@@ -11,6 +11,7 @@ import { Account, Session, PushSubscription, publicUser } from "./models.js";
 import { pushLogoutFilter } from "./pushLogout.js";
 import { LEGAL_VERSION } from "./legalVersion.js";
 import { notifyMasters } from "./webPush.js";
+import { staffAccessForRequest, trackAdministrativeAction } from "./teamAccess.js";
 
 const scrypt = promisify(scryptCallback);
 const cookieName = "freteon_session"; // Compatibilidade com sessões anteriores.
@@ -54,7 +55,7 @@ export async function hashPassword(password) {
   const key = await scrypt(password, salt, 64);
   return `${salt}:${key.toString("hex")}`;
 }
-async function verifyPassword(password, stored) {
+export async function verifyPassword(password, stored) {
   if (typeof password !== "string" || password.length > 128) return false;
   const [salt, hash] = stored.split(":");
   const key = await scrypt(password, salt, 64);
@@ -76,20 +77,22 @@ async function findSessionUser(token) {
     expiresAt: { $gt: new Date() },
   });
   if (!session) return null;
-  return Account.findById(session.userId);
+  const user = await Account.findById(session.userId);
+  if (user?.role === "staff" && (!user.staffEnabled || user.status !== "approved")) return null;
+  return user;
 }
 
 async function sessionForRole(req, role) {
   // Cada perfil exige sua própria sessão real, autenticada no servidor.
   const active = await findSessionUser(req.cookies[roleCookieName(role)]);
-  if (active?.role === role) return active;
+  if (active?.role === role || (role === "master" && active?.role === "staff")) return active;
   // Permite migrar uma sessão antiga sem exigir novo login.
   const previous = await findSessionUser(req.cookies[cookieName]);
-  return previous?.role === role ? previous : null;
+  return previous?.role === role || (role === "master" && previous?.role === "staff") ? previous : null;
 }
 
 async function issueSession(req, res, user) {
-  const name = roleCookieName(user.role);
+  const name = roleCookieName(user.role === "staff" ? "master" : user.role);
   const oldToken = req.cookies[name];
   if (validToken(oldToken)) {
     await Session.deleteOne({ tokenHash: digest(oldToken) });
@@ -107,8 +110,22 @@ async function issueSession(req, res, user) {
 
 export async function authenticate(req, res, next) {
   const role = requestedRole(req);
-  req.user = await sessionForRole(req, role);
-  if (!req.user) fail(401, "Entre na sua conta para continuar.");
+  const account = await sessionForRole(req, role);
+  if (!account) fail(401, "Entre na sua conta para continuar.");
+  // Perfil de equipe representa uma sessão administrativa limitada. Não mudar
+  // Account.role do documento Mongoose ou conceder acesso como segundo Master.
+  req.user = account.role === "staff" ? {
+    ...account.toObject(), role: "master",
+    staffAccountId: String(account._id),
+    teamRole: account.teamRole,
+    staffPermissions: account.staffPermissions || [],
+    mustChangePassword: Boolean(account.mustChangePassword),
+  } : account;
+  if (!staffAccessForRequest(req)) fail(403,
+    req.user.mustChangePassword
+      ? "Troque a senha provisória antes de utilizar o painel."
+      : "Seu nível administrativo não autoriza esta operação.");
+  trackAdministrativeAction(req, res);
   next();
 }
 export function authorize(...roles) {
@@ -155,9 +172,28 @@ auth.post("/login", limit, async (req, res) => {
   const stored = user?.passwordHash || `${"0".repeat(32)}:${"0".repeat(128)}`;
   if (!(await verifyPassword(req.body.password, stored)) || !user)
     fail(401, "Telefone ou senha incorretos.");
-  if (!roles.includes(req.body.role) || user.role !== req.body.role)
+  if (!roles.includes(req.body.role) ||
+      (user.role !== req.body.role && !(user.role === "staff" && req.body.role === "master")))
     fail(403, "Use a página de entrada correspondente ao seu perfil.");
+  if (user.role === "staff" && (!user.staffEnabled || user.status !== "approved"))
+    fail(403, "Conta da equipe bloqueada. Consulte o Master Principal.");
   res.json({ user: await issueSession(req, res, user) });
+});
+auth.post("/staff/password", authenticate, authorize("master"), limit, async (req, res) => {
+  if (!req.user.staffAccountId) fail(403, "Esta função é exclusiva da equipe.");
+  const account = await Account.findOne({ _id: req.user.staffAccountId, role: "staff",
+    staffEnabled: true }).select("+passwordHash");
+  if (!account || !(await verifyPassword(req.body?.currentPassword, account.passwordHash)))
+    fail(403, "Senha atual incorreta.");
+  if (req.body?.newPassword === req.body?.currentPassword)
+    fail(400, "Escolha uma senha diferente da provisória.");
+  account.passwordHash = await hashPassword(req.body?.newPassword);
+  account.mustChangePassword = false;
+  await account.save();
+  // Desfaz a sessão inicial com senha provisória. O funcionário entra novamente.
+  await Session.deleteMany({ userId: account._id });
+  res.clearCookie(roleCookieName("master"), cookieOptions);
+  res.json({ ok: true, message: "Senha atualizada. Entre novamente." });
 });
 auth.post("/accept-legal", authenticate, authorize("cliente", "motorista"), async (req, res) => {
   if (req.body.termsAccepted !== true || req.body.privacyAcknowledged !== true)
