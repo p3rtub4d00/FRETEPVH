@@ -40,6 +40,8 @@ export async function getPaymentProvider() {
       pagbank: providerReady("pagbank"),
     },
     pagbankEnvironment: process.env.PAGBANK_ENV === "production" ? "production" : "sandbox",
+    testFlowEnabled: process.env.PAGBANK_ENV === "sandbox" &&
+      process.env.PAGBANK_TEST_FLOW_ENABLED === "true" && providerReady("pagbank"),
     updatedAt: settings?.updatedAt || null,
   };
 }
