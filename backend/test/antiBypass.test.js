@@ -29,7 +29,7 @@ test("mensagens barram telefone, WhatsApp, contato, site e negociação por fora
   assert.throws(() => safeChatMessage("a".repeat(501)), /500/);
 });
 
-test("chat só pertence aos dois contratantes após a contratação", () => {
+test("chat apenas entre contratantes enquanto o frete estiver em andamento", () => {
   const r = { status: "open", clientId: "c1", driverId: null };
   assert.equal(canChat(r, "c1", "cliente"), false);
   r.status = "booked";
@@ -42,7 +42,8 @@ test("chat só pertence aos dois contratantes após a contratação", () => {
   r.status = "transit";
   assert.equal(canChat(r, "d1", "motorista"), true);
   r.status = "completed";
-  assert.equal(canChat(r, "c1", "cliente"), true);
+  assert.equal(canChat(r, "c1", "cliente"), false);
+  assert.equal(canChat(r, "d1", "motorista"), false);
   r.status = "cancelled";
   assert.equal(canChat(r, "c1", "cliente"), false);
 });
