@@ -4,7 +4,7 @@ import { api } from "./api.js";
 import { money } from "./format.js";
 
 const labels = { freight: "Pagar frete com Pix", commission: "Pagar comissão com Pix" };
-export default function MercadoPagoPix({ requestId, kind, onPaid }) {
+export default function MercadoPagoPix({ requestId, kind, onPaid, gateway }) {
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
   const [order, setOrder] = useState(null);
@@ -22,7 +22,7 @@ export default function MercadoPagoPix({ requestId, kind, onPaid }) {
     setError("");
     async function fetchStatus() {
       try {
-        const result = await api(`/mercadopago/orders/${requestId}/${kind}`);
+        const result = await api(`/payments/orders/${requestId}/${kind}`);
         if (!live) return;
         setOrder(result);
         if (result.status === "approved" && !notified.current) {
@@ -45,7 +45,7 @@ export default function MercadoPagoPix({ requestId, kind, onPaid }) {
     setBusy(true);
     setError("");
     try {
-      const data = await api(`/mercadopago/orders/${requestId}/${kind}`, {
+      const data = await api(`/payments/orders/${requestId}/${kind}`, {
         method: "POST", body: { email: email.trim(), cpf: cpf.replace(/\D/g, "") }
       });
       setOrder(data);
@@ -61,7 +61,7 @@ export default function MercadoPagoPix({ requestId, kind, onPaid }) {
     setBusy(true);
     setError("");
     try {
-      const result = await api(`/mercadopago/orders/${requestId}/${kind}`);
+      const result = await api(`/payments/orders/${requestId}/${kind}`);
       setOrder(result);
       if (result.status === "approved" && !notified.current) {
         notified.current = true;
@@ -77,12 +77,16 @@ export default function MercadoPagoPix({ requestId, kind, onPaid }) {
     } catch { setError("Copie o código Pix pelo campo abaixo."); }
   }
   const approved = order?.status === "approved";
+  const provider = order?.provider || gateway?.preferred || "mercadopago";
+  const providerName = provider === "pagbank" ? "PagBank" : "Mercado Pago";
+  const sandbox = provider === "pagbank" && gateway?.pagbankEnvironment === "sandbox";
   return <section className="mp-pix-panel" aria-label={labels[kind]}>
-    <div className="mp-pix-head"><QrCode size={20}/><strong>{labels[kind]}</strong></div>
+    <div className="mp-pix-head"><QrCode size={20}/><strong>{labels[kind]} · {providerName}</strong></div>
+    {sandbox && <p className="muted">Ambiente PagBank de testes: este Pix não representa cobrança real.</p>}
     {approved ? (
       <div className="mp-pix-success" role="status">
         <CheckCircle2 size={22}/>
-        <span>Pagamento confirmado pelo Mercado Pago. O financeiro do FreteOn foi atualizado.</span>
+        <span>Pagamento confirmado pelo {providerName}. O financeiro do FreteOn foi atualizado.</span>
       </div>
     ) : order?.qrCode ? (
       <div className="mp-pix-payment">
@@ -101,6 +105,8 @@ export default function MercadoPagoPix({ requestId, kind, onPaid }) {
           <RefreshCw size={17}/> {busy ? "Consultando..." : "Verificar pagamento"}
         </button>
       </div>
+    ) : order?.unavailable ? (
+      <p className="wallet-note">O banco responsável por esta cobrança não está configurado no servidor. Contate o Master antes de tentar outro Pix.</p>
     ) : order?.status && order.status !== "none" && order.status !== "created" ? (
       <div className="mp-pix-payment">
         <p className="muted">Cobrança: {order.status === "pending" ? "Aguardando pagamento" :
@@ -112,7 +118,7 @@ export default function MercadoPagoPix({ requestId, kind, onPaid }) {
       </div>
     ) : (
       <form onSubmit={create}>
-        <p className="muted">O valor é calculado pelo FreteOn. O Pix será emitido para a conta Mercado Pago do FreteOn.</p>
+        <p className="muted">O valor é calculado pelo FreteOn. O Pix será emitido para a conta {providerName} do FreteOn.</p>
         <label>E-mail do pagador
           <input type="email" required autoComplete="email" maxLength={200}
             placeholder="seuemail@exemplo.com" value={email}
