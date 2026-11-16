@@ -137,3 +137,45 @@ test("Modo produção e sandbox desativado não liberam frete de teste", async (
     });
   }
 });
+
+test("Master soma somente comissões bancárias reais, sem homologação ou duplicidade", async () => {
+  const cash = await request("cash_driver", 100);
+  cash.status = "completed";
+  cash.commissionStatus = "paid";
+  cash.commissionProvider = "mercadopago";
+  cash.commissionProviderEnvironment = "production";
+
+  const cardSandbox = await request("card_driver", 80);
+  cardSandbox.status = "completed";
+  cardSandbox.commissionStatus = "paid";
+  cardSandbox.commissionProvider = "pagbank";
+  cardSandbox.commissionProviderEnvironment = "sandbox";
+
+  const pixReal = await request("pix_freteon", 200);
+  pixReal.status = "completed";
+  pixReal.paymentStatus = "paid_mp";
+  pixReal.deliveryConfirmedAt = new Date();
+
+  const pixTest = await request("pix_freteon", 50);
+  pixTest.status = "completed";
+  pixTest.paymentProvider = "pagbank";
+  pixTest.paymentProviderEnvironment = "sandbox";
+  pixTest.pagbankTestApprovedAt = new Date();
+  pixTest.deliveryConfirmedAt = new Date();
+
+  const pixRefunded = await request("pix_freteon", 100);
+  pixRefunded.status = "completed";
+  pixRefunded.paymentStatus = "refunded_mp";
+  pixRefunded.refundStatus = "refunded_mp";
+  pixRefunded.deliveryConfirmedAt = new Date();
+
+  const legacyCommission = await request("cash_driver", 100);
+  legacyCommission.commissionStatus = "paid";
+
+  const master = { role: "master", _id: "master-teste" };
+  const wallet = walletSummary([cash, cardSandbox, pixReal, pixTest, pixRefunded, legacyCommission], master, true);
+  assert.equal(wallet.commissionRevenueCents, cash.commissionCents + pixReal.commissionCents);
+  assert.equal(wallet.testCommissionRevenueCents, cardSandbox.commissionCents + pixTest.commissionCents);
+  assert.equal(wallet.commissionRevenueCents, 3000);
+  assert.equal(wallet.testCommissionRevenueCents, 1300);
+});
