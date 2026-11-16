@@ -151,6 +151,86 @@ function Modal({ title, onClose, children, error, busy }) {
   );
 }
 
+function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhoto, onReport, onFinanceAction }) {
+  const [chatOpen, setChatOpen] = useState(false);
+  const accepted = request.proposals.find((proposal) => proposal.id === request.selectedId);
+  const gross = Number.isFinite(request.agreedPriceCents) ? request.agreedPriceCents : Math.round(Number(accepted?.price || 0) * 100);
+  const rate = Number.isFinite(request.commissionRate) ? request.commissionRate : 10;
+  const fee = Number.isFinite(request.commissionCents) ? request.commissionCents : Math.round(gross * rate / 100);
+  const net = Number.isFinite(request.driverNetCents) ? request.driverNetCents : gross - fee;
+  const pixWaiting = request.paymentMethod === "pix_freteon" && request.paymentStatus !== "simulated_paid";
+  const startBlocked = busy || refundBlocked(request) || (request.status === "booked" && pixWaiting);
+  const time = accepted?.time || request.time;
+  const canAdvance = ["booked", "transit"].includes(request.status);
+
+  return (
+    <div className="driver-compact">
+      <div className="driver-compact-status">
+        <CheckCircle2 size={18} />
+        <span>{request.status === "booked" ? "Frete contratado" : "Em transporte"}</span>
+        <span className={`status ${request.status}`}>{statusLabels[request.status]}</span>
+      </div>
+      <Route request={request} />
+      <section className="driver-compact-payment" aria-label="Resumo do pagamento combinado">
+        <PaymentLabel method={request.paymentMethod} />
+        <div className="driver-compact-values">
+          <span>Valor combinado</span><strong>{money(gross / 100)}</strong>
+          <span>Comissão FreteOn ({rate}%)</span><strong>− {money(fee / 100)}</strong>
+          <span className="driver-compact-net-label">Após comissão</span><strong className="driver-compact-net">{money(net / 100)}</strong>
+        </div>
+        {request.paymentMethod === "card_driver" && <small>Valor antes das taxas da sua maquininha.</small>}
+        {request.paymentMethod === "pix_freteon" && <small>Pagamento e repasse Pix em simulação.</small>}
+        {request.paymentMethod === "cash_driver" && <small>Pagamento em dinheiro diretamente ao motorista.</small>}
+      </section>
+      <div className="driver-compact-meta">
+        <span><Clock3 size={16} /> {request.date ? new Date(`${request.date}T12:00:00`).toLocaleDateString("pt-BR") : "Data a combinar"} · {time}</span>
+        <span><Package size={16} /> {request.helper ? "Com ajudante" : "Sem ajudante"}</span>
+      </div>
+      {request.description && (
+        <details className="driver-compact-expand">
+          <summary><Package size={17} /> Descrição da carga <ChevronRight size={17} /></summary>
+          <p>{request.description}</p>
+        </details>
+      )}
+      {request.photos?.length > 0 && (
+        <details className="driver-compact-expand">
+          <summary><Camera size={17} /> Ver fotos da carga ({request.photos.length}) <ChevronRight size={17} /></summary>
+          <div className="freight-gallery-images">
+            {request.photos.map((photo, index) => (
+              <button type="button" key={index} onClick={() => onPhoto(index)} aria-label={`Ampliar foto ${index + 1} da carga`}>
+                <FreightPhotoImage src={photo} alt={`Foto ${index + 1} da carga`} />
+              </button>
+            ))}
+          </div>
+        </details>
+      )}
+      {request.vehicle && <p className="driver-compact-vehicle"><Truck size={15} /> {request.vehicle}</p>}
+      <button type="button" className="driver-compact-link" onClick={() => setChatOpen(open => !open)}
+        aria-expanded={chatOpen} aria-controls={`driver-chat-${request.id}`}>
+        <MessageSquare size={19} />
+        <span>{chatOpen ? "Fechar conversa" : "Abrir conversa com o cliente"}</span>
+        <ChevronRight size={19} className={chatOpen ? "driver-compact-chevron-open" : ""} />
+      </button>
+      {chatOpen && <div id={`driver-chat-${request.id}`}>
+        <FreightChatPanel requestId={request.id} currentUserId={currentUserId} onReport={onReport} />
+      </div>}
+      <RouteDistance request={request} />
+      <RefundPanel request={request} role="motorista" busy={busy} onAction={onFinanceAction} />
+      {canAdvance && (
+        <div className="driver-compact-footer">
+          {request.status === "booked" && pixWaiting && (
+            <p className="info">Aguardando o cliente confirmar o Pix de teste para iniciar o transporte.</p>
+          )}
+          {refundBlocked(request) && <p className="info">Frete suspenso para análise do reembolso.</p>}
+          <button type="button" className="primary full" disabled={startBlocked} onClick={onAdvance}>
+            <Truck size={19} /> {request.status === "booked" ? "Iniciar transporte" : "Concluir frete"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RequestForm({ onCreate, onClose, requestError }) {
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
@@ -1224,110 +1304,26 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
       {modal?.type === "driverBooking" && selected && area === "motorista" &&
         selected.driverId === user.id && (
         <Modal
-          title="Sua proposta foi aceita!"
+          title={selected.title}
           error={notice}
           busy={busy}
           onClose={() => setModal(null)}
         >
-          <div className="driver-acceptance-content">
-            <div className="driver-acceptance-headline">
-              <CheckCircle2 size={35} />
-              <div>
-                <strong>Frete contratado com sucesso</strong>
-                <p>O cliente escolheu você para realizar este transporte.</p>
-              </div>
-            </div>
-            <div className="driver-acceptance-heading">
-              <strong>{selected.title}</strong>
-              <span className="status booked">{statusLabels[selected.status]}</span>
-            </div>
-            <Route request={selected} />
-            <RouteDistance request={selected} busy={busy} />
-            <div className="driver-acceptance-info">
-              <span><Clock3 size={16} />
-                {selected.date ? new Date(`${selected.date}T12:00:00`).toLocaleDateString("pt-BR") : "Data não definida"}
-                {" · "}
-                {selected.proposals.find((proposal) => proposal.id === selected.selectedId)?.time || selected.time}
-              </span>
-              <span><Truck size={16} /> {selected.vehicle || "Veículo definido pelo motorista"}</span>
-              <span><Package size={16} />
-                {selected.helper ? "Cliente solicitou ajudante" : "Sem ajudante solicitado"}
-              </span>
-            </div>
-            <button className="secondary full" type="button"
-              onClick={() => setModal({ type: "detail", id: selected.id })}>
-              <MessageSquare size={17}/> Conversar com o cliente
-            </button>
-            <div className="driver-acceptance-description">
-              <strong>Descrição da carga</strong>
-              <p>{selected.description}</p>
-            </div>
-            <div className="freight-gallery">
-              <h3>Fotos da carga ({selected.photos?.length || 0})</h3>
-              {selected.photos?.length ? (
-                <div className="freight-gallery-images">
-                  {selected.photos.map((photo, index) => (
-                    <button type="button" key={index} onClick={() =>
-                      setModal({ type: "photo", id: selected.id, index, returnTo: "driverBooking" })}>
-                      <FreightPhotoImage src={photo} alt={`Ampliar foto ${index + 1} da carga`} />
-                    </button>
-                  ))}
-                </div>
-              ) : <p className="muted">O cliente não anexou fotos.</p>}
-            </div>
-            <RefundPanel request={selected} role={area} busy={busy} onAction={walletAction} />
-            <div className="driver-acceptance-payment">
-              <h3>Pagamento combinado</h3>
-              <PaymentLabel method={selected.paymentMethod} />
-              {selected.agreedPriceCents != null ? (
-                <CommissionPreview
-                  price={selected.agreedPriceCents / 100}
-                  rate={selected.commissionRate}
-                  method={selected.paymentMethod}
-                />
-              ) : (
-                <p className="client-total-price">
-                  Preço aceito:{" "}
-                  <strong>{money(selected.proposals.find((proposal) =>
-                    proposal.id === selected.selectedId)?.price || 0)}</strong>
-                </p>
-              )}
-            </div>
-            {selected.status === "booked" && (
-              <div className="driver-acceptance-actions">
-                {selected.paymentMethod === "pix_freteon" &&
-                  selected.paymentStatus !== "simulated_paid" && (
-                  <p className="info">
-                    Aguardando o cliente confirmar o Pix de teste.
-                    Você poderá iniciar o transporte após essa simulação.
-                  </p>
-                )}
-                <button className="primary full"
-                  disabled={busy || refundBlocked(selected) ||
-                    (selected.paymentMethod === "pix_freteon" &&
-                     selected.paymentStatus !== "simulated_paid")}
-                  onClick={async () => {
-                    if (await updateRequest(selected.id, { status: "transit" })) {
-                      setModal(null);
-                      setNotice("Transporte iniciado! Os detalhes permanecem em Meus fretes.");
-                    }
-                  }}>
-                  <Truck size={18} /> Iniciar transporte
-                </button>
-              </div>
-            )}
-            {selected.status !== "booked" && (
-              <p className="info">A situação desta contratação mudou. Consulte os detalhes do frete.</p>
-            )}
-            <button type="button" className="text-button"
-              onClick={() => setModal({ type: "detail", id: selected.id })}>
-              Ver detalhes tradicionais
-            </button>
-            <button type="button" className="text-button"
-              onClick={() => setModal(null)}>
-              Fechar por enquanto
-            </button>
-          </div>
+          <DriverContractCompact
+            key={selected.id}
+            request={selected}
+            currentUserId={user.id}
+            busy={busy}
+            onPhoto={(index) => setModal({ type: "photo", id: selected.id, index, returnTo: "driverBooking" })}
+            onReport={() => setModal({ type: "report", id: selected.id })}
+            onFinanceAction={walletAction}
+            onAdvance={async () => {
+              if (await updateRequest(selected.id, { status: selected.status === "booked" ? "transit" : "completed" })) {
+                setModal(null);
+                setNotice(selected.status === "booked" ? "Transporte iniciado!" : "Frete concluído!");
+              }
+            }}
+          />
         </Modal>
       )}
       {modal?.type === "completion" && selected && (
@@ -1420,6 +1416,25 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           title={selected.title}
           onClose={() => setModal(null)}
         >
+          {area === "motorista" && selected.driverId === user.id &&
+           ["booked", "transit"].includes(selected.status) ? (
+            <DriverContractCompact
+              key={selected.id}
+              request={selected}
+              currentUserId={user.id}
+              busy={busy}
+              onPhoto={(index) => setModal({ type: "photo", id: selected.id, index, returnTo: "detail" })}
+              onReport={() => setModal({ type: "report", id: selected.id })}
+              onFinanceAction={walletAction}
+              onAdvance={async () => {
+                if (await updateRequest(selected.id, { status: selected.status === "booked" ? "transit" : "completed" })) {
+                  setModal(null);
+                  setNotice(selected.status === "booked" ? "Transporte iniciado!" : "Frete concluído!");
+                }
+              }}
+            />
+          ) : (
+            <>
           <span className={`status ${selected.status}`}>
             {statusLabels[selected.status]}
           </span>
@@ -1692,6 +1707,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 Cancelar pedido
               </button>
             )}
+            </>
+          )}
         </Modal>
       )}
       {modal?.type === "photo" && selected && (
