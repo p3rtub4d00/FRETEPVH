@@ -1125,7 +1125,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               )}
             </section>
           ) : page === "perfil" ? (
-            <section className="panel profile">
+            <section className={`panel profile${area === "motorista" ? " driver-profile-compact" : ""}`}>
               {["cliente", "motorista"].includes(area) ? (
                 <ProfilePhotoEditor account={state.user} busy={busy} onSave={saveProfilePhoto} />
               ) : <Avatar account={state.user} large />}
@@ -1139,31 +1139,36 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               )}
               {area === "motorista" && (
                 <>
-                  <div className="profile-item">
-                    <Truck />
+                  <div className="driver-profile-overview">
                     <div>
-                      <strong>Meu veículo</strong>
-                      <p>{driver.vehicle}</p>
+                      <Truck size={19} />
+                      <span><strong>Meu veículo</strong><small>{driver.vehicle || "Não informado"}</small></span>
+                    </div>
+                    <div>
+                      <ShieldCheck size={19} />
+                      <span><strong>Situação da conta</strong>
+                        <small className={state.user.verified ? "driver-profile-approved" : "driver-profile-pending"}>
+                          {state.user.verified ? "Verificada" : "Verificação pendente"}
+                        </small>
+                      </span>
                     </div>
                   </div>
-                  <div className="profile-item">
-                    <ShieldCheck />
-                    <div>
-                      <strong>Situação do cadastro</strong>
-                      <p>
-                        {state.user.verified
-                          ? "Conta verificada e aprovada pelo Master."
-                          : "Documentos necessários para enviar novas propostas. Consulte a análise abaixo."}
-                      </p>
-                    </div>
-                  </div>
+                  <details className="driver-profile-documents">
+                    <summary>
+                      <FileCheck2 size={20}/>
+                      <span><strong>Documentos e verificação</strong>
+                        <small>{state.user.verified
+                          ? "Consultar ou atualizar documentos"
+                          : "Abrir para enviar documentos e acompanhar a análise"}</small>
+                      </span>
+                      <ChevronRight size={19} className="driver-profile-disclosure-arrow"/>
+                    </summary>
+                    <DriverVerificationPanel
+                      driverId={user.id} role="motorista"
+                      onChange={refresh}
+                    />
+                  </details>
                 </>
-              )}
-              {area === "motorista" && (
-                <DriverVerificationPanel
-                  driverId={user.id} role="motorista"
-                  onChange={refresh}
-                />
               )}
               {["cliente", "motorista", "master"].includes(area) && (
                 <details className="profile-push-settings">
@@ -1260,15 +1265,16 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               )}
             </section>
           )}
-          <footer>
+          <footer className="dashboard-footer-compact">
             <span>FreteOn · Porto Velho, RO</span>
-            <div className="dashboard-legal-links">
-              <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
-              <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
-            </div>
-            <button onClick={() => setModal({ type: "help" })}>
-              Precisa de ajuda?
-            </button>
+            <details className="dashboard-legal-disclosure">
+              <summary>Informações legais</summary>
+              <div>
+                <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
+                <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
+              </div>
+            </details>
+            <button type="button" onClick={() => setModal({ type: "help" })}>Ajuda</button>
           </footer>
         </main>
         {area !== "master" && <nav className="mobile-nav" aria-label="Navegação principal">
