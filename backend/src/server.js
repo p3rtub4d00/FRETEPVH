@@ -13,8 +13,6 @@ import { privacyRouter } from "./privacyChannel.js";
 import { mercadoPagoPublic, MercadoPagoOrder } from "./mercadoPago.js";
 import { pagBankWebhook, PagBankOrder } from "./pagBank.js";
 import { PaymentProviderSettings } from "./paymentProviderSettings.js";
-import { maintenancePreflight } from "./maintenanceAudit.js";
-import { resetHomologationOnce } from "./maintenanceReset.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -144,15 +142,6 @@ try {
   await Promise.all([Account.init(), Session.init(), Freight.init(), PrivacyRequest.init(), PushSubscription.init(), MercadoPagoOrder.init(), PagBankOrder.init(), PaymentProviderSettings.init()]);
   startupStage = "criação do Master";
   await bootstrapAdmin();
-  if (process.env.FRETEON_AUDIT_PREFLIGHT === "true") {
-    try {
-      console.log("FRETEON_MAINTENANCE_PREFLIGHT " + JSON.stringify(await maintenancePreflight()));
-    } catch (error) {
-      console.error("FRETEON_MAINTENANCE_PREFLIGHT_FAILED " + String(error.name || "error"));
-    }
-  }
-  startupStage = "limpeza auditada de homologação";
-  await resetHomologationOnce();
   console.log("MongoDB conectado.");
  } catch (error) {
   // Nunca grave a URI ou a mensagem bruta do driver nos logs: podem conter credenciais.
