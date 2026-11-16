@@ -98,7 +98,81 @@ function driverEntryLabel(request) {
   return "Concluído";
 }
 
-function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = false }) {
+
+// Organização administrativa: as abas são visões de consulta sobre os mesmos fretes.
+// Nenhum status financeiro é alterado pelo filtro; todas as ações existentes ficam no detalhe.
+const masterTabLabels = {
+  pending: { label: "Pendências", subtitle: "Operações que aguardam análise ou confirmação do Master." },
+  commissions: { label: "Comissões", subtitle: "Comissões dos fretes pagos em dinheiro ou na maquininha." },
+  payouts: { label: "Repasses", subtitle: "Repasses Pix disponíveis, solicitados ou concluídos." },
+  refunds: { label: "Reembolsos", subtitle: "Solicitações de reembolso e contestações, abertas ou resolvidas." },
+  history: { label: "Histórico", subtitle: "Fretes encerrados com situação financeira resolvida." },
+  all: { label: "Todos", subtitle: "Consulta completa dos fretes com modalidade financeira registrada." },
+};
+const refundCases = request =>
+  Boolean(request.refundStatus && request.refundStatus !== "none") ||
+  Boolean(request.disputeStatus && request.disputeStatus !== "none");
+
+export function masterFinancialAction(request) {
+  if (["pending", "approved"].includes(request.refundStatus)) return true;
+  if (request.disputeStatus === "open") return true;
+  if (refundBlocked(request) || request.disputeStatus === "resolved_cancelled") return false;
+  if (request.payoutStatus === "requested" || request.commissionStatus === "pending") return true;
+  return request.status === "completed" && !request.deliveryConfirmedAt &&
+    request.disputeStatus !== "resolved_cancelled" &&
+    (request.paymentMethod !== "pix_freteon" || request.paymentStatus === "simulated_paid");
+}
+function masterSettled(request) {
+  if (masterFinancialAction(request) || !["completed", "cancelled"].includes(request.status)) return false;
+  if (["pending", "approved"].includes(request.refundStatus)) return false;
+  if (request.payoutStatus === "available" || request.payoutStatus === "requested") return false;
+  return request.refundStatus === "refunded_simulated" ||
+    request.disputeStatus === "resolved_cancelled" ||
+    ["paid", "waived"].includes(request.commissionStatus) ||
+    request.payoutStatus === "paid_simulated";
+}
+export function masterFinancialBucket(request, tab) {
+  if (tab === "pending") return masterFinancialAction(request);
+  if (tab === "commissions") return ["cash_driver", "card_driver"].includes(request.paymentMethod) &&
+    Number(request.commissionCents || 0) > 0;
+  if (tab === "payouts") return request.paymentMethod === "pix_freteon" &&
+    ["available", "requested", "paid_simulated"].includes(request.payoutStatus);
+  if (tab === "refunds") return refundCases(request);
+  if (tab === "history") return masterSettled(request);
+  return tab === "all";
+}
+function masterFinanceLabel(request) {
+  if (request.refundStatus === "pending") return "Reembolso aguardando análise";
+  if (request.refundStatus === "approved") return "Reembolso aprovado · aguarda devolução";
+  if (request.disputeStatus === "open") return "Contestação aguardando decisão";
+  if (request.payoutStatus === "requested") return "Repasse solicitado · confirmar";
+  if (request.commissionStatus === "pending")
+    return request.commissionPaymentRequestedAt ? "Motorista informou comissão · conferir" :
+      request.commissionDueAt && new Date(request.commissionDueAt).getTime() <= Date.now()
+        ? "Comissão vencida" : "Comissão a receber";
+  if (request.status === "completed" && !request.deliveryConfirmedAt) return "Entrega aguardando confirmação";
+  if (request.refundStatus === "refunded_simulated") return "Devolução registrada (simulação)";
+  if (request.refundStatus === "rejected") return "Reembolso recusado";
+  if (request.disputeStatus === "resolved_cancelled") return "Contestação encerrada · valores dispensados";
+  if (request.payoutStatus === "available") return "Repasse disponível para motorista solicitar";
+  if (request.payoutStatus === "paid_simulated") return "Repasse concluído (simulação)";
+  if (request.commissionStatus === "paid") return "Comissão quitada (simulação)";
+  if (request.commissionStatus === "waived") return "Comissão dispensada";
+  return driverEntryLabel(request);
+}
+function masterFinanceAmount(request, tab) {
+  if (tab === "commissions") return request.commissionCents;
+  if (tab === "payouts") return request.driverNetCents;
+  if (tab === "refunds" && request.refundStatus && request.refundStatus !== "none")
+    return request.refundAmountCents;
+  if (request.refundStatus === "pending" || request.refundStatus === "approved")
+    return request.refundAmountCents;
+  if (request.payoutStatus === "requested") return request.driverNetCents;
+  if (request.commissionStatus === "pending") return request.commissionCents;
+  return request.agreedPriceCents;
+}
+
+function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = false, masterTab = "pending" }) {
   const [expanded, setExpanded] = useState(false);
   const driver = drivers.find((person) => person.id === request.driverId);
   const isDriver = role === "motorista";
@@ -108,19 +182,20 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
     ? new Date(request.commissionDueAt).toLocaleString("pt-BR", { timeZone: "America/Porto_Velho", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
     : null;
   return (
-    <article className={`wallet-item${compact ? " wallet-item-compact" : ""}`}>
+    <article className={`wallet-item${compact ? " wallet-item-compact" : ""}${isMaster ? " wallet-master-item" : ""}`}>
       {compact && (
         <button type="button" className="wallet-row-toggle" aria-expanded={expanded}
           onClick={() => setExpanded(value => !value)}>
           <span className="wallet-row-main">
             <strong>{request.title}</strong>
-            <small>{driverEntryLabel(request)}</small>
+            <small>{isMaster ? masterFinanceLabel(request) : driverEntryLabel(request)}</small>
+            {isMaster && <small>Motorista: {driver?.name || "Cadastro não encontrado"}</small>
             {request.commissionStatus === "pending" && (
               <small className="wallet-row-commission">Comissão: {byCents(request.commissionCents)}</small>
             )}
           </span>
           <span className="wallet-row-side">
-            <strong>{byCents(amount)}</strong>
+            <strong>{byCents(isMaster ? masterFinanceAmount(request, masterTab) : amount)}</strong>
             <ChevronDown size={19} className={expanded ? "wallet-row-open" : ""} />
           </span>
         </button>
@@ -207,6 +282,9 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
   const [acceptsCard, setAcceptsCard] = useState(false);
   const [activeTab, setActiveTab] = useState("pending");
   const [visibleCount, setVisibleCount] = useState(5);
+  const [masterTab, setMasterTab] = useState("pending");
+  const [masterSearch, setMasterSearch] = useState("");
+  const [masterVisibleCount, setMasterVisibleCount] = useState(5);
   useEffect(() => {
     if (role === "motorista") {
       setPixKey(wallet?.pixKey || "");
@@ -231,7 +309,28 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
   const groups = { pending: [], active: [], history: [] };
   if (role === "motorista") sorted.forEach(request => groups[driverWalletBucket(request)].push(request));
   const driverRows = groups[activeTab] || [];
-  const rows = role === "motorista" ? driverRows.slice(0, visibleCount) : sorted;
+  const masterCounts = {};
+  if (role === "master") Object.keys(masterTabLabels).forEach(tab => {
+    masterCounts[tab] = all.filter(request => masterFinancialBucket(request, tab)).length;
+  });
+  const lookup = Object.fromEntries(drivers.map(driver => [driver.id, driver]));
+  const query = masterSearch.trim().toLocaleLowerCase("pt-BR");
+  const masterFiltered = role === "master" ? all.filter(request =>
+    masterFinancialBucket(request, masterTab) && (
+      !query || [request.title, request.origin, request.destination, request.id,
+        lookup[request.driverId]?.name, lookup[request.driverId]?.phone]
+        .some(item => String(item || "").toLocaleLowerCase("pt-BR").includes(query))
+    )
+  ) : [];
+  const masterRows = [...masterFiltered].sort((a, b) =>
+    Number(masterFinancialAction(b)) - Number(masterFinancialAction(a)) ||
+    priority(a) - priority(b) ||
+    new Date(b.updatedAt || b.createdAt || 0).getTime() -
+    new Date(a.updatedAt || a.createdAt || 0).getTime()
+  );
+  const rows = role === "motorista"
+    ? driverRows.slice(0, visibleCount)
+    : masterRows.slice(0, masterVisibleCount);
   const amount = wallet || {};
   return (
     <section className="wallet-section">
@@ -272,7 +371,36 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
           </form>
         </details>
       )}
-      <div className="section-heading"><h2>{role === "master" ? "Controle de pagamentos e repasses" : "Fretes e comissões"}</h2></div>
+      <div className="section-heading"><h2>{role === "master" ? "Gestão financeira" : "Fretes e comissões"}</h2></div>
+      {role === "master" && (
+        <>
+          <div className="wallet-master-overview">
+            <div><span>Exigem ação</span><strong>{masterCounts.pending || 0}</strong></div>
+            <div><span>Repasses solicitados</span><strong>{all.filter(r => r.payoutStatus === "requested").length}</strong></div>
+            <div><span>Reembolsos em análise</span><strong>{all.filter(r => ["pending", "approved"].includes(r.refundStatus)).length}</strong></div>
+            <div><span>Contestações abertas</span><strong>{all.filter(r => r.disputeStatus === "open").length}</strong></div>
+          </div>
+          <nav className="wallet-master-tabs" aria-label="Categorias financeiras">
+            {Object.entries(masterTabLabels).map(([key, tab]) => (
+              <button key={key} type="button" className={masterTab === key ? "active" : ""}
+                aria-pressed={masterTab === key}
+                onClick={() => { setMasterTab(key); setMasterVisibleCount(5); }}>
+                <span>{tab.label}</span><strong>{masterCounts[key] || 0}</strong>
+              </button>
+            ))}
+          </nav>
+          <p className="wallet-master-help">{masterTabLabels[masterTab].subtitle}</p>
+          <label className="wallet-master-search">
+            <span>Buscar frete ou motorista</span>
+            <input type="search" value={masterSearch} placeholder="Nome, pedido, cidade ou telefone"
+              onChange={event => { setMasterSearch(event.target.value); setMasterVisibleCount(5); }}/>
+          </label>
+          <p className="wallet-master-result-count" aria-live="polite">
+            {masterFiltered.length} {masterFiltered.length === 1 ? "registro encontrado" : "registros encontrados"}
+            {masterFiltered.length > 0 ? ` · Exibindo ${Math.min(masterVisibleCount, masterFiltered.length)}` : ""}
+          </p>
+        </>
+      )}
       {role === "motorista" && (
         <>
           <div className="wallet-driver-tabs" role="tablist" aria-label="Filtrar extrato por situação">
@@ -290,11 +418,12 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
         </>
       )}
       {rows.length ? (
-        <div id="wallet-driver-results" className={`wallet-history${role === "motorista" ? " wallet-driver-history" : ""}`}
+        <div id="wallet-driver-results" className={`wallet-history${role === "motorista" ? " wallet-driver-history" : role === "master" ? " wallet-master-history" : ""}`}
           role={role === "motorista" ? "tabpanel" : undefined} aria-labelledby={role === "motorista" ? `wallet-tab-${activeTab}` : undefined}>
           {rows.map((request) =>
             <FreightFinanceRow key={request.id} request={request} role={role}
-              drivers={drivers} busy={busy} onAction={onAction} compact={role === "motorista"} />
+              drivers={drivers} busy={busy} onAction={onAction}
+              compact={role === "motorista" || role === "master"} masterTab={masterTab}/>
           )}
         </div>
       ) : (
@@ -304,7 +433,13 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
             ? activeTab === "pending" ? "Nenhuma comissão ou repasse pendente."
               : activeTab === "active" ? "Nenhum frete em andamento."
               : "Seu histórico de fretes quitados aparecerá aqui."
-            : "Nenhum frete contratado com pagamento simulado ainda."}</p></div>
+            : masterSearch.trim() ? "Nenhum registro corresponde à busca nesta categoria." :
+              masterTab === "pending" ? "Nenhuma operação aguardando ação do Master." :
+              masterTab === "commissions" ? "Nenhuma comissão registrada." :
+              masterTab === "payouts" ? "Nenhum repasse registrado." :
+              masterTab === "refunds" ? "Nenhum reembolso ou contestação registrado." :
+              masterTab === "history" ? "Nenhum frete com financeiro encerrado." :
+              "Nenhum frete contratado com pagamento simulado ainda."}</p></div>
       )}
       {role === "motorista" && visibleCount < driverRows.length && (
         <button type="button" className="secondary wallet-load-more"
@@ -313,6 +448,13 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
           <ChevronRight size={16}/>
         </button>
       )}
+      {role === "master" && masterVisibleCount < masterRows.length && (
+        <button type="button" className="secondary wallet-load-more"
+          onClick={() => setMasterVisibleCount(count => count + 5)}>
+          Mostrar mais {Math.min(5, masterRows.length - masterVisibleCount)} registro(s)
+          <ChevronRight size={16}/>
+        </button>
+      )
       <p className="wallet-legal">Valores ilustrativos, sem movimentação bancária. As comissões de dinheiro e cartão vencem 72 horas após a confirmação da entrega e do recebimento. Contestação aberta suspende a cobrança automática.</p>
     </section>
   );
