@@ -41,6 +41,7 @@ import { pendingDriverBookings } from "./driverBooking.js";
 import PrivacyMaster from "./PrivacyMaster.jsx";
 import { RecoveryMaster } from "./PasswordRecovery.jsx";
 import CommissionSettings from "./CommissionSettings.jsx";
+import MasterNotifications, { useMasterNotifications } from "./MasterNotifications.jsx";
 import PushNotificationsPanel from "./PushNotificationsPanel.jsx";
 import DriverVerificationPanel from "./DriverVerificationPanel.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
@@ -64,6 +65,7 @@ const navigation = {
   ],
   master: [
     ["inicio", "Visão geral", LayoutDashboard],
+    ["notificacoes", "Notificações", BellRing],
     ["motoristas", "Motoristas", Truck],
     ["fretes", "Fretes", Package],
     ["financeiro", "Financeiro", FileCheck2],
@@ -386,6 +388,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   useEffect(() => { if (!masterMenuOpen) return; const onKey = (event) => { if (event.key === "Escape") setMasterMenuOpen(false); }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [masterMenuOpen]);
   const [commissionRate, setCommissionRate] = useState(10);
   useEffect(() => { if (area === "motorista") api("/commission/current").then(c => setCommissionRate(c.rate)).catch(() => {}); }, [area]);
+  const masterNotifications = useMasterNotifications(area === "master");
   const [recoveryPending, setRecoveryPending] = useState(0);
   useEffect(() => {
     if (area !== "master") return;
@@ -672,8 +675,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <Icon size={20} />
               {label}
               {area === "master" &&
-                ((key === "motoristas" && pending.length > 0) || (key === "recuperacao" && recoveryPending > 0)) && (
-                  <span className="count">{key === "recuperacao" ? recoveryPending : pending.length}</span>
+                ((key === "motoristas" && pending.length > 0) || (key === "recuperacao" && recoveryPending > 0) || (key === "notificacoes" && masterNotifications.unread > 0)) && (
+                  <span className="count">{key === "recuperacao" ? recoveryPending : key === "notificacoes" ? masterNotifications.unread : pending.length}</span>
                 )}
             </button>
           ))}
@@ -716,10 +719,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <button
               className="icon-button"
               aria-label="Notificações"
-              onClick={() => area === "master" && recoveryPending > 0 ? setPage("recuperacao") : setModal({ type: "notifications" })}
+              onClick={() => area === "master" ? (masterNotifications.refresh(), setPage("notificacoes")) : setModal({ type: "notifications" })}
             >
               <Bell size={20} />
-              {(area === "master" ? recoveryPending > 0 : area === "motorista" ? bookingsPending.length > 0 : totalProposals > 0) && (
+              {(area === "master" ? masterNotifications.unread > 0 : area === "motorista" ? bookingsPending.length > 0 : totalProposals > 0) && (
                 <span className="notification-dot" />
               )}
             </button>
@@ -1076,6 +1079,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 Sair da conta
               </button>
             </section>
+          ) : area === "master" && page === "notificacoes" ? (
+            <MasterNotifications notifications={masterNotifications} accountId={user.id} onNavigate={setPage}/>
           ) : area === "master" && page === "comissoes" ? (
             <CommissionSettings />
           ) : area === "master" && page === "privacidade" ? (
@@ -1806,7 +1811,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           />
         </Modal>
       )}
-      {modal?.type === "notifications" && (
+      {modal?.type === "notifications" && area !== "master" && (
         <Modal
           error={notice}
           busy={busy}
