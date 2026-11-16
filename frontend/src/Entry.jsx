@@ -15,6 +15,7 @@ import RoleSwitcher from "./RoleSwitcher.jsx";
 import InstallInvitation from "./InstallInvitation.jsx";
 import LegalPage, { LEGAL_VERSION } from "./LegalPage.jsx";
 import LegalAcceptanceGate from "./LegalAcceptanceGate.jsx";
+import StaffPasswordChange from "./StaffPasswordChange.jsx";
 
 const titles = {
   cliente: "Cliente",
@@ -111,6 +112,12 @@ export default function Entry() {
         Carregando FreteOn…
       </div>
     );
+  if (area === "master" && user?.role === "master" && user.mustChangePassword) {
+    return <StaffPasswordChange account={user} onLogout={logout} onComplete={()=>{
+      setSessions(previous=>{const next={...previous};delete next.master;return next;});
+      navigate("/master");
+    }}/>;
+  }
   if (titles[area] && user?.role === area && !path.includes("/cadastro") &&
       !legalAccepted) {
     return (
