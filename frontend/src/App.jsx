@@ -287,7 +287,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
   return (
     <Modal title="Solicitar frete" onClose={onClose} error={requestError}>
       <div className="steps request-steps" aria-label="Etapas da solicitação">
-        {["Retirada", "Entrega", "Carga", "Agendamento"].map((label, index) => (
+        {["Retirada", "Entrega", "Carga", "Agendar"].map((label, index) => (
           <span key={label} className={index <= step ? "active" : ""}>
             {index + 1}. {label}
           </span>
