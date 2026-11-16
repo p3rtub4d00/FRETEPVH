@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bookFinancials, confirmDelivery, walletSummary } from "../src/finance.js";
+import { bookFinancials, confirmDelivery, walletSummary, canStartTransport, isRealBankPayment, isApprovedPagBankTest } from "../src/finance.js";
 
 async function request(method, price, rate = 10) {
   const freight = {
@@ -33,14 +33,13 @@ test("Dinheiro/cartão: comissão só vence após entrega confirmada, em 72 hora
   assert.ok(dueIn >= 72 * 3600000 && dueIn <= 72 * 3600000 + 2000);
 });
 
-test("Pix simulado: repasse fica disponível após a entrega confirmada", async () => {
+test("Pagamento legado sem conciliação bancária não libera repasse", async () => {
   const freight = await request("pix_freteon", 200);
   freight.status = "completed";
-  assert.throws(() => confirmDelivery(freight), /Aguarde a confirmação do pagamento Pix/);
+  assert.throws(() => confirmDelivery(freight), /Aguarde a confirmação do Pix/);
   freight.paymentStatus = "simulated_paid";
-  confirmDelivery(freight);
-  assert.equal(freight.payoutStatus, "available");
-  assert.equal(freight.driverNetCents, 18000);
+  assert.throws(() => confirmDelivery(freight), /Aguarde a confirmação do Pix/);
+  assert.equal(freight.payoutStatus, "none");
 });
 
 test("Pix real: confirmação do Mercado Pago libera repasse apenas após entrega", async () => {
@@ -73,4 +72,58 @@ test("Motorista recém-cadastrado recebe taxa promocional de 5%", async () => {
   assert.equal(freight.commissionRate, 5);
   assert.equal(freight.commissionCents, 1000);
   assert.equal(freight.driverNetCents, 19000);
+});
+
+test("PagBank sandbox aprovado libera ciclo de teste sem saldo real", async () => {
+  const vars = ["PAGBANK_ENABLED", "PAGBANK_ENV", "PAGBANK_TEST_FLOW_ENABLED"];
+  const previous = vars.map(name => process.env[name]);
+  process.env.PAGBANK_ENABLED = "true";
+  process.env.PAGBANK_ENV = "sandbox";
+  process.env.PAGBANK_TEST_FLOW_ENABLED = "true";
+  try {
+    const freight = await request("pix_freteon", 50);
+    freight.status = "booked";
+    freight.paymentProvider = "pagbank";
+    freight.paymentProviderEnvironment = "sandbox";
+    freight.pagbankTestApprovedAt = new Date();
+    assert.equal(isRealBankPayment(freight), false);
+    assert.equal(isApprovedPagBankTest(freight), true);
+    assert.equal(canStartTransport(freight), true);
+    freight.status = "completed";
+    confirmDelivery(freight);
+    assert.ok(freight.deliveryConfirmedAt instanceof Date);
+    assert.equal(freight.payoutStatus, "none");
+    assert.equal(walletSummary([freight], { role: "motorista", _id: "motorista-teste" }).availableCents, 0);
+  } finally {
+    vars.forEach((name, index) => {
+      if (previous[index] === undefined) delete process.env[name];
+      else process.env[name] = previous[index];
+    });
+  }
+});
+
+test("Modo produção e sandbox desativado não liberam frete de teste", async () => {
+  const vars = ["PAGBANK_ENABLED", "PAGBANK_ENV", "PAGBANK_TEST_FLOW_ENABLED"];
+  const previous = vars.map(name => process.env[name]);
+  try {
+    const freight = await request("pix_freteon", 50);
+    freight.status = "booked";
+    freight.paymentProvider = "pagbank";
+    freight.paymentProviderEnvironment = "sandbox";
+    freight.pagbankTestApprovedAt = new Date();
+    process.env.PAGBANK_ENABLED = "true";
+    process.env.PAGBANK_ENV = "sandbox";
+    process.env.PAGBANK_TEST_FLOW_ENABLED = "false";
+    assert.equal(canStartTransport(freight), false);
+    process.env.PAGBANK_TEST_FLOW_ENABLED = "true";
+    process.env.PAGBANK_ENV = "production";
+    assert.equal(canStartTransport(freight), false);
+    freight.status = "completed";
+    assert.throws(() => confirmDelivery(freight), /Aguarde a confirmação/);
+  } finally {
+    vars.forEach((name, index) => {
+      if (previous[index] === undefined) delete process.env[name];
+      else process.env[name] = previous[index];
+    });
+  }
 });
