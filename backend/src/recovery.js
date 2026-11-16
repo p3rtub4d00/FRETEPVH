@@ -34,7 +34,7 @@ recovery.post("/request", limiter(8), async (req, res) => {
     const recent = await Recovery.findOne({ userId: user._id, createdAt: { $gt: new Date(Date.now() - 5 * 60_000) }, status: { $in: ["pending", "issued"] } });
     if (!recent) {
       await Recovery.create({ userId: user._id, role, phone, name: user.name });
-      void notifyMasters({ title: "Recuperação de senha solicitada", body: "Há uma nova solicitação no painel Master.", id: String(user._id) });
+      void notifyMasters({ title: "Recuperação de senha solicitada", body: "Há uma nova solicitação no painel Master.", category: "recuperacao", id: String(user._id) });
     }
   }
   res.json({ message: "Se os dados estiverem cadastrados, a solicitação será encaminhada ao administrador." });
