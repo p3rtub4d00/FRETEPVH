@@ -13,6 +13,7 @@ const schema = new mongoose.Schema({
   payerId: { type: String, required: true },
   externalReference: { type: String, unique: true, required: true },
   amountCents: { type: Number, required: true, min: 100 },
+  environment: { type: String, enum: ["sandbox", "production"], default: "sandbox" },
   idempotencyKey: { type: String, required: true },
   attemptedAt: { type: Date, default: null },
   orderId: { type: String, default: "", index: true },
@@ -113,7 +114,8 @@ export async function syncPagBankOrder(order, remote) {
         disputeStatus: { $ne: "open" },
         refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_pagbank"] }
       }, { $set: { commissionStatus: "paid", commissionPaidAt: new Date(),
-        commissionProvider: "pagbank" } });
+        commissionProvider: "pagbank",
+        commissionProviderEnvironment: order.environment } });
       valid = Boolean(change.modifiedCount);
     } else {
       const change = await Freight.updateOne({
@@ -121,7 +123,8 @@ export async function syncPagBankOrder(order, remote) {
         paymentMethod: "pix_freteon", paymentStatus: "awaiting",
         agreedPriceCents: order.amountCents,
         status: { $in: ["booked", "transit", "completed", "cancelled"] }
-      }, { $set: { paymentStatus: "paid_pagbank", paymentProvider: "pagbank" } });
+      }, { $set: { paymentStatus: "paid_pagbank", paymentProvider: "pagbank",
+        paymentProviderEnvironment: order.environment } });
       valid = Boolean(change.modifiedCount) && freight.status !== "cancelled";
     }
   } else if (status === "refunded" && order.kind === "freight") {
@@ -161,6 +164,8 @@ export async function syncPagBankOrder(order, remote) {
 }
 export async function refreshPagBankOrder(order) {
   if (order.orderId && order.status !== "refunded") {
+    if (order.environment !== process.env.PAGBANK_ENV)
+      fail(409, "Cobrança criada em outro ambiente PagBank. Consulte a configuração original.");
     const remote = await pagbankRequest("GET", `/orders/${encodeURIComponent(order.orderId)}`);
     await syncPagBankOrder(order, remote);
   }
@@ -205,6 +210,7 @@ export async function pagBankCreate(req, res) {
       order = await PagBankOrder.create({
         freightId: freight._id, kind: req.params.kind,
         payerId: String(req.user._id), amountCents,
+        environment: process.env.PAGBANK_ENV,
         externalReference: `ft-${req.params.kind}-${randomUUID()}`,
         idempotencyKey: randomUUID().replaceAll("-", ""),
       });
