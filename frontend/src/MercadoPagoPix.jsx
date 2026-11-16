@@ -4,7 +4,7 @@ import { api } from "./api.js";
 import { money } from "./format.js";
 
 const labels = { freight: "Pagar frete com Pix", commission: "Pagar comissão com Pix" };
-export default function MercadoPagoPix({ requestId, kind, onPaid, gateway }) {
+export default function MercadoPagoPix({ requestId, kind, onPaid, gateway, compact = false }) {
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
   const [order, setOrder] = useState(null);
@@ -85,9 +85,9 @@ export default function MercadoPagoPix({ requestId, kind, onPaid, gateway }) {
   const provider = order?.provider || gateway?.preferred || "mercadopago";
   const providerName = provider === "pagbank" ? "PagBank" : "Mercado Pago";
   const sandbox = provider === "pagbank" && gateway?.pagbankEnvironment === "sandbox";
-  return <section className="mp-pix-panel" aria-label={labels[kind]}>
+  return <section className={`mp-pix-panel${compact ? " mp-pix-panel-compact" : ""}`} aria-label={labels[kind]}>
     <div className="mp-pix-head"><QrCode size={20}/><strong>{labels[kind]} · {providerName}</strong></div>
-    {sandbox && <p className="muted">Ambiente PagBank de testes: este Pix não representa cobrança real.</p>}
+    {sandbox && <p className="muted">{compact ? "PagBank sandbox · Apenas testes, sem pagamento real." : "Ambiente PagBank de testes: este Pix não representa cobrança real."}</p>}
     {checking ? (
       <p className="muted" role="status">Consultando situação do Pix no banco...</p>
     ) : approved ? (
@@ -129,7 +129,7 @@ export default function MercadoPagoPix({ requestId, kind, onPaid, gateway }) {
       </div>
     ) : (
       <form onSubmit={create}>
-        <p className="muted">O valor é calculado pelo FreteOn. O Pix será emitido para a conta {providerName} do FreteOn.</p>
+        <p className="muted">{compact ? "Informe os dados do pagador para gerar o Pix." : <>O valor é calculado pelo FreteOn. O Pix será emitido para a conta {providerName} do FreteOn.</>}</p>
         <label>E-mail do pagador
           <input type="email" required autoComplete="email" maxLength={200}
             placeholder="seuemail@exemplo.com" value={email}
