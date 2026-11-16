@@ -4210,3 +4210,35 @@ a.maps-route-button { display: flex; align-items: center; justify-content: cente
 a.maps-route-button:focus-visible { outline: 3px solid #ff8a35; outline-offset: 3px; }
 .maps-route-help { font-size: .8rem; color: #617186; line-height: 1.5; }
 .freight-distance { flex-wrap: wrap; }
+
+
+/* Menu administrativo móvel: sem alterar a navegação de cliente e motorista. */
+.master-menu-toggle, .master-drawer-layer { display: none; }
+@media (max-width: 760px) {
+  .master-menu-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 42px; width: 42px; height: 42px; border-radius: 12px;
+    background: #fff3e9; color: #a84f10; border: 1px solid #f5dfcb;
+  }
+  .master-drawer-layer { display: block; position: fixed; inset: 0; z-index: 200; pointer-events: none; visibility: hidden; }
+  .master-drawer-layer.open { pointer-events: auto; visibility: visible; }
+  .master-drawer-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 0; background: rgba(10, 26, 45, .55); opacity: 0; transition: opacity .2s; }
+  .master-drawer-layer.open .master-drawer-backdrop { opacity: 1; }
+  .master-mobile-drawer {
+    position: absolute; inset: 0 auto 0 0; width: min(310px, 86vw);
+    background: #fff; padding: 22px 16px max(20px, env(safe-area-inset-bottom));
+    box-shadow: 8px 0 35px #071b2b2e; transform: translateX(-102%);
+    transition: transform .22s ease; overflow-y: auto; overscroll-behavior: contain;
+  }
+  .master-drawer-layer.open .master-mobile-drawer { transform: translateX(0); }
+  .master-drawer-heading { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px 22px; font-size: 19px; color: #10243e; }
+  .master-drawer-heading button { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: #f2f4f7; }
+  .master-mobile-drawer nav { display: grid; gap: 5px; }
+  .master-mobile-drawer nav button { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 49px; padding: 12px 14px; text-align: left; border-radius: 11px; color: #59677b; font-size: 15px; }
+  .master-mobile-drawer nav button span:nth-child(2) { flex: 1; }
+  .master-mobile-drawer nav button.selected { color: #a84600; background: #fff0e4; font-weight: 700; }
+  .master-drawer-count { background: #f88730; color: #fff; border-radius: 99px; min-width: 22px; text-align: center; padding: 2px 6px; font-size: 12px; font-weight: 700; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .master-mobile-drawer, .master-drawer-backdrop { transition: none; }
+}
