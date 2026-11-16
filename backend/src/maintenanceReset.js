@@ -13,16 +13,20 @@ import { maintenancePreflight } from "./maintenanceAudit.js";
 const BATCH_ID = "freteon-reset-homologacao-2026-11-16-v1";
 const RESET_FLAG = "RESET_NONMASTER_HOMOLOGATION_ONCE";
 
+export function resetPreflightAllowed(preflight) {
+  return preflight.counts.masters === 1 &&
+    !preflight.paymentEnvironment.mpEnabled &&
+    preflight.paymentEnvironment.pagBankEnvironment === "sandbox" &&
+    !preflight.paymentEnvironment.pagBankProductionAllowed &&
+    preflight.counts.mercadoPagoOrders === 0 &&
+    preflight.counts.pagBankOrdersProduction === 0 &&
+    preflight.counts.fretesAtivosForaHomologacao === 0;
+}
+
 export async function resetHomologationOnce() {
   if (process.env.FRETEON_RESET_TEST_DATA_ONCE !== RESET_FLAG) return;
   const preflight = await maintenancePreflight();
-  if (preflight.counts.masters !== 1 ||
-      preflight.paymentEnvironment.mpEnabled ||
-      preflight.paymentEnvironment.pagBankEnvironment !== "sandbox" ||
-      preflight.paymentEnvironment.pagBankProductionAllowed ||
-      preflight.counts.mercadoPagoOrders !== 0 ||
-      preflight.counts.pagBankOrdersProduction !== 0 ||
-      preflight.counts.fretesAtivosForaHomologacao !== 0) {
+  if (!resetPreflightAllowed(preflight)) {
     console.error("FRETEON_RESET_BLOCKED " + JSON.stringify({
       masters: preflight.counts.masters,
       gateway: preflight.paymentEnvironment,
