@@ -4349,3 +4349,6 @@ dialog:has(.driver-compact) { max-width: 620px; overscroll-behavior: contain; }
 @media (prefers-reduced-motion: reduce) {
   .wallet-row-side svg, .wallet-preferences-disclosure > summary svg:last-child { transition: none; }
 }
+
+.wallet-row-address { color: #63778a; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; margin-top: 0; margin-bottom: 0; }
+.wallet-item-compact > .wallet-row-address { border-top: 1px solid #edf1f5; padding-top: 12px; }
