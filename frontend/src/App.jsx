@@ -632,13 +632,16 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         </div>
         <RouteDistance request={request} />
         {area === "motorista" ? <div className="driver-card-actions">
-          <button type="button" className="driver-details-button" onClick={() => setModal({ type: "detail", id: request.id })}>
-            Ver detalhes <ArrowRight size={18}/>
+          <button type="button"
+            className={request.status === "open" ? "driver-proposal-button" : "driver-details-button"}
+            onClick={() => setModal({ type: "detail", id: request.id })}>
+            {request.status === "open"
+              ? request.proposals.some(p => p.driverId === user.id)
+                ? "Ver detalhes e editar proposta"
+                : "Ver detalhes e enviar proposta"
+              : "Ver detalhes"}
+            <ArrowRight size={18}/>
           </button>
-          {request.status === "open" && <button type="button" className="driver-proposal-button"
-            onClick={() => setModal({ type: "detail", id: request.id, focusProposal: true })}>
-            {request.proposals.some(p => p.driverId === user.id) ? "Editar proposta" : "Enviar proposta"}
-          </button>}
         </div> : request.status === "open" ? (
           <button type="button" className={`client-proposals-cta${request.proposals.length ? " has-proposals" : ""}`}
             onClick={() => setModal({ type: "detail", id: request.id })}>
@@ -1456,13 +1459,27 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             {selected.helper ? "Com ajudante" : "Sem ajudante"} ·{" "}
             {selected.time}
           </p>
-          {area === "cliente" && ["open", "booked"].includes(selected.status) ? (
+          {area === "cliente" && ["open", "booked"].includes(selected.status) && !selected.proposals?.length ? (
             <FreightPhotoPicker
               photos={selected.photos || []}
               busy={busy}
               onAdd={(photos) => addFreightPhotos(selected.id, photos)}
               onRemove={(index) => removeFreightPhoto(selected.id, index)}
             />
+          ) : area === "cliente" && selected.proposals?.length ? (
+            selected.photos?.length > 0 ? (
+              <details className="freight-gallery freight-gallery-collapsible">
+                <summary><Camera size={17}/> Ver fotos já enviadas ({selected.photos.length})</summary>
+                <div className="freight-gallery-images">
+                  {selected.photos.map((photo, i) => (
+                    <button type="button" key={i} onClick={() =>
+                      setModal({ type: "photo", id: selected.id, index: i })}>
+                      <FreightPhotoImage src={photo} alt={`Abrir foto ${i + 1} da carga`} />
+                    </button>
+                  ))}
+                </div>
+              </details>
+            ) : null
           ) : (
             <div className="freight-gallery">
               <h3>Fotos da carga ({selected.photos?.length || 0})</h3>
