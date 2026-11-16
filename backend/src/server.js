@@ -11,6 +11,8 @@ import { maps } from "./maps.js";
 import { Account, Session, Freight, PrivacyRequest, PushSubscription } from "./models.js";
 import { privacyRouter } from "./privacyChannel.js";
 import { mercadoPagoPublic, MercadoPagoOrder } from "./mercadoPago.js";
+import { pagBankWebhook, PagBankOrder } from "./pagBank.js";
+import { PaymentProviderSettings } from "./paymentProviderSettings.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -37,6 +39,8 @@ app.use(
 app.use(cookieParser());
 // Webhook público: a assinatura HMAC do Mercado Pago substitui a sessão/cabeçalhos do PWA.
 app.use("/api/mercadopago", express.json({ limit: "50kb" }), mercadoPagoPublic);
+// PagBank assina o corpo ORIGINAL. Não usar express.json antes da verificação ECDSA.
+app.use("/api/pagbank", express.raw({ type: "application/json", limit: "50kb" }), pagBankWebhook);
 // As consultas de mapas não dependem do MongoDB; a sessão e os fretes continuam protegidos.
 app.use("/api/maps", maps);
 app.get("/api/health", (req, res) =>
@@ -135,7 +139,7 @@ let startupStage = "conexão MongoDB";
 try {
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
   startupStage = "criação de índices";
-  await Promise.all([Account.init(), Session.init(), Freight.init(), PrivacyRequest.init(), PushSubscription.init(), MercadoPagoOrder.init()]);
+  await Promise.all([Account.init(), Session.init(), Freight.init(), PrivacyRequest.init(), PushSubscription.init(), MercadoPagoOrder.init(), PagBankOrder.init(), PaymentProviderSettings.init()]);
   startupStage = "criação do Master";
   await bootstrapAdmin();
   console.log("MongoDB conectado.");
