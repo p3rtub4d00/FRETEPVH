@@ -6,10 +6,10 @@ import PushNotificationsPanel from "./PushNotificationsPanel.jsx";
 const labels = { motoristas:"Motoristas",fretes:"Fretes",financeiro:"Financeiro",recuperacao:"Recuperar senhas",denuncias:"Denúncias",geral:"Visão geral" };
 export function useMasterNotifications(active) {
  const [items,setItems]=useState([]);const [error,setError]=useState("");
- async function refresh(){if(!active)return;try{const data=await api("/master/notifications");setItems(data.items||[]);setError("");}catch(e){setError(e.message||"Falha ao consultar notificações");}}
+ async function refresh(){if(!active)return;try{const data=await api("/master/notifications", { headers: { "X-FreteOn-Role": "master" } });setItems(data.items||[]);setError("");}catch(e){setError(e.message||"Falha ao consultar notificações");}}
  useEffect(()=>{if(!active)return;refresh();const interval=setInterval(refresh,12000);const visible=()=>{if(!document.hidden)refresh();};document.addEventListener("visibilitychange",visible);return()=>{clearInterval(interval);document.removeEventListener("visibilitychange",visible);};},[active]);
- async function markRead(id){try{await api(`/master/notifications/${id}/read`,{method:"POST",body:{}});setItems(old=>old.map(item=>item.id===id?{...item,read:true}:item));}catch(e){setError(e.message);}}
- async function markAll(){try{await api("/master/notifications/read-all",{method:"POST",body:{}});setItems(old=>old.map(item=>({...item,read:true})));}catch(e){setError(e.message);}}
+ async function markRead(id){try{await api(`/master/notifications/${id}/read`,{method:"POST",body:{},headers:{"X-FreteOn-Role":"master"}});setItems(old=>old.map(item=>item.id===id?{...item,read:true}:item));}catch(e){setError(e.message);}}
+ async function markAll(){try{await api("/master/notifications/read-all",{method:"POST",body:{},headers:{"X-FreteOn-Role":"master"}});setItems(old=>old.map(item=>({...item,read:true})));}catch(e){setError(e.message);}}
  return {items,error,refresh,markRead,markAll,unread:items.filter(item=>!item.read).length};
 }
 export default function MasterNotifications({notifications,onNavigate,accountId}) {
