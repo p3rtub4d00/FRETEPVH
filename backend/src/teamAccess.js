@@ -115,14 +115,16 @@ export function staffAccessForRequest(req) {
   if (pathname.startsWith("/master/team")) return false;
   if (pathname.startsWith("/master/audit")) return method === "GET" && allowed(req, "audit.view");
   if (/^\/master\/reports(?:\/|$)/.test(pathname))
-    return allowed(req, method === "PATCH" ? "support.manage" : "support.view");
+    return method === "GET" ? allowed(req, "support.view") :
+      method === "PATCH" ? allowed(req, "support.manage") : false;
   if (pathname.startsWith("/master/")) return false;
   if (pathname.startsWith("/recovery/master")) return false;
   if (pathname.startsWith("/privacy/") || pathname.startsWith("/legal/")) return false;
   if (/^\/drivers\/[a-f\d]{24}$/i.test(pathname))
     return method === "PATCH" && allowed(req, "drivers.manage");
   if (/^\/driver-verification\/[a-f\d]{24}(?:\/documents\/[^/]+|\/review)?$/i.test(pathname)) {
-    return allowed(req, method === "PATCH" ? "drivers.manage" : "drivers.view");
+    if (method === "GET") return allowed(req, "drivers.view");
+    return method === "PATCH" && pathname.endsWith("/review") && allowed(req, "drivers.manage");
   }
   if (/^\/requests\/[a-f\d]{24}\/finance$/i.test(pathname) && method === "POST") {
     const action = req.body?.action;
