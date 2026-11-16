@@ -70,7 +70,7 @@ test("validação de permissões impede privilégios fora de catálogo e combina
     TEAM_ROLES.financeiro.permissions);
   assert.throws(() => validateTeamPermissions("financeiro", ["dashboard.view", "finance.payout"]), /exige/);
   assert.throws(() => validateTeamPermissions("financeiro", ["dashboard.view", "bank.manage"]), /inválidas/);
-  assert.throws(() => validateTeamPermissions("auditor", ["dashboard.view", "finance.refund"]), /somente de leitura/);
+  assert.throws(() => validateTeamPermissions("auditor", ["dashboard.view", "finance.refund"]), /exclusivamente de leitura/);
   assert.throws(() => validateTeamPermissions("unknown", ["dashboard.view"]), /inválido/);
 });
 test("serialização não expõe papel staff como Master Principal", () => {
