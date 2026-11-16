@@ -180,7 +180,7 @@ function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhot
           <span className="driver-compact-net-label">Após comissão</span><strong className="driver-compact-net">{money(net / 100)}</strong>
         </div>
         {request.paymentMethod === "card_driver" && <small>Valor antes das taxas da sua maquininha.</small>}
-        {request.paymentMethod === "pix_freteon" && <small>Pagamento e repasse Pix em simulação.</small>}
+        {request.paymentMethod === "pix_freteon" && <small>Pix do cliente validado pelo banco. Repasse ao motorista após confirmação da entrega.</small>}
         {request.paymentMethod === "cash_driver" && <small>Pagamento em dinheiro diretamente ao motorista.</small>}
       </section>
       <div className="driver-compact-meta">
@@ -453,7 +453,7 @@ function RequestForm({ onCreate, onClose, requestError }) {
               {[
                 ["cash_driver", "Dinheiro ao motorista", "Pague diretamente ao motorista ao final do serviço."],
                 ["card_driver", "Cartão na maquininha", "O motorista precisa aceitar cartão; ele informa um preço que considere a taxa da maquininha."],
-                ["pix_freteon", "Pix pelo FreteOn", "Por enquanto é apenas uma simulação. Nenhum Pix real será cobrado."],
+                ["pix_freteon", "Pix pelo FreteOn", "O Pix é gerado após escolher o motorista. O transporte aguarda a confirmação do banco."],
               ].map(([value, label, help]) => (
                 <label key={value} className={`payment-choice ${data.paymentMethod === value ? "selected" : ""}`}>
                   <input type="radio" name="paymentMethod" value={value} required
@@ -1657,9 +1657,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 <h3>Confirme a entrega</h3>
                 <p>
                   {selected.paymentMethod === "pix_freteon"
-                    ? state.mercadoPagoEnabled
-                      ? "Confirme que recebeu sua carga corretamente. O Pix já foi registrado pelo provedor de pagamento."
-                      : "Confirme que recebeu sua carga corretamente. O pagamento continua em modo simulação."
+                    ? ["paid_mp", "paid_pagbank"].includes(selected.paymentStatus)
+                      ? "Confirme que recebeu sua carga corretamente. O Pix foi confirmado pelo banco."
+                      : "Confirme sua entrega somente após verificar que o pagamento consta como aprovado no FreteOn."
                     : "Confirme somente se recebeu a carga e efetuou o pagamento combinado diretamente ao motorista."}
                 </p>
                 <button className="primary full" disabled={busy}
@@ -1774,7 +1774,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 )
               )}
               {selected.paymentMethod === "pix_freteon" && (
-                <p className="muted">Pix pelo FreteOn em modo simulação. Nenhum pagamento real será recebido.</p>
+                <p className="muted">O Pix será pago à conta FreteOn pelo banco selecionado, depois da contratação. A coleta aguarda confirmação bancária.</p>
               )}
               {selected.paymentMethod === "card_driver" && (
                 <p className="muted">O cliente pagará na maquininha do motorista. A taxa bancária deve estar considerada no preço da proposta.</p>
@@ -2078,7 +2078,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </p>
             <p className="info">
               {selected.paymentMethod === "pix_freteon"
-                ? "Pagamento Pix apenas simulado após a contratação. Não haverá cobrança real."
+                ? "Após contratar o motorista, você deverá pagar o Pix gerado pelo FreteOn. O transporte começa após confirmação do banco."
                 : selected.paymentMethod === "card_driver"
                   ? "Pague diretamente na maquininha do motorista. O preço total informado na proposta deve incluir os custos da transação."
                   : selected.paymentMethod === "cash_driver"
@@ -2248,10 +2248,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </div>
           </div>
           <p className="info">
-            Pedidos, propostas e pagamentos simulados ficam registrados na conta.
+            Pedidos, propostas e pagamentos ficam registrados na conta.
             Para motoristas com o painel aberto, contratações novas são verificadas
-            aproximadamente a cada 5 segundos. Dinheiro e cartão
-            são recebidos pelo motorista; Pix pelo FreteOn ainda é simulado.
+            aproximadamente a cada 5 segundos. Dinheiro e cartão são recebidos pelo motorista;
+            o Pix ao FreteOn depende da aprovação bancária.
           </p>
         </Modal>
       )}
@@ -2301,7 +2301,7 @@ function ProposalForm({ request, available, driverId, onSubmit, commissionRate =
     : request.paymentMethod === "cash_driver"
       ? `O cliente paga em dinheiro ao motorista. A comissão de ${commissionRate}% é repassada ao FreteOn em até 72h após a confirmação do pagamento.`
       : request.paymentMethod === "pix_freteon"
-        ? "Pix pelo FreteOn em simulação. Após a entrega, solicite o repasse na carteira."
+        ? "O Pix é recebido pelo FreteOn após confirmação bancária. Depois da entrega, solicite o repasse na carteira."
         : "Confirme a forma de pagamento com as informações deste pedido.";
   return (
     <form className="driver-proposal-form" onSubmit={event => {
