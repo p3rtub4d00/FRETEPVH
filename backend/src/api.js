@@ -16,6 +16,7 @@ import { validProposalOptions, proposalDescription, hasExternalContact } from ".
 import { notifyInBackground, notifyMasters } from "./webPush.js";
 import { commissionRouter } from "./commissionSettings.js";
 import { masterNotifications } from "./masterNotifications.js";
+import { mercadoPagoPrivate, mercadoPagoEnabled } from "./mercadoPago.js";
 
 export const api = Router();
 api.use(authenticate);
@@ -31,6 +32,7 @@ api.use((req, res, next) => {
   next();
 });
 api.use(finance);
+api.use(mercadoPagoPrivate);
 api.use(commissionRouter);
 api.use(masterNotifications);
 api.use(pushRouter);
@@ -171,6 +173,7 @@ api.get("/state", async (req, res) => {
     users,
     requests: requests.map((request) => presentRequest(request, req.user)),
     wallet: req.user.role === "cliente" ? null : walletSummary(requests, req.user),
+    mercadoPagoEnabled: mercadoPagoEnabled(),
   });
 });
 api.patch("/profile/photo", authorize("cliente", "motorista"), async (req, res) => {
@@ -394,7 +397,7 @@ api.patch("/requests/:id", async (req, res) => {
       req.body.status === "cancelled" &&
       ["open", "booked"].includes(request.status)
     ) {
-      if (request.paymentMethod === "pix_freteon" && request.paymentStatus === "simulated_paid")
+      if (request.paymentMethod === "pix_freteon" && ["simulated_paid", "paid_mp"].includes(request.paymentStatus))
         fail(409, "Use Cancelar e solicitar reembolso para o Master analisar o Pix pago.");
       request.status = "cancelled";
       request.payoutStatus = "none";
@@ -417,8 +420,8 @@ api.patch("/requests/:id", async (req, res) => {
   ) {
     if (request.status === "booked" && req.body.status === "transit") {
       if (request.paymentMethod === "pix_freteon" &&
-          request.paymentStatus !== "simulated_paid")
-        fail(409, "Aguarde o cliente simular o Pix antes de iniciar o transporte.");
+          !["simulated_paid", "paid_mp"].includes(request.paymentStatus))
+        fail(409, "Aguarde a confirmação do pagamento Pix antes de iniciar o transporte.");
       request.status = "transit";
     } else if (request.status === "transit" && req.body.status === "completed") {
       request.status = "completed";
