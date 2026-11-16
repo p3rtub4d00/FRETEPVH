@@ -739,6 +739,65 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     );
   }
 
+  function clientFreightCard(request) {
+    const proposalCount = request.proposals?.length || 0;
+    const isOpen = request.status === "open";
+    const needsConfirmation = request.status === "completed" &&
+      request.paymentMethod && !request.deliveryConfirmedAt &&
+      request.disputeStatus === "none" && !refundBlocked(request);
+    const date = request.date
+      ? new Date(`${request.date}T12:00:00`)
+      : new Date(request.createdAt || 0);
+    const dateLabel = !Number.isNaN(date.getTime())
+      ? date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+      : "Data não informada";
+    const actionLabel = isOpen
+      ? proposalCount > 0 ? "Ver propostas dos motoristas" : "Ver detalhes do pedido"
+      : needsConfirmation ? "Confirmar entrega"
+      : ["booked", "transit"].includes(request.status) ? "Acompanhar frete"
+      : "Ver detalhes do frete";
+
+    return (
+      <article className="driver-history-card client-freight-card" key={request.id}>
+        <div className="driver-history-heading">
+          <span className={`status ${request.status}`}>
+            {statusLabels[request.status]}
+          </span>
+          <span className="driver-history-date"><Clock3 size={14}/> {dateLabel}</span>
+        </div>
+        <h3>{request.title}</h3>
+        <div className="driver-history-addresses">
+          <div><span>Retirada</span><strong>{request.origin}</strong></div>
+          <div><span>Entrega</span><strong>{request.destination}</strong></div>
+        </div>
+        <div className="client-freight-card-summary">
+          {request.status === "open" ? (
+            <span className={`client-freight-proposals${proposalCount > 0 ? " has-proposals" : ""}`}>
+              <FileCheck2 size={17}/>
+              {proposalCount > 0
+                ? `${proposalCount} ${proposalCount === 1 ? "proposta recebida" : "propostas recebidas"}`
+                : "Aguardando propostas"}
+            </span>
+          ) : Number.isFinite(request.agreedPriceCents) ? (
+            <div className="driver-history-price">
+              <span>Valor combinado</span>
+              <strong>{money(request.agreedPriceCents / 100)}</strong>
+            </div>
+          ) : null}
+          {request.photos?.length > 0 && (
+            <span className="client-freight-photo-count"><Camera size={15}/> {request.photos.length} foto(s) da carga</span>
+          )}
+          {needsConfirmation && <span className="client-freight-attention">Entrega aguardando confirmação</span>}
+        </div>
+        <button type="button"
+          className={`driver-history-details${isOpen && proposalCount > 0 ? " client-freight-action-highlight" : ""}`}
+          onClick={() => setModal({ type: "detail", id: request.id })}>
+          {actionLabel} <ArrowRight size={18}/>
+        </button>
+      </article>
+    );
+  }
+
   function driverHistoryCard(request) {
     const completed = request.status === "completed";
     const date = request.completedAt || request.updatedAt || request.createdAt;
@@ -1305,6 +1364,17 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                       new Date(a.completedAt || a.updatedAt || a.createdAt || 0).getTime())}
                     renderCard={driverHistoryCard}
                     ariaLabel="Histórico de fretes do motorista"
+                    itemName="frete"
+                  />
+                </div>
+              ) : area === "cliente" && ["fretes", "historico"].includes(page) ? (
+                <div className="client-freights-carousel">
+                  <FreightCarousel
+                    key={`cliente-${page}-${filter}`}
+                    requests={[...requests].sort((a, b) =>
+                      new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())}
+                    renderCard={clientFreightCard}
+                    ariaLabel={page === "historico" ? "Histórico de fretes do cliente" : "Meus fretes"}
                     itemName="frete"
                   />
                 </div>
