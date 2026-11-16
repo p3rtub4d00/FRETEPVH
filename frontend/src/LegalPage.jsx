@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, ArrowRight, FileText, LockKeyhole, ShieldCheck } from "lucide-react";
 import { api } from "./api.js";
 
-export const LEGAL_VERSION = "2026-11-13.3";
+export const LEGAL_VERSION = "2026-11-16.1";
 export const legalPaths = ["/termos", "/privacidade"];
 
 const terms = [
@@ -74,23 +74,23 @@ const terms = [
     paragraphs: [
       "DINHEIRO: quando escolhido, o cliente paga diretamente ao motorista nos termos da proposta aceita. O motorista é responsável por informar o recebimento e emitir eventual documento fiscal ou comprovante legalmente devido.",
       "CARTÃO NA MAQUININHA DO MOTORISTA: o pagamento é realizado diretamente ao motorista, em equipamento e contrato de adquirência próprios. As taxas da maquininha e condições de parcelamento são de responsabilidade do motorista, que deverá incorporá-las ou informá-las no preço total apresentado previamente ao cliente, respeitada a legislação sobre diferenciação de preços.",
-      "PIX PELO FRETEON: na versão atual, a função é exclusivamente SIMULADA. Não há cobrança Pix verdadeira, instituição custodiante, saldo bancário real ou repasse automático. Eventual ativação de pagamentos reais exigirá integração adequada, revisão dos documentos e comunicação prévia aos usuários.",
+      "PIX PELO FRETEON: quando a instituição escolhida pela plataforma estiver habilitada, o cliente paga o valor contratado por Pix gerado pelo Mercado Pago ou PagBank para a conta recebedora do FreteOn. O transporte somente é liberado após a confirmação bancária. Se a instituição não estiver configurada ou liberada, a emissão do Pix permanecerá indisponível. O repasse ao motorista é realizado manualmente pelo FreteOn após a confirmação da entrega; não há transferência bancária automática ao prestador.",
       "Pagamentos diretos feitos ao motorista não são recebidos, processados ou estornados pelo FreteOn. Divergências sobre dinheiro, cartão, chargeback, entrega ou devolução deverão ser tratadas com o prestador e, quando cabível, por meio dos canais de atendimento e das autoridades competentes."
     ]
   },
   {
-    title: "10. Comissão da plataforma: 10% sobre o frete",
+    title: "10. Comissão da plataforma e condições aplicáveis",
     paragraphs: [
-      "Para cada proposta aceita que resulte em frete concluído nos fluxos contemplados pelo sistema, a comissão da intermediação é de 10% sobre o valor total contratado, apresentada ao motorista antes de enviar a proposta e na carteira. Para pedidos antigos não abrangidos pelo financeiro, não há cobrança retroativa.",
-      "Em dinheiro ou cartão na maquininha, a obrigação simulada de repassar a comissão nasce depois da conclusão do serviço e da confirmação da entrega e do recebimento pelo cliente. O vencimento ocorre 72 horas corridas após esse registro, salvo disputa aberta ou outra suspensão válida da exigibilidade.",
-      "Na modalidade Pix pelo FreteOn, o sistema demonstra a dedução de 10% do valor contratual e o saldo líquido do motorista, sem movimentar dinheiro real enquanto durar a simulação. Alterações futuras de percentuais deverão ser informadas antes de novas propostas e não alterarão retroativamente condições já aceitas."
+      "Para cada frete elegível, a comissão é calculada sobre o valor total contratado conforme a taxa informada ao motorista na proposta e na carteira. A taxa padrão configurada pode ser de 10%, com condição promocional de 5% para motoristas recém-cadastrados quando vigente. A taxa aplicável é fixada na contratação e não se altera retroativamente.",
+      "Em dinheiro ou cartão na própria maquininha, a obrigação do motorista de pagar a comissão ao FreteOn nasce após a conclusão do serviço e a confirmação da entrega e do recebimento pelo cliente. O vencimento ocorre em 72 horas corridas, ressalvadas contestações e suspensões válidas. Quando habilitado, o pagamento da comissão ocorre por Pix ao provedor selecionado, e a quitação depende da confirmação bancária.",
+      "Na modalidade Pix pelo FreteOn, o sistema calcula a comissão indicada na contratação e o valor líquido previsto para o motorista. A administração realiza o repasse manual após a confirmação da entrega, conforme o andamento financeiro registrado. Despesas e tarifas eventualmente incidentes serão informadas conforme as condições comerciais aplicáveis."
     ]
   },
   {
     title: "11. Carteira do motorista e repasses",
     paragraphs: [
-      "A carteira apresenta, individualmente por frete, comissões a repassar e valores previstos para recebimento. Durante os testes, todos os saldos, confirmações de quitação e repasses Pix manuais indicados na interface são apenas registros demonstrativos.",
-      "Em futura operação real, eventuais pagamentos recebidos por meio de parceiro financeiro e repasses manuais dependerão de condições contratuais, confirmação efetiva do pagamento e regras de segurança do prestador de serviços de pagamento, previamente divulgadas.",
+      "A carteira apresenta, por frete, o valor contratado, a comissão devida, os pagamentos confirmados pelo provedor e a situação de repasses. Registros de ambientes de homologação ou de versões antigas não constituem, por si sós, comprovante de movimentação bancária real.",
+      "Os Pix recebidos pelo FreteOn dependem de aprovação do provedor de pagamento. O repasse ao motorista é realizado manualmente pela administração, com referência de comprovante; uma solicitação ou alteração de status sem confirmação do banco não equivale a transferência efetiva.",
       "O registro de uma solicitação de repasse não equivale, por si só, a pagamento concluído."
     ]
   },
@@ -106,14 +106,14 @@ const terms = [
     title: "13. Cancelamentos, alterações e reembolsos",
     paragraphs: [
       "Cliente e motorista devem informar prontamente impossibilidade de comparecimento ou alteração relevante. Pedidos cancelados antes da execução seguem os registros de cancelamento disponíveis na plataforma, sem comissão retroativa e sem multa automática que não tenha sido previamente divulgada e validamente acordada.",
-      "Se houver pagamento direto, eventual devolução ou indenização será apurada segundo o contrato e a legislação aplicável. Registros fictícios de Pix e estorno não representam transferência bancária real. O exercício de direitos legais do consumidor não é afastado."
+      "Se houver pagamento direto ao motorista, devoluções ou indenizações seguem o contrato e a legislação aplicável. Para Pix recebido pelo FreteOn, o cliente pode solicitar análise de reembolso e o Master poderá encaminhar a devolução pelo provedor original, quando elegível. O registro de aprovação interna não equivale a devolução concluída sem confirmação do banco. Os direitos legais do consumidor permanecem preservados."
     ]
   },
   {
     title: "14. Confirmação da entrega, avaliações e reclamações",
     paragraphs: [
       "O motorista sinaliza a conclusão do transporte. O cliente é convidado a confirmar entrega e, quando cabível, o pagamento direto, podendo registrar reclamação por divergência. A avaliação de uma a cinco estrelas reflete a percepção do cliente e não constitui laudo técnico.",
-      "Na ocorrência de reclamação, o FreteOn poderá suspender movimentações financeiras simuladas referentes ao pedido enquanto analisa os registros, sem impedir a busca de órgãos administrativos, autoridades policiais ou Judiciário.",
+      "Na ocorrência de reclamação, o FreteOn poderá suspender a liberação de repasses e submeter movimentações elegíveis à análise, observados os procedimentos dos provedores, sem impedir o acesso a órgãos administrativos, autoridades policiais ou Judiciário.",
       "Nenhum resultado de avaliação ou análise interna constitui renúncia a direitos legais."
     ]
   },
@@ -166,7 +166,7 @@ const privacy = [
   {
     title: "1. Quem trata seus dados",
     paragraphs: [
-      "FreteOn é o nome comercial da plataforma de intermediação disponível em fretepvh.onrender.com. O responsável jurídico pela operação e seu CNPJ precisam ser confirmados e informados integralmente antes do lançamento comercial. Esta é a versão de testes dos documentos.",
+      "FreteOn é o nome comercial da plataforma de intermediação disponível em fretepvh.onrender.com. A identificação jurídica completa, CNPJ e canais oficiais de atendimento da operadora devem ser informados e revisados antes do início da operação comercial com recebimentos reais.",
       "O canal de contato para solicitações de privacidade é o formulário ao final desta Política. As solicitações ficam disponíveis à administração e podem exigir confirmação de identidade antes da entrega de dados pessoais."
     ]
   },
@@ -177,14 +177,14 @@ const privacy = [
       "Verificação de motoristas: fotografias da CNH, do CRLV e selfie, placa, validade da habilitação, exercício do documento veicular, RNTRC informado quando aplicável, data e resultado da revisão e eventual motivo de correção. Não há reconhecimento facial automatizado nesta etapa; as imagens são analisadas manualmente pela administração.",
       "Fretes: endereço de coleta e entrega, título, descrição, fotos dos objetos, serviços incluídos na proposta, data, horário, estimativa de rota quando disponível, propostas, valores, modalidade de pagamento, aceite, status da entrega, avaliação e registros de contestação.",
       "Comunicações e moderação: depois da contratação, mensagens de texto entre cliente e motorista são armazenadas para execução do frete, suporte e prevenção de fraude. Denúncias, motivos de cancelamento e o histórico operacional associado podem ser tratados na análise de ocorrências, sem punição automática por simples registro.",
-      "Carteira: chave Pix informada voluntariamente pelo motorista, valores simulados de comissão, solicitações de repasse, quitação fictícia e datas de movimentação no sistema. O FreteOn atualmente não solicita dados completos de cartão bancário nem processa Pix real.",
+      "Carteira e pagamentos: chave Pix informada pelo motorista, comissão contratada, solicitações de repasse, status financeiros, identificadores e datas de pagamentos e estornos. Para gerar Pix, o pagador fornece e-mail e CPF ao provedor selecionado, além de dados cadastrais necessários à cobrança. Esses dados de pagamento são transmitidos ao Mercado Pago ou PagBank para processamento; o FreteOn não coleta os números de cartões usados na maquininha do motorista.",
       "Dados técnicos: cookies de sessão, identificadores, registros de acesso e eventos necessários à segurança, prevenção a abuso e operação. Localização GPS é acessada apenas se o usuário optar por fornecê-la e o navegador autorizar."
     ]
   },
   {
     title: "3. Finalidades e bases legais",
     paragraphs: [
-      "Os dados são usados para criar e autenticar contas, aproximar clientes e motoristas, publicar pedidos, permitir propostas, apresentar informações necessárias ao frete, registrar contratações, controlar comissões simuladas, combater fraudes, prestar suporte e responder a solicitações legais.",
+      "Os dados são usados para autenticar contas, aproximar clientes e motoristas, publicar pedidos e propostas, executar contratações, processar e conciliar pagamentos via provedores, controlar comissões, prevenir fraudes e prestar suporte e atendimento legal.",
       "As bases legais podem incluir execução de contrato e procedimentos preliminares, cumprimento de obrigação legal ou regulatória, exercício regular de direitos, legítimo interesse devidamente avaliado e consentimento apenas quando efetivamente exigido. A aceitação dos Termos não equivale a consentimento genérico para todo tratamento de dados."
     ]
   },
@@ -214,8 +214,8 @@ const privacy = [
   {
     title: "7. Pagamentos e informações financeiras",
     paragraphs: [
-      "Dinheiro e cartão na maquininha são recebidos diretamente pelo motorista, fora do processamento financeiro do FreteOn. O aplicativo pode registrar modalidade, preço, confirmações, pendências e comissões simuladas, mas não recebe os números de cartão utilizados na maquininha.",
-      "O Pix indicado como sendo pelo FreteOn funciona apenas em modo simulação, sem transferência de valores reais. Se forem ativados meios de pagamento integrados futuramente, esta Política será atualizada para descrever parceiros, compartilhamentos e retenção."
+      "Dinheiro e cartão na maquininha são recebidos diretamente pelo motorista, fora do processamento do FreteOn. O aplicativo registra modalidade, preço, confirmações, pendências e comissões, mas não recebe os números de cartão utilizados na maquininha. Para Pix pelo FreteOn e comissões, são utilizados provedores de pagamento integrados.",
+      "Os provedores Mercado Pago e PagBank podem receber e tratar os dados necessários para gerar Pix, confirmar pagamentos e processar reembolsos, sujeitos às suas respectivas políticas de privacidade. O FreteOn armazena identificadores, referências, valor, data e situação das cobranças para conciliação, prevenção de fraude e obrigações legais. Pagamentos de homologação são distintos de transações financeiras de produção."
     ]
   },
   {
@@ -361,7 +361,7 @@ export default function LegalPage({ kind, navigate }) {
         <div className="legal-icon">{isTerms ? <FileText size={25} /> : <LockKeyhole size={25} />}</div>
         <p className="eyebrow">FRETEON · DOCUMENTOS LEGAIS</p>
         <h1>{isTerms ? "Termos de Uso" : "Política de Privacidade"}</h1>
-        <p className="legal-meta">Versão {LEGAL_VERSION} · Atualização em 13 de novembro de 2026 · Aplicável à fase de testes</p>
+        <p className="legal-meta">Versão {LEGAL_VERSION} · Atualização em 16 de novembro de 2026</p>
         <p className="legal-lead">
           {isTerms ?
             "Leia as regras de utilização, responsabilidades, pagamentos, comissões e segurança antes de contratar ou oferecer um frete." :
@@ -369,7 +369,7 @@ export default function LegalPage({ kind, navigate }) {
         </p>
         <p className="legal-test-notice">
           <ShieldCheck size={18} />
-          Os pagamentos e repasses Pix do FreteOn permanecem em simulação. O conteúdo deve passar por revisão jurídica e receber a identificação cadastral completa da operadora antes do lançamento comercial.
+          Pagamentos Pix dependem da habilitação do provedor e da confirmação bancária. Os repasses aos motoristas são manuais. Estes documentos exigem revisão jurídica e identificação cadastral completa da operadora antes do lançamento comercial.
         </p>
       </div>
       <nav className="legal-toc" aria-label="Navegação pelos tópicos">
