@@ -1,6 +1,6 @@
 import RefundPanel, { refundBlocked } from "./RefundPanel.jsx";
 import { useEffect, useState } from "react";
-import { AlertCircle, Banknote, CheckCircle2, Clock3, CreditCard, QrCode, Wallet, ChevronDown, ChevronRight, History, Truck } from "lucide-react";
+import { AlertCircle, Banknote, CheckCircle2, Clock3, CreditCard, QrCode, Wallet, ChevronDown, ChevronRight } from "lucide-react";
 import { money } from "./format.js";
 
 export const paymentLabels = {
@@ -126,14 +126,18 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
         </button>
       )}
       {(!compact || expanded) && <>
-      <div className="wallet-item-heading">
-        <div>
-          <strong>{request.title}</strong>
-          <small>{request.origin} → {request.destination}</small>
-          {isMaster && <small>Motorista: {driver?.name || "Cadastro não encontrado"}</small>}
+      {compact ? (
+        <p className="wallet-row-address">{request.origin} → {request.destination}</p>
+      ) : (
+        <div className="wallet-item-heading">
+          <div>
+            <strong>{request.title}</strong>
+            <small>{request.origin} → {request.destination}</small>
+            {isMaster && <small>Motorista: {driver?.name || "Cadastro não encontrado"}</small>}
+          </div>
+          <strong>{byCents(amount)}</strong>
         </div>
-        <strong>{byCents(amount)}</strong>
-      </div>
+      )}
       <PaymentLabel method={request.paymentMethod} />
       <RefundPanel request={request} role={role} busy={busy} onAction={onAction} />
       {!refundBlocked(request) && <StatusText request={request} />}
