@@ -116,13 +116,29 @@ export async function syncPagBankOrder(order, remote) {
   const previous = order.status;
   if (previous === "refunded" && status !== "refunded") return false;
   if (previous === "approved" && !["approved", "refunded"].includes(status)) return false;
-  // Sandbox comprova apenas o teste da integração. Nunca altera o pagamento
-  // real, libera um transporte, quita comissão ou autoriza repasse.
+  // Aprovação de sandbox é registrada SEPARADAMENTE: permite homologar
+  // a execução do frete, mas não gera saldo, comissão quitada ou repasse bancário.
+  // Reconciliar mesmo para pedidos que o PagBank já aprovou antes dessa versão.
   if (order.environment !== "production") {
     if (previous !== status) {
       order.status = status;
       if (["approved", "refunded"].includes(status)) order.verifiedAt ||= new Date();
       await order.save();
+    }
+    if (status === "approved" && order.kind === "freight") {
+      await Freight.updateOne({
+        _id: order.freightId,
+        clientId: order.payerId,
+        paymentMethod: "pix_freteon",
+        paymentStatus: "awaiting",
+        agreedPriceCents: order.amountCents,
+        pagbankTestApprovedAt: null,
+        status: { $in: ["booked", "transit", "completed"] }
+      }, { $set: {
+        pagbankTestApprovedAt: order.verifiedAt || new Date(),
+        paymentProvider: "pagbank",
+        paymentProviderEnvironment: "sandbox"
+      } });
     }
     return true;
   }
