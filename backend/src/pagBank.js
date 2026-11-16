@@ -185,3 +185,123 @@ export async function refundPagBankPayment(freight) {
   await order.save();
   return result;
 }
+
+export async function pagBankCreate(req, res) {
+  if (!pagBankEnabled()) fail(503, "PagBank ainda não configurado.");
+  if (!mongoose.isValidObjectId(req.params.id)) fail(404, "Frete não encontrado.");
+  const freight = await Freight.findById(req.params.id);
+  const amountCents = canCreateMercadoPagoPix(freight, req.params.kind, req.user);
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const cpf = String(req.body?.cpf || "").replace(/\D/g, "");
+  const phone = String(req.user.phone || "").replace(/\D/g, "");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200)
+    fail(400, "Informe um e-mail válido.");
+  if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf))
+    fail(400, "Informe um CPF válido.");
+  if (!/^\d{11}$/.test(phone)) fail(409, "Atualize seu celular no perfil.");
+  let order = await PagBankOrder.findOne({ freightId: freight._id, kind: req.params.kind });
+  if (!order) {
+    try {
+      order = await PagBankOrder.create({
+        freightId: freight._id, kind: req.params.kind,
+        payerId: String(req.user._id), amountCents,
+        externalReference: `ft-${req.params.kind}-${randomUUID()}`,
+        idempotencyKey: randomUUID().replaceAll("-", ""),
+      });
+    } catch (error) {
+      if (error.code !== 11000) throw error;
+      order = await PagBankOrder.findOne({ freightId: freight._id, kind: req.params.kind });
+    }
+  }
+  if (!order || order.payerId !== String(req.user._id) || order.amountCents !== amountCents)
+    fail(409, "Cobrança anterior divergente. Consulte a administração.");
+  if (order.orderId) {
+    await refreshPagBankOrder(order);
+    return res.json(publicPagBankOrder(order));
+  }
+  if (order.attemptedAt)
+    fail(409, "Pix em conciliação. Por segurança, peça ao Master para conferir antes de repetir.");
+  const claim = await PagBankOrder.updateOne({
+    _id: order._id, attemptedAt: null, orderId: ""
+  }, { $set: { attemptedAt: new Date() } });
+  if (!claim.modifiedCount) fail(409, "Geração de Pix em andamento.");
+  const payload = {
+    reference_id: order.externalReference,
+    customer: {
+      name: String(req.user.name).trim().slice(0,100),
+      email, tax_id: cpf,
+      phones: [{ type: "MOBILE", country: "55", area: phone.slice(0,2), number: phone.slice(2) }]
+    },
+    items: [{
+      reference_id: order.externalReference.slice(0,60),
+      name: order.kind === "freight" ? "Frete FreteOn" : "Comissao FreteOn",
+      quantity: 1, unit_amount: amountCents
+    }],
+    charges: [{
+      reference_id: order.externalReference,
+      description: order.kind === "freight" ? "Frete contratado" : "Comissao de frete",
+      amount: { value: amountCents, currency: "BRL" },
+      payment_method: {
+        type: "PIX", pix: { expiration_date: new Date(Date.now()+24*60*60*1000).toISOString() }
+      }
+    }],
+    notification_urls: [`${process.env.PAGBANK_PUBLIC_URL.trim()}/api/pagbank/webhook`]
+  };
+  const result = await pagbankRequest("POST", "/orders", payload, order.idempotencyKey);
+  const charge = result?.charges?.[0];
+  if (!/^ORDE_[A-Za-z0-9-]+$/.test(String(result?.id || "")) ||
+      !/^CHAR_[A-Za-z0-9-]+$/.test(String(charge?.id || "")) ||
+      charge.reference_id !== order.externalReference ||
+      charge.amount?.value !== amountCents ||
+      charge.amount?.currency !== "BRL" ||
+      charge.payment_method?.type !== "PIX")
+    fail(502, "Resposta PagBank incompleta. Consulte o Master.");
+  order.orderId = result.id;
+  order.chargeId = charge.id;
+  order.status = "pending";
+  order.qrCode = charge.qr_code?.text || "";
+  order.expiresAt = charge.payment_method?.pix?.expiration_date
+    ? new Date(charge.payment_method.pix.expiration_date) : null;
+  await order.save();
+  const qrId = charge.qr_code?.id;
+  if (/^QRCO_[A-Fa-f0-9-]{36}$/.test(qrId || "")) {
+    try {
+      order.qrCodeBase64 = await pagbankRequest("GET", `/qrcode/${encodeURIComponent(qrId)}/png`,
+        undefined, undefined, true);
+      await order.save();
+    } catch { /* Código copia-e-cola permanece disponível. */ }
+  }
+  await syncPagBankOrder(order, result);
+  res.json(publicPagBankOrder(order));
+}
+export async function pagBankGet(req, res) {
+  if (!pagBankEnabled()) fail(503, "PagBank ainda não configurado.");
+  if (!mongoose.isValidObjectId(req.params.id)) fail(404, "Frete não encontrado.");
+  const freight = await Freight.findById(req.params.id);
+  if (!freight) fail(404, "Frete não encontrado.");
+  if (!["freight", "commission"].includes(req.params.kind))
+    fail(400, "Tipo de cobrança inválido.");
+  const owner = req.params.kind === "freight" ? freight.clientId : freight.driverId;
+  if (String(req.user._id) !== owner && req.user.role !== "master")
+    fail(403, "Sem acesso a esta cobrança.");
+  const order = await PagBankOrder.findOne({ freightId: freight._id, kind: req.params.kind });
+  if (!order) return res.json({ status: "none", provider: "pagbank" });
+  await refreshPagBankOrder(order);
+  res.json(publicPagBankOrder(order));
+}
+export const pagBankWebhook = Router();
+pagBankWebhook.post("/webhook", async (req, res) => {
+  if (!pagBankEnabled()) return res.sendStatus(503);
+  if (!verifyPagBankWebhook(req.body, req.headers["x-payload-signature"],
+      process.env.PAGBANK_WEBHOOK_PUBLIC_KEY)) return res.sendStatus(401);
+  let event;
+  try { event = JSON.parse(req.body.toString("utf8")); }
+  catch { return res.sendStatus(400); }
+  const id = String(event?.id || event?.charges?.[0]?.id || "");
+  const order = id.startsWith("CHAR_")
+    ? await PagBankOrder.findOne({ chargeId: id })
+    : id.startsWith("ORDE_")
+      ? await PagBankOrder.findOne({ orderId: id }) : null;
+  if (order) await refreshPagBankOrder(order);
+  return res.sendStatus(204);
+});
