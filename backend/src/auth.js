@@ -145,7 +145,7 @@ auth.post("/register", limit, async (req, res) => {
     privacyNoticeVersion: LEGAL_VERSION,
     privacyAcknowledgedAt: new Date(),
   });
-  if (role === "motorista") void notifyMasters({ title: "Novo motorista cadastrado", body: "Um motorista aguarda análise no painel Master.", id: String(user._id) });
+  if (role === "motorista") void notifyMasters({ title: "Novo motorista cadastrado", body: "Um motorista aguarda análise no painel Master.", category: "motoristas", id: String(user._id) });
   res.status(201).json({ user: await issueSession(req, res, user) });
 });
 auth.post("/login", limit, async (req, res) => {
