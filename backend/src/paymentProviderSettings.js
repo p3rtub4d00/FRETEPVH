@@ -34,6 +34,7 @@ export async function getPaymentProvider() {
   return {
     preferred,
     enabled: providerReady(preferred),
+    real: providerReady(preferred) && (preferred !== "pagbank" || process.env.PAGBANK_ENV === "production"),
     available: {
       mercadopago: providerReady("mercadopago"),
       pagbank: providerReady("pagbank"),
