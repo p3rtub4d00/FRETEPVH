@@ -41,7 +41,7 @@ export function applyRefund(request, user, action, reason) {
         request.commissionDueAt = null;
       }
     } else if (action === 'simulate_refund') {
-      if (request.refundStatus !== 'approved' || request.paymentStatus !== 'simulated_paid') reject(409, 'Somente cobranças simuladas podem ter devolução simulada.');
+      if (request.refundStatus !== 'approved' || request.paymentStatus !== 'simulated_paid') reject(409, 'Aprove o reembolso antes de simular a devolução. Cobranças reais exigem confirmação do Mercado Pago.');
       request.refundStatus = 'refunded_simulated';
       request.paymentStatus = 'refunded_simulated';
       request.refundedAt = new Date();
