@@ -48,11 +48,13 @@ export default function PaymentProviderAdmin({ initial, onSaved }) {
         </button>
       ))}
     </div>
-    <div className={config?.enabled ? "payment-provider-ready" : "payment-provider-warning"} role="status">
-      {config?.enabled ? <CheckCircle2 size={18}/> : <AlertCircle size={18}/>}
-      <span>{config?.enabled
-        ? `Banco selecionado: ${names[current]}. Novos Pix serão gerados nesse provedor.`
-        : `${names[current]} selecionado, mas ainda não habilitado para Pix real. Configure as credenciais antes de ativar cobranças.`}</span>
+    <div className={config?.enabled && config?.real ? "payment-provider-ready" : "payment-provider-warning"} role="status">
+      {config?.enabled && config?.real ? <CheckCircle2 size={18}/> : <AlertCircle size={18}/>}
+      <span>{config?.enabled && config?.real
+        ? `Banco selecionado: ${names[current]}. Novos Pix serão gerados para recebimento real.`
+        : config?.enabled
+          ? `${names[current]} está habilitado somente para homologação. Não há recebimento bancário real neste ambiente.`
+          : `${names[current]} selecionado, mas ainda não habilitado para Pix real. Configure as credenciais no Render antes de cobrar clientes.`}</span>
     </div>
     {config?.pagbankEnvironment === "sandbox" && current === "pagbank" && config.enabled && (
       <p className="muted">PagBank em sandbox: ambiente apenas para testes, sem recebimentos reais.</p>
