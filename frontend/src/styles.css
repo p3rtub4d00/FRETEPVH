@@ -4463,3 +4463,15 @@ dialog:has(.driver-compact) { max-width: 620px; overscroll-behavior: contain; }
   .client-freight-card .driver-history-heading { gap: 7px; }
   .client-freight-card .driver-history-details { font-size: 12px; }
 }
+
+
+/* Solicitação de frete: quatro etapas compactas; retirada e entrega não se sobrepõem. */
+.request-steps { gap: 7px; margin: 12px 0 18px; font-size: 11px; }
+.request-steps span { min-width: 0; text-align: center; line-height: 1.35; padding-top: 8px; }
+.request-route-origin-summary { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; margin: 0; border: 1px solid #dce7ef; border-radius: 10px; background: #f2f6fa; color: #536a81; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.request-route-origin-summary svg { flex-shrink: 0; color: #b97939; margin-top: 1px; }
+.request-route-origin-summary strong { color: #29425b; }
+@media (max-width: 420px) {
+  .request-steps { gap: 5px; font-size: 10px; }
+  .request-steps span { padding-top: 7px; }
+}
