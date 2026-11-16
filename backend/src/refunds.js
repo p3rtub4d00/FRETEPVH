@@ -1,16 +1,16 @@
-// Simulated refunds only. A real gateway must confirm a refund before a future
-// production flow can mark it as paid. Never accept amounts from the browser.
+// Reembolsos simulados ou reais. O status real só muda após o Mercado Pago confirmar.
+// Nunca aceitar valores enviados pelo navegador.
 const reject = (status, message) => { throw Object.assign(new Error(message), { status }); };
 const reasonText = value => {
   const reason = typeof value === 'string' ? value.trim() : '';
   if (reason.length < 10 || reason.length > 500) reject(400, 'Informe um motivo de 10 a 500 caracteres.');
   return reason;
 };
-export const refundBlocks = request => ['pending', 'approved', 'refunded_simulated'].includes(request.refundStatus);
+export const refundBlocks = request => ['pending', 'approved', 'refunded_simulated', 'refunded_mp'].includes(request.refundStatus);
 export const canRequestRefund = request => request.paymentMethod === 'pix_freteon' &&
   Number.isSafeInteger(request.agreedPriceCents) && request.agreedPriceCents > 0 &&
   ['simulated_paid', 'paid_mp'].includes(request.paymentStatus) && ['booked', 'transit', 'completed', 'cancelled'].includes(request.status) &&
-  request.payoutStatus !== 'paid_simulated' && request.disputeStatus !== 'open' &&
+  !['paid_simulated', 'paid_manual'].includes(request.payoutStatus) && request.disputeStatus !== 'open' &&
   (!request.refundStatus || request.refundStatus === 'none');
 
 export function applyRefund(request, user, action, reason) {
@@ -41,7 +41,7 @@ export function applyRefund(request, user, action, reason) {
         request.commissionDueAt = null;
       }
     } else if (action === 'simulate_refund') {
-      if (request.refundStatus !== 'approved') reject(409, 'Aprove o reembolso antes de simular a devolução.');
+      if (request.refundStatus !== 'approved' || request.paymentStatus !== 'simulated_paid') reject(409, 'Somente cobranças simuladas podem ter devolução simulada.');
       request.refundStatus = 'refunded_simulated';
       request.paymentStatus = 'refunded_simulated';
       request.refundedAt = new Date();
