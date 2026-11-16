@@ -651,8 +651,15 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   let requests = state.requests;
   if (page === "historico")
     requests = state.requests.filter((request) =>
-      ["completed", "cancelled"].includes(request.status) &&
+      (area === "cliente"
+        ? request.status === "completed"
+        : ["completed", "cancelled"].includes(request.status)) &&
       (area !== "motorista" || request.driverId === user.id),
+    );
+  else if (area === "cliente" && page === "fretes")
+    requests = state.requests.filter((request) =>
+      ["open", "booked", "transit"].includes(request.status) ||
+      (filter === "cancelled" && request.status === "cancelled"),
     );
   else if (area === "motorista")
     requests =
@@ -669,7 +676,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 ["booked", "transit"].includes(request.status)),
           );
   else if (page === "inicio") requests = active;
-  if (filter !== "all")
+  if (filter !== "all" && page === "fretes")
     requests = requests.filter((request) => request.status === filter);
 
   function requestCard(request, featured = false) {
@@ -1331,14 +1338,20 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               </div>
               {page === "fretes" && (
                 <div className="filters">
-                  {[
+                  {(area === "cliente" ? [
+                    ["all", "Em andamento"],
+                    ["open", "Aguardando propostas"],
+                    ["booked", "Contratados"],
+                    ["transit", "Em transporte"],
+                    ["cancelled", "Cancelados"],
+                  ] : [
                     ["all", "Todos"],
                     ["open", "Propostas"],
                     ["booked", "Contratados"],
                     ["transit", "Em transporte"],
                     ["completed", "Concluídos"],
                     ["cancelled", "Cancelados"],
-                  ].map(([key, label]) => (
+                  ]).map(([key, label]) => (
                     <button
                       key={key}
                       aria-pressed={filter === key}
@@ -1380,8 +1393,18 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 </div>
               ) : <div className="cards">{requests.map(request => requestCard(request))}</div>}
               {!requests.length && !(area === "motorista" && page === "inicio") && (
-                <Empty title="Nenhum frete por aqui">
-                  Novos pedidos e atualizações aparecerão nesta área.
+                <Empty title={area === "cliente" && page === "historico"
+                  ? "Nenhum frete concluído"
+                  : area === "cliente" && page === "fretes" && filter === "cancelled"
+                    ? "Nenhum frete cancelado"
+                    : area === "cliente" && page === "fretes"
+                      ? "Nenhum frete nesta situação"
+                      : "Nenhum frete por aqui"}>
+                  {area === "cliente" && page === "historico"
+                    ? "Os fretes finalizados aparecerão aqui."
+                    : area === "cliente" && page === "fretes"
+                      ? "Consulte as outras situações ou solicite um novo frete."
+                      : "Novos pedidos e atualizações aparecerão nesta área."}
                 </Empty>
               )}
             </section>
