@@ -101,10 +101,10 @@ const freightSchema = new mongoose.Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ["none", "awaiting", "simulated_paid", "received_driver", "refunded_simulated"],
+      enum: ["none", "awaiting", "simulated_paid", "paid_mp", "received_driver", "refunded_simulated", "refunded_mp"],
       default: "none",
     },
-    refundStatus: { type: String, enum: ["none", "pending", "approved", "rejected", "refunded_simulated"], default: "none" },
+    refundStatus: { type: String, enum: ["none", "pending", "approved", "rejected", "refunded_simulated", "refunded_mp"], default: "none" },
     refundReason: { type: String, default: "", maxlength: 500 },
     refundDecisionReason: { type: String, default: "", maxlength: 500 },
     refundAmountCents: { type: Number, default: 0, min: 0 },
@@ -128,7 +128,7 @@ const freightSchema = new mongoose.Schema(
     commissionPaidAt: { type: Date, default: null },
     payoutStatus: {
       type: String,
-      enum: ["none", "available", "requested", "paid_simulated"],
+      enum: ["none", "available", "requested", "paid_simulated", "paid_manual"],
       default: "none",
     },
     payoutRequestedAt: { type: Date, default: null },
