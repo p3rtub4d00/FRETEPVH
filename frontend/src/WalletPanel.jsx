@@ -47,6 +47,8 @@ function StatusText({ request }) {
   if (state === "open") return <span className="wallet-status warning">Em contestação — sem bloqueio automático</span>;
   if (state === "resolved_cancelled") return <span className="wallet-status">Cancelado pela administração</span>;
   if (request.paymentMethod === "pix_freteon") {
+    if (request.paymentProviderEnvironment === "sandbox" && request.pagbankTestApprovedAt)
+      return <span className="wallet-status">PagBank sandbox aprovado · {request.deliveryConfirmedAt ? "frete de teste concluído, sem repasse bancário" : "transporte em homologação, sem saldo real"}</span>;
     if (request.paymentStatus === "refunded_simulated") return <span className="wallet-status">Devolução de registro antigo sem conciliação bancária</span>;
     if (request.paymentStatus === "refunded_mp") return <span className="wallet-status success">Reembolso confirmado pelo Mercado Pago</span>;
     if (request.paymentStatus === "refunded_pagbank") return <span className="wallet-status success">Reembolso confirmado pelo PagBank</span>;
@@ -147,6 +149,10 @@ export function masterFinancialBucket(request, tab) {
   return tab === "all";
 }
 function masterFinanceLabel(request) {
+  if (request.paymentProviderEnvironment === "sandbox" && request.pagbankTestApprovedAt)
+    return request.deliveryConfirmedAt
+      ? "Homologação PagBank concluída · sem repasse real"
+      : "Pix sandbox aprovado · apenas fluxo de teste";
   if (request.refundStatus === "pending") return "Reembolso aguardando análise";
   if (request.refundStatus === "approved") return "Reembolso aprovado · aguarda devolução";
   if (request.disputeStatus === "open") return "Contestação aguardando decisão";
