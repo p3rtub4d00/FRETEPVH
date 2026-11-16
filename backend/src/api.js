@@ -118,6 +118,17 @@ function presentRequest(request, user) {
       "commissionPaidAt", "payoutStatus", "payoutRequestedAt", "payoutPaidAt",
     ]) delete result[field];
   }
+  if (user.staffAccountId && !user.staffPermissions?.includes("finance.view")) {
+    // O painel operacional/atendimento não recebe valores internos nem chaves
+    // de pagamento: esconder o menu sozinho não protegeria os dados na API.
+    for (const field of [
+      "commissionCents", "driverNetCents", "commissionRate",
+      "commissionStatus", "commissionDueAt", "commissionPaymentRequestedAt",
+      "commissionPaidAt", "commissionProvider", "commissionProviderEnvironment",
+      "payoutStatus", "payoutRequestedAt", "payoutPaidAt", "payoutReference",
+      "refundAmountCents", "refundedAt", "refundedBy",
+    ]) delete result[field];
+  }
   return result;
 }
 api.get("/state", async (req, res) => {
@@ -254,7 +265,7 @@ api.get("/state", async (req, res) => {
     result.rating = summary?.rating
       ? summary.rating.toFixed(1).replace(".", ",")
       : "Novo";
-    if (req.user.role === "master") result.pixKey = driver.pixKey || "";
+    if (req.user.role === "master" && (!req.user.staffAccountId || req.user.staffPermissions?.includes("finance.view"))) result.pixKey = driver.pixKey || "";
     if (req.user.role !== "master" && result.id !== userId) delete result.phone;
     return result;
   });
@@ -271,7 +282,8 @@ api.get("/state", async (req, res) => {
     drivers: people,
     users,
     requests: requests.map((request) => presentRequest(request, req.user)),
-    wallet: req.user.role === "cliente" ? null : walletSummary(requests, req.user, gateway.real),
+    wallet: req.user.role === "cliente" || (req.user.staffAccountId && !req.user.staffPermissions?.includes("finance.view"))
+      ? null : walletSummary(requests, req.user, gateway.real),
     mercadoPagoEnabled: gateway.enabled || gateway.anyReady,
     paymentGateway: gateway,
   });
