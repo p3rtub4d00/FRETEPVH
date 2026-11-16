@@ -4475,3 +4475,77 @@ dialog:has(.driver-compact) { max-width: 620px; overscroll-behavior: contain; }
   .request-steps { gap: 5px; font-size: 10px; }
   .request-steps span { padding-top: 7px; }
 }
+
+
+/* Motorista: informações do chamado resumidas; área de proposta recebe prioridade visual. */
+dialog:has(.driver-open-layout) { width: calc(100% - 24px); max-width: 890px; max-height: 94dvh; }
+.driver-open-layout { display: grid; grid-template-columns: minmax(0,0.88fr) minmax(0,1.35fr); align-items: start; gap: 18px; min-width: 0; }
+.driver-open-brief { display: grid; gap: 13px; min-width: 0; padding: 14px; border: 1px solid #e0e8ef; border-radius: 15px; background: #f8fafc; }
+.driver-open-route { display: grid; gap: 11px; }
+.driver-open-route > div { display: grid; gap: 3px; min-width: 0; }
+.driver-open-route span { color: #728498; font-size: 11px; }
+.driver-open-route strong { color: #1a344e; font-weight: 650; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.driver-open-meta { display: flex; align-items: center; gap: 8px 13px; flex-wrap: wrap; color: #5c7186; font-size: 11px; line-height: 1.35; }
+.driver-open-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.driver-open-meta svg { flex-shrink: 0; }
+.driver-open-brief > .payment-tag { width: fit-content; font-size: 12px; }
+.driver-open-extra { border: 1px solid #dce5ef; background: #fff; border-radius: 11px; overflow: hidden; }
+.driver-open-extra > summary { display: flex; align-items: center; gap: 7px; min-height: 48px; padding: 10px 11px; cursor: pointer; font-size: 12px; font-weight: 700; color: #284965; list-style: none; }
+.driver-open-extra > summary::-webkit-details-marker { display: none; }
+.driver-open-extra > summary > span { flex: 1; }
+.driver-open-extra > summary > small { font-weight: 500; color: #687c90; white-space: nowrap; }
+.driver-open-extra > summary > svg:last-child { flex-shrink: 0; transition: transform .15s ease; }
+.driver-open-extra[open] > summary > svg:last-child { transform: rotate(90deg); }
+.driver-open-extra-body { display: grid; gap: 12px; padding: 0 12px 12px; border-top: 1px solid #f0f3f6; }
+.driver-open-extra-body > p { margin: 10px 0 0; color: #566b81; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.driver-open-extra-body > p + p { margin-top: 0; }
+.driver-open-photos { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; }
+.driver-open-photos button { padding: 0; overflow: hidden; border: 1px solid #d4dfe9; border-radius: 9px; background: #edf3f9; }
+.driver-open-photos button[aria-pressed=true] { border: 2px solid #ff8b32; }
+.driver-open-photos button img { display: block; width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+.driver-open-expanded-photo { display: block; grid-column: 1/-1; width: 100%; max-height: 300px; object-fit: contain; background: #edf2f6; border-radius: 10px; }
+.driver-open-extra-body .maps-route-help { display: none; }
+.driver-open-extra-body .freight-distance { margin: 0; padding: 5px 0 0; }
+.driver-open-existing { margin: 0; padding: 10px; border-radius: 9px; background: #e7f5eb; color: #276642; font-size: 12px; }
+.driver-open-report { justify-self: start; display: inline-flex; align-items: center; gap: 6px; text-align: left; font-size: 11px; color: #697c90; min-height: 34px; }
+.driver-proposal-form { min-width: 0; display: grid; gap: 14px; padding: 19px; background: white; border: 1px solid #d8e5ef; border-top: 4px solid #ff8b32; border-radius: 15px; box-shadow: 0 6px 26px #162e4510; }
+.driver-proposal-form-header h3 { margin: 0 0 5px; color: #152e48; font-size: 22px; }
+.driver-proposal-form-header p { margin: 0; font-size: 12px; line-height: 1.5; color: #697c90; }
+.driver-proposal-main-fields { display: grid; grid-template-columns: minmax(0,1.08fr) minmax(0,.92fr); gap: 11px; }
+.driver-proposal-main-fields label { margin: 0; min-width: 0; color: #233e57; font-size: 12px; }
+.driver-proposal-main-fields input { width: 100%; min-height: 57px; margin-top: 7px; border-radius: 11px; border: 1px solid #cddbe7; padding: 10px 12px; background: #fff; font-size: 18px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.driver-proposal-main-fields .driver-proposal-price-field input { font-size: 24px; color: #122b45; }
+.driver-proposal-payment-note { margin: 0; padding: 10px 12px; border-radius: 10px; background: #eef4fa; color: #4f6781; font-size: 12px; line-height: 1.5; }
+.driver-proposal-form .proposal-services { display: block; margin: 0; padding: 10px 12px 12px; min-width: 0; border: 1px solid #dce5ed; border-radius: 12px; }
+.driver-proposal-form .proposal-services legend { padding: 0 5px; font-weight: 750; font-size: 13px; }
+.driver-proposal-form .proposal-services p { color: #72849a; font-size: 11px; margin: 0 0 9px; line-height: 1.45; }
+.driver-proposal-services-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+.driver-proposal-form .proposal-service-option { display: flex; align-items: center; min-width: 0; min-height: 50px; margin: 0; padding: 9px; background: #f8fafc; border: 1px solid #e0e7f0; border-radius: 10px; gap: 8px; font-size: 12px; font-weight: 600; line-height: 1.35; cursor: pointer; }
+.driver-proposal-form .proposal-service-option:has(input:checked) { border-color: #ff9d4b; background: #fff1e5; color: #814816; }
+.driver-proposal-form .proposal-service-option input { flex: 0 0 18px; width: 18px; height: 18px; margin: 0; accent-color: #e7822b; }
+.driver-proposal-form .proposal-service-option span { min-width: 0; overflow-wrap: anywhere; }
+.driver-proposal-form .commission-preview { margin: 0; padding: 11px 13px; gap: 6px; }
+.driver-proposal-form .commission-preview > div { font-size: 12px; }
+.driver-proposal-form .commission-preview > div:last-of-type strong { font-size: 15px; }
+.driver-proposal-form .commission-preview small { font-size: 11px; }
+.driver-proposal-submit { position: sticky; bottom: -1px; z-index: 2; padding: 10px 0 2px; background: #fff; }
+.driver-proposal-submit .primary { display: flex; justify-content: center; align-items: center; gap: 9px; min-height: 52px; border-radius: 11px; font-size: 15px; }
+.driver-proposal-form input:focus-visible, .driver-open-extra > summary:focus-visible, .driver-open-report:focus-visible { outline: 3px solid #ff8b32; outline-offset: 2px; }
+@media (max-width: 760px) {
+  dialog:has(.driver-open-layout) { width: calc(100% - 16px); max-height: 95dvh; padding: 16px 12px; }
+  dialog:has(.driver-open-layout) .modal-head { margin-bottom: 9px; }
+  dialog:has(.driver-open-layout) .modal-head h2 { font-size: 17px; }
+  .driver-open-layout { grid-template-columns: minmax(0,1fr); gap: 12px; }
+  .driver-open-brief { padding: 11px 12px; gap: 9px; }
+  .driver-open-route { gap: 8px; }
+  .driver-proposal-form { padding: 13px 12px; gap: 12px; }
+  .driver-proposal-form-header h3 { font-size: 19px; }
+  .driver-proposal-main-fields { grid-template-columns: minmax(0,1fr); gap: 10px; }
+  .driver-proposal-main-fields input { min-height: 54px; }
+  .driver-proposal-main-fields .driver-proposal-price-field input { min-height: 61px; font-size: 25px; }
+  .driver-proposal-submit { padding-top: 10px; }
+}
+@media (max-width: 365px) {
+  .driver-proposal-services-grid { grid-template-columns: minmax(0,1fr); }
+}
+@media (prefers-reduced-motion: reduce) { .driver-open-extra > summary > svg:last-child { transition: none; } }
