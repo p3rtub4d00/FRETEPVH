@@ -196,7 +196,10 @@ finance.post("/requests/:id/finance", async (req, res) => {
       fail(409, "Não existe repasse solicitado para confirmar.");
     const driver = await Account.findById(request.driverId);
     if (!driver?.pixKey) fail(409, "Motorista não cadastrou chave Pix.");
-    if (["paid_mp", "paid_pagbank"].includes(request.paymentStatus)) {
+    const realTransfer = request.paymentStatus === "paid_mp" ||
+      (request.paymentStatus === "paid_pagbank" &&
+        request.paymentProviderEnvironment === "production");
+    if (realTransfer) {
       const ref = String(req.body.reference || "").trim();
       if (ref.length < 6 || ref.length > 100)
         fail(400, "Informe o identificador do comprovante do repasse real.");
