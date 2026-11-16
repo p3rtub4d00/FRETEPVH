@@ -47,8 +47,13 @@ function StatusText({ request }) {
   if (state === "open") return <span className="wallet-status warning">Em contestação — sem bloqueio automático</span>;
   if (state === "resolved_cancelled") return <span className="wallet-status">Cancelado pela administração</span>;
   if (request.paymentMethod === "pix_freteon") {
-    if (request.paymentProviderEnvironment === "sandbox" && request.pagbankTestApprovedAt)
-      return <span className="wallet-status">PagBank sandbox aprovado · {request.deliveryConfirmedAt ? "frete de teste concluído, sem repasse bancário" : "transporte em homologação, sem saldo real"}</span>;
+    if (request.paymentProviderEnvironment === "sandbox" && request.pagbankTestApprovedAt) {
+      const label = request.payoutStatus === "paid_sandbox" ? "Repasse de teste concluído pelo Master" :
+        request.payoutStatus === "requested" ? "Repasse de teste solicitado" :
+        request.payoutStatus === "available" ? "Saldo de teste disponível para solicitar" :
+        request.deliveryConfirmedAt ? "Entrega de teste confirmada" : "Pix de teste aprovado";
+      return <span className="wallet-status">{label} · sem transferência bancária real</span>;
+    }
     if (request.paymentStatus === "refunded_simulated") return <span className="wallet-status">Devolução de registro antigo sem conciliação bancária</span>;
     if (request.paymentStatus === "refunded_mp") return <span className="wallet-status success">Reembolso confirmado pelo Mercado Pago</span>;
     if (request.paymentStatus === "refunded_pagbank") return <span className="wallet-status success">Reembolso confirmado pelo PagBank</span>;
@@ -98,9 +103,9 @@ function driverEntryLabel(request) {
   if (request.status === "booked") return "Frete contratado";
   if (request.status === "transit") return "Em transporte";
   if (request.status === "completed" && !request.deliveryConfirmedAt) return "Aguardando confirmação da entrega";
-  if (request.commissionStatus === "paid") return "Comissão quitada";
+  if (request.commissionStatus === "paid") return request.commissionProviderEnvironment === "sandbox" ? "Comissão quitada no PagBank sandbox" : "Comissão quitada";
   if (request.commissionStatus === "waived") return "Comissão dispensada";
-  if (["paid_simulated", "paid_manual"].includes(request.payoutStatus)) return "Repasse concluído";
+  if (["paid_simulated", "paid_manual", "paid_sandbox"].includes(request.payoutStatus)) return "Repasse concluído";
   if (request.status === "cancelled") return "Cancelado";
   return "Concluído";
 }
@@ -136,27 +141,36 @@ function masterSettled(request) {
   return ["refunded_simulated", "refunded_mp", "refunded_pagbank"].includes(request.refundStatus) ||
     request.disputeStatus === "resolved_cancelled" ||
     ["paid", "waived"].includes(request.commissionStatus) ||
-    ["paid_simulated", "paid_manual"].includes(request.payoutStatus);
+    ["paid_simulated", "paid_manual", "paid_sandbox"].includes(request.payoutStatus);
 }
 export function masterFinancialBucket(request, tab) {
   if (tab === "pending") return masterFinancialAction(request);
   if (tab === "commissions") return ["cash_driver", "card_driver"].includes(request.paymentMethod) &&
     Number(request.commissionCents || 0) > 0;
   if (tab === "payouts") return request.paymentMethod === "pix_freteon" &&
-    ["available", "requested", "paid_simulated", "paid_manual"].includes(request.payoutStatus);
+    ["available", "requested", "paid_simulated", "paid_manual", "paid_sandbox"].includes(request.payoutStatus);
   if (tab === "refunds") return refundCases(request);
   if (tab === "history") return masterSettled(request);
   return tab === "all";
 }
 function masterFinanceLabel(request) {
-  if (request.paymentProviderEnvironment === "sandbox" && request.pagbankTestApprovedAt)
-    return request.deliveryConfirmedAt
-      ? "Homologação PagBank concluída · sem repasse real"
-      : "Pix sandbox aprovado · apenas fluxo de teste";
   if (request.refundStatus === "pending") return "Reembolso aguardando análise";
   if (request.refundStatus === "approved") return "Reembolso aprovado · aguarda devolução";
   if (request.disputeStatus === "open") return "Contestação aguardando decisão";
-  if (request.payoutStatus === "requested") return "Repasse solicitado · confirmar";
+  if (request.payoutStatus === "requested")
+    return request.paymentProviderEnvironment === "sandbox"
+      ? "Repasse de homologação solicitado · confirmação manual"
+      : "Repasse bancário solicitado · confirmar";
+  if (request.commissionStatus === "paid" && request.commissionProviderEnvironment === "sandbox")
+    return "Comissão quitada no PagBank sandbox · sem entrada real";
+  if (request.paymentProviderEnvironment === "sandbox" && request.pagbankTestApprovedAt)
+    return request.payoutStatus === "paid_sandbox"
+      ? "Repasse de homologação confirmado pelo Master"
+      : request.payoutStatus === "available"
+        ? "Saldo de homologação disponível para motorista"
+        : request.deliveryConfirmedAt
+          ? "Entrega de homologação confirmada"
+          : "Pix sandbox aprovado · apenas teste";
   if (request.commissionStatus === "pending")
     return request.commissionPaymentRequestedAt ? "Motorista informou comissão · conferir" :
       request.commissionDueAt && new Date(request.commissionDueAt).getTime() <= Date.now()
@@ -170,6 +184,7 @@ function masterFinanceLabel(request) {
   if (request.payoutStatus === "available") return "Repasse disponível para motorista solicitar";
   if (request.payoutStatus === "paid_simulated") return "Repasse antigo registrado; conferir comprovante";
   if (request.payoutStatus === "paid_manual") return "Repasse manual realizado";
+  if (request.payoutStatus === "paid_sandbox") return "Repasse de homologação concluído";
   if (request.commissionStatus === "paid") return "Comissão registrada no sistema antigo";
   if (request.commissionStatus === "waived") return "Comissão dispensada";
   return driverEntryLabel(request);
@@ -195,7 +210,8 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
   const amount = request.agreedPriceCents;
   const realTransfer = request.paymentStatus === "paid_mp" ||
     (request.paymentStatus === "paid_pagbank" && request.paymentProviderEnvironment === "production");
-  const pagBankSandbox = request.paymentStatus === "paid_pagbank" && request.paymentProviderEnvironment === "sandbox";
+  const pagBankSandbox = request.paymentProvider === "pagbank" &&
+    request.paymentProviderEnvironment === "sandbox" && Boolean(request.pagbankTestApprovedAt);
   const due = request.commissionDueAt
     ? new Date(request.commissionDueAt).toLocaleString("pt-BR", { timeZone: "America/Porto_Velho", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
     : null;
@@ -208,8 +224,12 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
             <strong>{request.title}</strong>
             <small>{isMaster ? masterFinanceLabel(request) : driverEntryLabel(request)}</small>
             {isMaster && <small>Motorista: {driver?.name || "Cadastro não encontrado"}</small>}
-            {request.commissionStatus === "pending" && (
-              <small className="wallet-row-commission">Comissão: {byCents(request.commissionCents)}</small>
+            {["pending", "paid"].includes(request.commissionStatus) &&
+              ["cash_driver", "card_driver"].includes(request.paymentMethod) && (
+              <small className="wallet-row-commission">
+                Comissão: {byCents(request.commissionCents)}
+                {request.commissionStatus === "paid" && request.commissionProviderEnvironment === "sandbox" ? " · quitada em homologação" : ""}
+              </small>
             )}
           </span>
           <span className="wallet-row-side">
@@ -249,7 +269,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
       )}
       {isDriver && !refundBlocked(request) && request.payoutStatus === "available" && (
         <button className="primary full" disabled={busy} onClick={() => onAction(request.id, "request_payout")}>
-          Solicitar repasse ao motorista
+          {pagBankSandbox ? "Solicitar repasse de teste" : "Solicitar repasse ao motorista"}
         </button>
       )}
       {isDriver && request.commissionStatus === "pending" && request.disputeStatus !== "open" &&
@@ -273,7 +293,13 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
       {isMaster && !refundBlocked(request) && request.payoutStatus === "requested" && request.disputeStatus !== "open" && (
         <div className="wallet-transfer">
           <p>Chave Pix do motorista: <strong className="wallet-pix-key">{driver?.pixKey || "Não cadastrada"}</strong></p>
-          {pagBankSandbox && <p className="wallet-note">Ambiente PagBank de homologação: não é permitido registrar repasse bancário real.</p>}
+          {pagBankSandbox && <p className="wallet-note">Saldo de homologação. A confirmação abaixo é manual e encerra apenas o registro de teste, sem transferir dinheiro ou usar a chave Pix.</p>}
+          {pagBankSandbox && (
+            <button type="button" className="secondary full" disabled={busy || !gateway?.testFlowEnabled}
+              onClick={() => onAction(request.id, "confirm_test_payout_master")}>
+              Confirmar repasse de teste (sem Pix real)
+            </button>
+          )}
           {!realTransfer && !pagBankSandbox && <p className="wallet-note">Não há recebimento bancário confirmado para autorizar este registro de repasse.</p>}
           {realTransfer && (
             <>
@@ -374,6 +400,18 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
         <div><span>Comissões vencidas</span><strong>{byCents(amount.overdueCents)}</strong></div>
         <div><span>Repasses registrados</span><strong>{byCents(amount.paidOutCents)}</strong></div>
       </div>
+      {["testAvailableCents", "testRequestedCents", "testPaidOutCents", "testCommissionsPaidCents"].some(key => Number(amount[key] || 0) > 0) && (
+        <section className="wallet-sandbox-ledger" aria-label="Financeiro de homologação PagBank">
+          <strong><CheckCircle2 size={18}/> PagBank Sandbox · valores somente para teste</strong>
+          <p>Estas quantias não representam dinheiro recebido nem podem ser transferidas pelo banco.</p>
+          <div className="wallet-sandbox-metrics">
+            <div><span>Saldo de teste disponível</span><strong>{byCents(amount.testAvailableCents)}</strong></div>
+            <div><span>Repasses de teste solicitados</span><strong>{byCents(amount.testRequestedCents)}</strong></div>
+            <div><span>Repasses de teste concluídos</span><strong>{byCents(amount.testPaidOutCents)}</strong></div>
+            <div><span>Comissões quitadas em teste</span><strong>{byCents(amount.testCommissionsPaidCents)}</strong></div>
+          </div>
+        </section>
+      )}
       {role === "motorista" && amount.blocked && (
         <p className="wallet-alert" role="alert">
           <AlertCircle size={18} /> Novas propostas estão suspensas por comissão vencida. Você ainda pode concluir fretes contratados e acessar esta carteira.
