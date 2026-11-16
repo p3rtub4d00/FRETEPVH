@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { money } from './format.js';
 
-export const refundBlocked = request => ['pending', 'approved', 'refunded_simulated'].includes(request.refundStatus);
+export const refundBlocked = request => ['pending', 'approved', 'refunded_simulated', 'refunded_mp'].includes(request.refundStatus);
 const labels = {
   pending: 'Reembolso em análise', approved: 'Reembolso aprovado · aguardando simulação',
   rejected: 'Reembolso recusado', refunded_simulated: 'Reembolsado (simulação)',
+  refunded_mp: 'Reembolso confirmado pelo Mercado Pago',
 };
 const stages = { booked: 'Contratado', transit: 'Em transporte', completed: 'Concluído', cancelled: 'Cancelado' };
 const date = value => value ? new Date(value).toLocaleString('pt-BR', { timeZone: 'America/Porto_Velho' }) : '';
@@ -14,6 +15,7 @@ export default function RefundPanel({ request, role, busy, onAction }) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
   const status = request.refundStatus || 'none';
+  const realPix = ['paid_mp', 'refunded_mp'].includes(request.paymentStatus);
   const canAsk = role === 'cliente' && request.canRequestRefund;
   if (status === 'none' && !canAsk) return null;
   async function submit(action) {
@@ -24,7 +26,9 @@ export default function RefundPanel({ request, role, busy, onAction }) {
   }
   return <section className="refund-panel" aria-label="Cancelamento e reembolso">
     <h3>{labels[status] || 'Cancelamento e reembolso Pix'}</h3>
-    <p className="muted">Somente simulação. Nenhum dinheiro será devolvido ou movimentado nesta versão.</p>
+    <p className="muted">{realPix
+      ? "Pagamento real. O Master analisa o pedido e a devolução é processada pelo Mercado Pago, sem confirmação fictícia."
+      : "Somente simulação. Nenhum dinheiro será devolvido ou movimentado nesta versão."}</p>
     {status !== 'none' && <>
       <p><strong>Valor integral: {money(request.refundAmountCents / 100)}</strong></p>
       <p>Solicitado em {date(request.refundRequestedAt)} · Etapa: {stages[request.refundStage] || request.refundStage}</p>
@@ -42,7 +46,7 @@ export default function RefundPanel({ request, role, busy, onAction }) {
       </label>
       {role === 'master' ? <>
         <p>Analise a etapa do transporte e o motivo. A aprovação cancela o frete e autoriza o reembolso integral simulado.</p>
-        <button className="primary full" disabled={busy}>Aprovar reembolso integral</button>
+        <button className="primary full" disabled={busy}>{realPix ? "Aprovar e devolver via Mercado Pago" : "Aprovar reembolso integral (simulação)"}</button>
         <button type="button" className="secondary full" disabled={busy || reason.trim().length < 10} onClick={() => submit('reject_refund')}>Recusar com justificativa</button>
       </> : <>
         <p>Solicitação de {money(request.agreedPriceCents / 100)}. O pedido ficará suspenso para análise; não há aprovação automática.</p>
@@ -50,7 +54,7 @@ export default function RefundPanel({ request, role, busy, onAction }) {
         <button type="button" className="secondary full" disabled={busy} onClick={() => setEditing(false)}>Voltar</button>
       </>}
     </form>}
-    {role === 'master' && status === 'approved' && <button className="primary full" disabled={busy} onClick={() => submit('simulate_refund')}>Simular devolução de {money(request.refundAmountCents / 100)}</button>}
+    {role === 'master' && status === 'approved' && !realPix && <button className="primary full" disabled={busy} onClick={() => submit('simulate_refund')}>Simular devolução de {money(request.refundAmountCents / 100)}</button>}
     {error && <p className="error" role="alert">{error}</p>}
   </section>;
 }
