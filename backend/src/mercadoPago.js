@@ -123,6 +123,7 @@ async function synchronize(order, payment) {
   }
   const nextStatus = String(payment.status || "pending");
   const alreadyApproved = order.status === "approved";
+  const alreadyRefunded = order.status === "refunded";
   if (order.status === "refunded" && nextStatus !== "refunded") return;
   if (alreadyApproved && !["approved", "refunded"].includes(nextStatus)) return;
   const freight = await Freight.findById(order.freightId);
@@ -165,7 +166,7 @@ async function synchronize(order, payment) {
   if (["approved", "refunded"].includes(nextStatus)) order.verifiedAt ||= new Date();
   if (nextStatus === "approved" && !accepted && !alreadyApproved) order.reviewRequired = true;
   await order.save();
-  if (nextStatus === "refunded" && !alreadyApproved) {
+  if (nextStatus === "refunded" && !alreadyRefunded) {
     void notifyMasters({
       title: accepted ? "Estorno Mercado Pago confirmado" : "Estorno exige conciliação",
       body: accepted ? "Pagamento Pix devolvido. Confira o Financeiro." : "Pagamento estornado com repasse ou situação divergente. Confira manualmente.",
