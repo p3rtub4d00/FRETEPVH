@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import { Account, Freight } from "./models.js";
 import { authorize, fail } from "./auth.js";
 import { notifyAccounts, notifyMasters } from "./webPush.js";
+import { getPaymentProvider } from "./paymentProviderSettings.js";
 
 const paymentSchema = new mongoose.Schema({
   freightId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "Freight", index: true },
@@ -106,7 +107,7 @@ export function canCreateMercadoPagoPix(freight, kind, user) {
 }
 
 const publicOrder = order => ({
-  kind: order.kind, status: order.status,
+  provider: "mercadopago", kind: order.kind, status: order.status,
   amountCents: order.amountCents, paymentId: order.paymentId,
   qrCode: order.qrCode, qrCodeBase64: order.qrCodeBase64,
   expiresAt: order.expiresAt, reviewRequired: order.reviewRequired,
@@ -229,7 +230,7 @@ export const mercadoPagoPrivate = Router();
 mercadoPagoPrivate.get("/mercadopago/config", (req, res) =>
   res.json({ enabled: mercadoPagoEnabled(), provider: "mercadopago", mode: mercadoPagoEnabled() ? "real" : "simulation" })
 );
-mercadoPagoPrivate.post("/mercadopago/orders/:id/:kind", async (req, res) => {
+export async function mercadoPagoCreateOrder(req, res) {
   if (!mercadoPagoEnabled()) fail(503, "Configure a conta Mercado Pago do FreteOn no Render.");
   if (!mongoose.isValidObjectId(req.params.id)) fail(404, "Frete não encontrado.");
   const freight = await Freight.findById(req.params.id);
@@ -242,6 +243,8 @@ mercadoPagoPrivate.post("/mercadopago/orders/:id/:kind", async (req, res) => {
 
   let order = await MercadoPagoOrder.findOne({ freightId: freight._id, kind: req.params.kind });
   if (!order) {
+    if ((await getPaymentProvider()).preferred !== "mercadopago")
+      fail(409, "O Master selecionou PagBank para novas cobranças.");
     try {
       order = await MercadoPagoOrder.create({
         freightId: freight._id, kind: req.params.kind,
@@ -278,8 +281,8 @@ mercadoPagoPrivate.post("/mercadopago/orders/:id/:kind", async (req, res) => {
     await synchronize(order, payment);
   } else await refreshOrder(order);
   return res.json(publicOrder(order));
-});
-mercadoPagoPrivate.get("/mercadopago/orders/:id/:kind", async (req, res) => {
+}
+export async function mercadoPagoGetOrder(req, res) {
   if (!mercadoPagoEnabled()) fail(503, "Mercado Pago não configurado.");
   if (!mongoose.isValidObjectId(req.params.id)) fail(404, "Frete não encontrado.");
   const freight = await Freight.findById(req.params.id);
@@ -290,7 +293,9 @@ mercadoPagoPrivate.get("/mercadopago/orders/:id/:kind", async (req, res) => {
   if (!order) return res.json({ status: "none" });
   await refreshOrder(order);
   res.json(publicOrder(order));
-});
+}
+mercadoPagoPrivate.post("/mercadopago/orders/:id/:kind", mercadoPagoCreateOrder);
+mercadoPagoPrivate.get("/mercadopago/orders/:id/:kind", mercadoPagoGetOrder);
 export const mercadoPagoPublic = Router();
 mercadoPagoPublic.post("/webhook", async (req, res) => {
   if (!mercadoPagoEnabled()) return res.sendStatus(503);
