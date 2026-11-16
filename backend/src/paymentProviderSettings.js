@@ -26,7 +26,10 @@ export function providerReady(provider) {
   return false;
 }
 export async function getPaymentProvider() {
-  const settings = await PaymentProviderSettings.findOne({ key: "global" }).lean();
+  // Nos testes unitários não existe banco; em produção a API bloqueia operações
+  // financeiras quando o MongoDB estiver desconectado.
+  const settings = mongoose.connection.readyState === 1
+    ? await PaymentProviderSettings.findOne({ key: "global" }).lean() : null;
   const preferred = settings?.preferred || "mercadopago";
   return {
     preferred,
