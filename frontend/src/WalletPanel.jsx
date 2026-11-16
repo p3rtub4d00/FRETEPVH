@@ -1,5 +1,6 @@
 import RefundPanel, { refundBlocked } from "./RefundPanel.jsx";
 import MercadoPagoPix from "./MercadoPagoPix.jsx";
+import PaymentProviderAdmin from "./PaymentProviderAdmin.jsx";
 import { useEffect, useState } from "react";
 import { AlertCircle, Banknote, CheckCircle2, Clock3, CreditCard, QrCode, Wallet, ChevronDown, ChevronRight } from "lucide-react";
 import { money } from "./format.js";
@@ -48,6 +49,7 @@ function StatusText({ request }) {
   if (request.paymentMethod === "pix_freteon") {
     if (request.paymentStatus === "refunded_simulated") return <span className="wallet-status">Reembolso simulado</span>;
     if (request.paymentStatus === "refunded_mp") return <span className="wallet-status success">Reembolso confirmado pelo Mercado Pago</span>;
+    if (request.paymentStatus === "refunded_pagbank") return <span className="wallet-status success">Reembolso confirmado pelo PagBank</span>;
     if (request.paymentStatus === "awaiting") return <span className="wallet-status warning">Aguardando Pix do cliente</span>;
     if (request.payoutStatus === "paid_simulated") return <span className="wallet-status success">Repasse simulado concluído</span>;
     if (request.payoutStatus === "paid_manual") return <span className="wallet-status success">Repasse manual registrado</span>;
@@ -55,7 +57,7 @@ function StatusText({ request }) {
     if (request.payoutStatus === "available") return <span className="wallet-status success">Repasse disponível para solicitar</span>;
     return <span className="wallet-status">Aguardando conclusão e confirmação do cliente</span>;
   }
-  if (request.commissionStatus === "paid") return <span className="wallet-status success">Comissão quitada (simulação)</span>;
+  if (request.commissionStatus === "paid") return <span className="wallet-status success">Comissão quitada</span>;
   if (request.commissionStatus === "waived") return <span className="wallet-status">Comissão dispensada</span>;
   if (request.commissionStatus === "pending") {
     const overdue = request.commissionDueAt && new Date(request.commissionDueAt).getTime() <= Date.now();
@@ -123,13 +125,13 @@ export function masterFinancialAction(request) {
   if (request.payoutStatus === "requested" || request.commissionStatus === "pending") return true;
   return request.status === "completed" && !request.deliveryConfirmedAt &&
     request.disputeStatus !== "resolved_cancelled" &&
-    (request.paymentMethod !== "pix_freteon" || ["simulated_paid", "paid_mp"].includes(request.paymentStatus));
+    (request.paymentMethod !== "pix_freteon" || ["simulated_paid", "paid_mp", "paid_pagbank"].includes(request.paymentStatus));
 }
 function masterSettled(request) {
   if (masterFinancialAction(request) || !["completed", "cancelled"].includes(request.status)) return false;
   if (["pending", "approved"].includes(request.refundStatus)) return false;
   if (request.payoutStatus === "available" || request.payoutStatus === "requested") return false;
-  return ["refunded_simulated", "refunded_mp"].includes(request.refundStatus) ||
+  return ["refunded_simulated", "refunded_mp", "refunded_pagbank"].includes(request.refundStatus) ||
     request.disputeStatus === "resolved_cancelled" ||
     ["paid", "waived"].includes(request.commissionStatus) ||
     ["paid_simulated", "paid_manual"].includes(request.payoutStatus);
@@ -156,6 +158,7 @@ function masterFinanceLabel(request) {
   if (request.status === "completed" && !request.deliveryConfirmedAt) return "Entrega aguardando confirmação";
   if (request.refundStatus === "refunded_simulated") return "Devolução registrada (simulação)";
   if (request.refundStatus === "refunded_mp") return "Devolução confirmada pelo Mercado Pago";
+  if (request.refundStatus === "refunded_pagbank") return "Devolução confirmada pelo PagBank";
   if (request.refundStatus === "rejected") return "Reembolso recusado";
   if (request.disputeStatus === "resolved_cancelled") return "Contestação encerrada · valores dispensados";
   if (request.payoutStatus === "available") return "Repasse disponível para motorista solicitar";
@@ -177,7 +180,7 @@ function masterFinanceAmount(request, tab) {
   return request.agreedPriceCents;
 }
 
-function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = false, masterTab = "pending", mpEnabled = false, onPaid }) {
+function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = false, masterTab = "pending", mpEnabled = false, gateway, onPaid }) {
   const [expanded, setExpanded] = useState(false);
   const [payoutReference, setPayoutReference] = useState("");
   const driver = drivers.find((person) => person.id === request.driverId);
@@ -242,7 +245,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
       )}
       {isDriver && request.commissionStatus === "pending" && request.disputeStatus !== "open" &&
         !refundBlocked(request) && (mpEnabled ? (
-          <MercadoPagoPix requestId={request.id} kind="commission" onPaid={onPaid}/>
+          <MercadoPagoPix requestId={request.id} kind="commission" gateway={gateway} onPaid={onPaid}/>
         ) : (
           <button className="secondary full" disabled={busy || Boolean(request.commissionPaymentRequestedAt)}
             onClick={() => onAction(request.id, "notify_commission")}>
@@ -262,7 +265,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
       {isMaster && !refundBlocked(request) && request.commissionStatus === "pending" &&
         request.disputeStatus !== "open" && (
           mpEnabled ? (
-            <p className="wallet-note">A comissão será quitada somente após confirmação do Pix pelo Mercado Pago.</p>
+            <p className="wallet-note">A comissão será quitada somente após confirmação do Pix pelo banco responsável.</p>
           ) : request.commissionPaymentRequestedAt ? (
             <button className="primary full" disabled={busy}
               onClick={() => onAction(request.id, "confirm_commission_master")}>
@@ -275,7 +278,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
       {isMaster && !refundBlocked(request) && request.payoutStatus === "requested" && request.disputeStatus !== "open" && (
         <div className="wallet-transfer">
           <p>Chave Pix do motorista: <strong className="wallet-pix-key">{driver?.pixKey || "Não cadastrada"}</strong></p>
-          {request.paymentStatus === "paid_mp" && (
+          {["paid_mp", "paid_pagbank"].includes(request.paymentStatus) && (
             <>
               <p className="info">O FreteOn recebeu o Pix real do cliente. Faça primeiro o repasse no seu banco. Este botão apenas registra a transferência realizada.</p>
               <label>Identificador do comprovante de repasse
@@ -285,10 +288,10 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
             </>
           )}
           <button className="primary full" disabled={busy || !driver?.pixKey ||
-            (request.paymentStatus === "paid_mp" && payoutReference.trim().length < 6)}
+            (["paid_mp", "paid_pagbank"].includes(request.paymentStatus) && payoutReference.trim().length < 6)}
             onClick={() => onAction(request.id, "confirm_payout_master",
-              request.paymentStatus === "paid_mp" ? { reference: payoutReference.trim() } : {})}>
-            {request.paymentStatus === "paid_mp" ? "Registrar repasse real já efetuado" : "Confirmar repasse manual (simulação)"}
+              ["paid_mp", "paid_pagbank"].includes(request.paymentStatus) ? { reference: payoutReference.trim() } : {})}>
+            {["paid_mp", "paid_pagbank"].includes(request.paymentStatus) ? "Registrar repasse real já efetuado" : "Confirmar repasse manual (simulação)"}
           </button>
         </div>
       )}
@@ -305,7 +308,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
   );
 }
 
-export default function WalletPanel({ role, user, wallet, requests, drivers, busy, onAction, onSavePreferences, mpEnabled = false, onPaid }) {
+export default function WalletPanel({ role, user, wallet, requests, drivers, busy, onAction, onSavePreferences, mpEnabled = false, gateway, onPaid }) {
   const [pixKey, setPixKey] = useState("");
   const [acceptsCard, setAcceptsCard] = useState(false);
   const [activeTab, setActiveTab] = useState("pending");
@@ -362,9 +365,10 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
   const amount = wallet || {};
   return (
     <section className="wallet-section">
+      {role === "master" && <PaymentProviderAdmin initial={gateway} onSaved={onPaid}/>}
       <div className="wallet-banner">
         <Wallet size={22} />
-        <div><strong>{mpEnabled ? "Financeiro FreteOn · Mercado Pago" : "Carteira FreteOn · Simulação"}</strong><p>{mpEnabled ? "Pix reais conciliados pelo Mercado Pago. Os repasses ao motorista ainda são feitos manualmente pela administração." : "Nenhum Pix ou repasse real será realizado nesta versão."}</p></div>
+        <div><strong>{mpEnabled ? `Financeiro FreteOn · ${gateway?.preferred === "pagbank" ? "PagBank" : "Mercado Pago"}` : "Carteira FreteOn · Simulação"}</strong><p>{mpEnabled ? `Pix conciliado pelo ${gateway?.preferred === "pagbank" ? "PagBank" : "Mercado Pago"}. Os repasses ao motorista continuam manuais.` : "Nenhum Pix ou repasse real será realizado nesta versão."}</p></div>
       </div>
       {role === "master" && all.some(r => ["pending", "approved"].includes(r.refundStatus)) && <p className="wallet-alert" role="status">{all.filter(r => r.refundStatus === "pending").length} reembolso(s) em análise · {all.filter(r => r.refundStatus === "approved").length} aguardando devolução. Solicitações aparecem primeiro no extrato.</p>}
       <div className="wallet-metrics">
@@ -450,7 +454,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
           role={role === "motorista" ? "tabpanel" : undefined} aria-labelledby={role === "motorista" ? `wallet-tab-${activeTab}` : undefined}>
           {rows.map((request) =>
             <FreightFinanceRow key={request.id} request={request} role={role}
-              drivers={drivers} busy={busy} onAction={onAction} mpEnabled={mpEnabled} onPaid={onPaid}
+              drivers={drivers} busy={busy} onAction={onAction} mpEnabled={mpEnabled} gateway={gateway} onPaid={onPaid}
               compact={role === "motorista" || role === "master"} masterTab={masterTab}/>
           )}
         </div>
@@ -483,7 +487,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
           <ChevronRight size={16}/>
         </button>
       )}
-      <p className="wallet-legal">{mpEnabled ? "Pagamentos Pix e reembolsos reais são confirmados diretamente pelo Mercado Pago. O repasse ao motorista não é automático: o Master deve transferir o dinheiro e registrar o identificador do comprovante. Comissões vencem em 72 horas após a confirmação da entrega; contestações suspendem a cobrança." : "Valores ilustrativos, sem movimentação bancária. As comissões de dinheiro e cartão vencem 72 horas após a confirmação da entrega e do recebimento. Contestação aberta suspende a cobrança automática."}</p>
+      <p className="wallet-legal">{mpEnabled ? "Pagamentos Pix e reembolsos reais são confirmados pelo provedor utilizado na cobrança. O repasse ao motorista não é automático: o Master deve transferir o dinheiro e registrar o identificador do comprovante. Comissões vencem em 72 horas após a confirmação da entrega; contestações suspendem a cobrança." : "Valores ilustrativos, sem movimentação bancária. As comissões de dinheiro e cartão vencem 72 horas após a confirmação da entrega e do recebimento. Contestação aberta suspende a cobrança automática."}</p>
     </section>
   );
 }
