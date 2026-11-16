@@ -246,7 +246,7 @@ export default function Entry() {
         <details className="public-legal-links"><summary>Informações legais</summary><div>
           <a href="/termos" onClick={event => { event.preventDefault(); navigate("/termos"); }}>Termos de Uso</a>
           <a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Política de Privacidade</a>
-          <small>Intermediação de fretes · Financeiro em simulação</small>
+          <small>Intermediação de fretes · Pix mediante confirmação bancária</small>
         </div></details>
       </footer>
     </div>
