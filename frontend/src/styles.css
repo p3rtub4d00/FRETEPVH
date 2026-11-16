@@ -4189,8 +4189,8 @@ dialog.push-invite-dialog::backdrop {
 .freight-card-featured .freight-card-photo { padding: 0; overflow: hidden; position: relative; height: 138px; }
 .freight-card-featured .freight-card-photo > img { width: 100%; height: 100%; border-radius: 0; object-fit: cover; }
 .freight-card-featured .freight-card-photo > span { position: absolute; bottom: 8px; left: 8px; background: #10243ee6; color: white; font-size: .75rem; padding: 6px 9px; border-radius: 8px; }
-.driver-card-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin-top: 16px; }
-.driver-card-actions button { display: flex; justify-content: center; align-items: center; gap: 6px; min-height: 46px; padding: 11px 8px; border: 0; border-radius: 12px; font-size: .85rem; font-weight: 700; cursor: pointer; }
+.driver-card-actions { display: grid; grid-template-columns: minmax(0,1fr); gap: 9px; margin-top: 16px; }
+.driver-card-actions button { display: flex; justify-content: center; align-items: center; gap: 9px; min-height: 50px; padding: 12px 13px; border: 0; border-radius: 12px; font-size: .92rem; line-height: 1.4; font-weight: 700; cursor: pointer; }
 .driver-card-actions button:only-child { grid-column: 1 / -1; }
 .driver-details-button { background: #10243e; color: white; }
 .driver-proposal-button { background: #ff8a35; color: #10243e; }
@@ -4257,3 +4257,12 @@ a.maps-route-button:focus-visible { outline: 3px solid #ff8a35; outline-offset: 
 .client-proposals-cta-count { display:grid; place-items:center; flex:0 0 30px; min-width:30px; height:30px; border-radius:50%; background:#f58024; color:#fff; font-weight:800; font-size:14px; }
 .client-proposals-cta-arrow { flex-shrink:0; }
 @media(max-width:390px) { .client-proposals-cta { padding:12px; gap:9px; } .client-proposals-cta-copy strong { font-size:14px; } }
+
+/* Fotos do pedido: após a primeira oferta, exibição compacta somente para consulta. */
+.freight-gallery-collapsible { border: 1px solid #e1e9f1; border-radius: 12px; background: #f8fafc; padding: 0; margin: 12px 0 18px; }
+.freight-gallery-collapsible > summary { display: flex; align-items: center; gap: 8px; padding: 14px 16px; cursor: pointer; color: #36516b; font-size: 14px; font-weight: 700; list-style: none; }
+.freight-gallery-collapsible > summary::-webkit-details-marker { display: none; }
+.freight-gallery-collapsible > summary::after { content: "+"; font-size: 18px; margin-left: auto; color: #8291a3; }
+.freight-gallery-collapsible[open] > summary::after { content: "−"; }
+.freight-gallery-collapsible .freight-gallery-images { padding: 0 14px 14px; }
+.freight-gallery-collapsible > summary:focus-visible { outline: 2px solid #fb8b32; outline-offset: -3px; border-radius: 12px; }
