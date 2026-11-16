@@ -412,13 +412,17 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   const modalRef = useRef(null);
   useEffect(() => { modalRef.current = modal; }, [modal]);
   function showError(error) {
+    if (!mounted.current) return;
+    setLoaded(true);
     if (error.status === 401) onExpired();
     else setNotice(error.message);
   }
   async function refresh() {
-    const data = await api("/state");
+    const data = await api("/state", { headers: { "X-FreteOn-Role": area } });
     if (mounted.current) {
+      if (data.user?.role !== area || data.user?.id !== user.id) return;
       setState(data);
+      setNotice("");
       setLoaded(true);
       if (area === "cliente" && !modalRef.current) {
         const toReview = data.requests.find((request) =>
