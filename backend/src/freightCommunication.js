@@ -26,7 +26,7 @@ const limit = rateLimit({
 freightCommunication.get("/requests/:id/chat", authorize("cliente", "motorista"), async (req, res) => {
   const request = await getRequest(req);
   if (!canChat(request, own(req), req.user.role))
-    fail(403, "O chat é exclusivo do cliente e motorista contratado, durante e após a execução.");
+    fail(403, "O chat é exclusivo do cliente e motorista contratado, enquanto o frete estiver em andamento.");
   const items = await FreightChat.find({ requestId: request._id })
     .sort({ createdAt: -1 }).limit(100).lean();
   res.setHeader("Cache-Control", "no-store, private");
@@ -39,7 +39,7 @@ freightCommunication.get("/requests/:id/chat", authorize("cliente", "motorista")
 freightCommunication.post("/requests/:id/chat", authorize("cliente", "motorista"), limit, async (req, res) => {
   const request = await getRequest(req);
   if (!canChat(request, own(req), req.user.role))
-    fail(403, "O chat só é liberado entre o cliente e o motorista contratado.");
+    fail(403, "O chat só fica disponível durante o frete, entre cliente e motorista contratado.");
   const content = safeChatMessage(req.body?.content);
   const item = await FreightChat.create({
     requestId: request._id, authorId: own(req), authorRole: req.user.role, content,
