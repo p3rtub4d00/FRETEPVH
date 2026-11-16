@@ -39,7 +39,9 @@ test('HTTP finance routes enforce refund roles, freeze payouts and save reviewed
   assert.equal(await post('cliente','approve_refund'),403);
   assert.equal(await post('master','approve_refund'),200);
   assert.equal(request.paymentStatus,'simulated_paid');
-  assert.equal(await post('master','simulate_refund'),200);
+  // O fluxo operacional não autoriza marcar devolução como realizada
+  // sem confirmação bancária, inclusive para registros legados.
   assert.equal(await post('master','simulate_refund'),409);
-  assert.equal(saves,3);
+  assert.equal(await post('master','simulate_refund'),409);
+  assert.equal(saves,2);
 });
