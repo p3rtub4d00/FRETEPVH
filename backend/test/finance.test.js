@@ -74,7 +74,7 @@ test("Motorista recém-cadastrado recebe taxa promocional de 5%", async () => {
   assert.equal(freight.driverNetCents, 19000);
 });
 
-test("PagBank sandbox aprovado libera ciclo de teste sem saldo real", async () => {
+test("PagBank sandbox aprovado libera saldo apenas de homologação, sem saldo real", async () => {
   const vars = ["PAGBANK_ENABLED", "PAGBANK_ENV", "PAGBANK_TEST_FLOW_ENABLED"];
   const previous = vars.map(name => process.env[name]);
   process.env.PAGBANK_ENABLED = "true";
@@ -92,8 +92,18 @@ test("PagBank sandbox aprovado libera ciclo de teste sem saldo real", async () =
     freight.status = "completed";
     confirmDelivery(freight);
     assert.ok(freight.deliveryConfirmedAt instanceof Date);
-    assert.equal(freight.payoutStatus, "none");
-    assert.equal(walletSummary([freight], { role: "motorista", _id: "motorista-teste" }).availableCents, 0);
+    assert.equal(freight.payoutStatus, "available");
+    const wallet = walletSummary([freight], { role: "motorista", _id: "motorista-teste" });
+    assert.equal(wallet.availableCents, 0, "saldo real deve permanecer zerado");
+    assert.equal(wallet.testAvailableCents, freight.driverNetCents, "saldo de teste deve refletir o líquido");
+    freight.payoutStatus = "requested";
+    const requestedWallet = walletSummary([freight], { role: "motorista", _id: "motorista-teste" });
+    assert.equal(requestedWallet.requestedCents, 0);
+    assert.equal(requestedWallet.testRequestedCents, freight.driverNetCents);
+    freight.payoutStatus = "paid_sandbox";
+    const settledWallet = walletSummary([freight], { role: "motorista", _id: "motorista-teste" });
+    assert.equal(settledWallet.paidOutCents, 0);
+    assert.equal(settledWallet.testPaidOutCents, freight.driverNetCents);
   } finally {
     vars.forEach((name, index) => {
       if (previous[index] === undefined) delete process.env[name];
