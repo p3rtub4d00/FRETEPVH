@@ -17,8 +17,8 @@ export async function recordMasterNotification(message) {
   return Event.create({ title, body, category, targetId: String(message.id || "").slice(0,80) });
 }
 export const masterNotifications = Router();
-masterNotifications.use(authorize("master"));
-masterNotifications.get("/master/notifications", async (req,res) => {
+// Autorização aplicada apenas às rotas Master; não bloquear demais rotas da API.
+masterNotifications.get("/master/notifications", authorize("master"), async (req,res) => {
   const events = await Event.find().sort({ createdAt:-1 }).limit(100).lean();
   const userId = String(req.user._id);
   res.json({ items: events.map(event => ({
@@ -27,12 +27,12 @@ masterNotifications.get("/master/notifications", async (req,res) => {
     createdAt: event.createdAt, read: (event.readBy || []).includes(userId)
   })) });
 });
-masterNotifications.post("/master/notifications/:id/read", async (req,res) => {
+masterNotifications.post("/master/notifications/:id/read", authorize("master"), async (req,res) => {
   if (!mongoose.isValidObjectId(req.params.id)) fail(400,"Aviso inválido.");
   await Event.updateOne({ _id:req.params.id }, { $addToSet: { readBy: String(req.user._id) } });
   res.json({ ok:true });
 });
-masterNotifications.post("/master/notifications/read-all", async (req,res) => {
+masterNotifications.post("/master/notifications/read-all", authorize("master"), async (req,res) => {
   await Event.updateMany({ readBy: { $ne: String(req.user._id) } }, { $addToSet: { readBy: String(req.user._id) } });
   res.json({ ok:true });
 });
