@@ -38,6 +38,22 @@ export function isRealBankPayment(request) {
       request?.paymentProviderEnvironment === "production");
 }
 
+// Exclusivo para percorrer o fluxo no PagBank Sandbox.
+// Não corresponde a dinheiro real, não libera saques nem vira saldo de motorista.
+export function isApprovedPagBankTest(request) {
+  return process.env.PAGBANK_TEST_FLOW_ENABLED === "true" &&
+    process.env.PAGBANK_ENABLED === "true" &&
+    process.env.PAGBANK_ENV === "sandbox" &&
+    request?.paymentMethod === "pix_freteon" &&
+    request?.paymentStatus === "awaiting" &&
+    request?.paymentProvider === "pagbank" &&
+    request?.paymentProviderEnvironment === "sandbox" &&
+    Boolean(request?.pagbankTestApprovedAt);
+}
+export function canStartTransport(request) {
+  return isRealBankPayment(request) || isApprovedPagBankTest(request);
+}
+
 export function confirmDelivery(request) {
   if (refundBlocks(request)) fail(409, "O reembolso bloqueia a confirmação e o repasse deste frete.");
   if (request.status !== "completed" || request.deliveryConfirmedAt)
@@ -45,9 +61,12 @@ export function confirmDelivery(request) {
   if (request.disputeStatus === "open" || request.disputeStatus === "resolved_cancelled")
     fail(409, "A entrega está em análise ou foi cancelada pela administração.");
   if (request.paymentMethod === "pix_freteon") {
-    if (!isRealBankPayment(request))
-      fail(409, "Aguarde a confirmação do pagamento Pix antes de liberar o repasse.");
-    request.payoutStatus = "available";
+    if (!canStartTransport(request))
+      fail(409, "Aguarde a confirmação do Pix pelo banco antes de confirmar a entrega.");
+    // Sandbox permite concluir a operação de teste, sem disponibilizar nenhum
+    // valor ao motorista e sem habilitar pedidos de repasse.
+    if (isRealBankPayment(request)) request.payoutStatus = "available";
+    else request.payoutStatus = "none";
   } else if (["card_driver", "cash_driver"].includes(request.paymentMethod)) {
     request.paymentStatus = "received_driver";
     request.commissionStatus = "pending";
