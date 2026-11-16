@@ -63,10 +63,9 @@ export function confirmDelivery(request) {
   if (request.paymentMethod === "pix_freteon") {
     if (!canStartTransport(request))
       fail(409, "Aguarde a confirmação do Pix pelo banco antes de confirmar a entrega.");
-    // Sandbox permite concluir a operação de teste, sem disponibilizar nenhum
-    // valor ao motorista e sem habilitar pedidos de repasse.
-    if (isRealBankPayment(request)) request.payoutStatus = "available";
-    else request.payoutStatus = "none";
+    // Tanto a confirmação real quanto a homologação liberam a etapa de
+    // solicitação na carteira; o resumo mantém os saldos em categorias distintas.
+    request.payoutStatus = "available";
   } else if (["card_driver", "cash_driver"].includes(request.paymentMethod)) {
     request.paymentStatus = "received_driver";
     request.commissionStatus = "pending";
@@ -98,18 +97,36 @@ export function walletSummary(requests, user, realEnabled = false) {
   let requestedCents = 0;
   let paidOutCents = 0;
   let commissionsPaidCents = 0;
+  let testAvailableCents = 0;
+  let testRequestedCents = 0;
+  let testPaidOutCents = 0;
+  let testCommissionsPaidCents = 0;
   const now = Date.now();
   for (const request of selected) {
+    const sandbox = request.paymentProviderEnvironment === "sandbox" &&
+      Boolean(request.pagbankTestApprovedAt) && request.paymentProvider === "pagbank";
     if (request.commissionStatus === "pending") {
       pendingCents += request.commissionCents || 0;
       if (request.commissionDueAt && new Date(request.commissionDueAt).getTime() <= now &&
           request.disputeStatus !== "open")
         overdueCents += request.commissionCents || 0;
     }
-    if (!refundBlocks(request) && request.disputeStatus !== "open" && request.payoutStatus === "available") availableCents += request.driverNetCents || 0;
-    if (!refundBlocks(request) && request.disputeStatus !== "open" && request.payoutStatus === "requested") requestedCents += request.driverNetCents || 0;
+    if (!refundBlocks(request) && request.disputeStatus !== "open") {
+      if (request.payoutStatus === "available") {
+        if (sandbox) testAvailableCents += request.driverNetCents || 0;
+        else availableCents += request.driverNetCents || 0;
+      }
+      if (request.payoutStatus === "requested") {
+        if (sandbox) testRequestedCents += request.driverNetCents || 0;
+        else requestedCents += request.driverNetCents || 0;
+      }
+    }
+    if (request.payoutStatus === "paid_sandbox") testPaidOutCents += request.driverNetCents || 0;
     if (["paid_simulated", "paid_manual"].includes(request.payoutStatus)) paidOutCents += request.driverNetCents || 0;
-    if (request.commissionStatus === "paid") commissionsPaidCents += request.commissionCents || 0;
+    if (request.commissionStatus === "paid") {
+      if (request.commissionProviderEnvironment === "sandbox") testCommissionsPaidCents += request.commissionCents || 0;
+      else commissionsPaidCents += request.commissionCents || 0;
+    }
   }
   return {
     simulated: !realEnabled,
@@ -119,6 +136,10 @@ export function walletSummary(requests, user, realEnabled = false) {
     requestedCents,
     paidOutCents,
     commissionsPaidCents,
+    testAvailableCents,
+    testRequestedCents,
+    testPaidOutCents,
+    testCommissionsPaidCents,
     blocked: user.role === "motorista" && overdueCents > 0,
     pixKey: user.role === "motorista" ? user.pixKey || "" : undefined,
   };
@@ -199,7 +220,8 @@ finance.post("/requests/:id/finance", async (req, res) => {
         request.disputeStatus === "open" ||
         request.paymentMethod !== "pix_freteon")
       fail(409, "Este repasse ainda não está disponível.");
-    if (!req.user.pixKey || req.user.pixKey.trim().length < 6)
+    if (!isApprovedPagBankTest(request) &&
+        (!req.user.pixKey || req.user.pixKey.trim().length < 6))
       fail(409, "Cadastre sua chave Pix na carteira antes de solicitar o repasse.");
     request.payoutStatus = "requested";
     request.payoutRequestedAt = new Date();
@@ -222,6 +244,14 @@ finance.post("/requests/:id/finance", async (req, res) => {
       fail(409, "Aguarde o motorista informar o pagamento da comissão.");
     request.commissionStatus = "paid";
     request.commissionPaidAt = new Date();
+  } else if (action === "confirm_test_payout_master" && isMaster) {
+    if (!isApprovedPagBankTest(request) || !request.deliveryConfirmedAt ||
+        request.status !== "completed" || request.payoutStatus !== "requested" ||
+        request.disputeStatus === "open" || refundBlocks(request))
+      fail(409, "Somente repasses de homologação PagBank solicitados podem ser concluídos como teste.");
+    // Registro manual de teste: NUNCA marcar como transferência bancária real.
+    request.payoutStatus = "paid_sandbox";
+    request.payoutPaidAt = new Date();
   } else if (action === "confirm_payout_master" && isMaster) {
     if (request.payoutStatus !== "requested" || request.disputeStatus === "open")
       fail(409, "Não existe repasse solicitado para confirmar.");
