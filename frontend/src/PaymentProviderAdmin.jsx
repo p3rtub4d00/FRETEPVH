@@ -3,7 +3,7 @@ import { Building2, CheckCircle2, AlertCircle } from "lucide-react";
 import { api } from "./api.js";
 const names = { mercadopago: "Mercado Pago", pagbank: "PagBank" };
 
-export default function PaymentProviderAdmin({ initial, onSaved }) {
+export default function PaymentProviderAdmin({ initial, onSaved, readOnly = false }) {
   const [current, setCurrent] = useState(initial?.preferred || "mercadopago");
   const [config, setConfig] = useState(initial || null);
   const [busy, setBusy] = useState(false);
@@ -15,7 +15,7 @@ export default function PaymentProviderAdmin({ initial, onSaved }) {
     }
   }, [initial?.preferred, initial?.enabled, initial?.updatedAt]);
   async function choose(provider) {
-    if (busy || provider === current) return;
+    if (busy || readOnly || provider === current) return;
     setBusy(true);
     setError("");
     try {
@@ -36,9 +36,10 @@ export default function PaymentProviderAdmin({ initial, onSaved }) {
         <p>Defina para onde irão as novas cobranças de frete e comissões. Pagamentos antigos permanecem no banco de origem.</p>
       </div>
     </div>
+    {readOnly && <p className="muted">Somente o Master Principal pode alterar o banco que recebe os pagamentos.</p>}
     <div className="payment-provider-options">
       {Object.entries(names).map(([provider, name]) => (
-        <button key={provider} type="button" disabled={busy}
+        <button key={provider} type="button" disabled={busy || readOnly}
           aria-pressed={current === provider} onClick={() => choose(provider)}
           className={current === provider ? "selected" : ""}>
           <span><strong>{name}</strong>
