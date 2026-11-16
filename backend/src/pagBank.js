@@ -81,3 +81,107 @@ export function verifyPagBankWebhook(rawBody, signatureHeader, publicKeyBase64) 
     });
   } catch { return false; }
 }
+
+export async function syncPagBankOrder(order, remote) {
+  const charge = remote?.charges?.find(item => item.id === order.chargeId);
+  if (remote?.id !== order.orderId || !charge ||
+      charge.reference_id !== order.externalReference ||
+      charge.payment_method?.type !== "PIX" ||
+      charge.amount?.currency !== "BRL" ||
+      charge.amount?.value !== order.amountCents) {
+    console.warn("PagBank: divergência na conciliação da cobrança.");
+    return false;
+  }
+  let status = charge.status === "PAID" ? "approved" :
+    charge.status === "CANCELED" ? "cancelled" :
+    charge.status === "DECLINED" ? "rejected" : "pending";
+  if (status === "cancelled" &&
+      Number(charge.amount?.summary?.refunded || 0) >= order.amountCents)
+    status = "refunded";
+  const previous = order.status;
+  if (previous === "refunded" && status !== "refunded") return false;
+  if (previous === "approved" && !["approved", "refunded"].includes(status)) return false;
+  if (previous === status) return true;
+  const freight = await Freight.findById(order.freightId);
+  if (!freight) return false;
+  let valid = false;
+  if (status === "approved") {
+    if (order.kind === "commission") {
+      const change = await Freight.updateOne({
+        _id: freight._id, driverId: order.payerId,
+        commissionStatus: "pending", commissionCents: order.amountCents,
+        disputeStatus: { $ne: "open" },
+        refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_pagbank"] }
+      }, { $set: { commissionStatus: "paid", commissionPaidAt: new Date(),
+        commissionProvider: "pagbank" } });
+      valid = Boolean(change.modifiedCount);
+    } else {
+      const change = await Freight.updateOne({
+        _id: freight._id, clientId: order.payerId,
+        paymentMethod: "pix_freteon", paymentStatus: "awaiting",
+        agreedPriceCents: order.amountCents,
+        status: { $in: ["booked", "transit", "completed", "cancelled"] }
+      }, { $set: { paymentStatus: "paid_pagbank", paymentProvider: "pagbank" } });
+      valid = Boolean(change.modifiedCount) && freight.status !== "cancelled";
+    }
+  } else if (status === "refunded" && order.kind === "freight") {
+    const change = await Freight.updateOne({
+      _id: freight._id, paymentStatus: "paid_pagbank",
+      payoutStatus: { $nin: ["paid_manual", "paid_simulated"] }
+    }, { $set: {
+      paymentStatus: "refunded_pagbank", refundStatus: "refunded_pagbank",
+      payoutStatus: "none", refundAmountCents: order.amountCents, refundedAt: new Date()
+    } });
+    valid = Boolean(change.modifiedCount);
+  }
+  if (["approved", "refunded"].includes(status) && !valid) order.reviewRequired = true;
+  order.status = status;
+  if (["approved", "refunded"].includes(status)) order.verifiedAt ||= new Date();
+  await order.save();
+  if (["approved", "refunded"].includes(status)) {
+    void notifyMasters({
+      title: status === "refunded" ? "Estorno PagBank" :
+        order.kind === "commission" ? "Comissão paga no PagBank" : "Pix recebido no PagBank",
+      body: valid ? "Confirmação do PagBank registrada no Financeiro."
+        : "Pagamento exige conciliação manual. Não libere repasse.",
+      category: "financeiro", id: String(order.freightId)
+    });
+    if (status === "approved" && valid) {
+      if (freight.driverId) void notifyAccounts([freight.driverId], {
+        role: "motorista", title: order.kind === "commission" ? "Comissão quitada" : "Frete pago",
+        body: "Pagamento confirmado pelo PagBank.", id: String(order.freightId)
+      }).catch(() => {});
+      if (order.kind === "freight") void notifyAccounts([freight.clientId], {
+        role: "cliente", title: "Pix confirmado",
+        body: "Pagamento confirmado pelo PagBank.", id: String(order.freightId)
+      }).catch(() => {});
+    }
+  }
+  return true;
+}
+export async function refreshPagBankOrder(order) {
+  if (order.orderId && order.status !== "refunded") {
+    const remote = await pagbankRequest("GET", `/orders/${encodeURIComponent(order.orderId)}`);
+    await syncPagBankOrder(order, remote);
+  }
+  return order;
+}
+export async function refundPagBankPayment(freight) {
+  if (freight.paymentStatus !== "paid_pagbank")
+    fail(409, "Este frete não possui Pix PagBank disponível para reembolso.");
+  const order = await PagBankOrder.findOne({ freightId: freight._id, kind: "freight" });
+  if (!order?.chargeId || order.amountCents !== freight.agreedPriceCents)
+    fail(409, "Cobrança PagBank não conciliada.");
+  if (order.status === "refunded")
+    return { status: "CANCELED", amount: { summary: { refunded: order.amountCents } } };
+  if (order.status !== "approved") fail(409, "O pagamento não está aprovado no PagBank.");
+  const result = await pagbankRequest("POST", `/charges/${encodeURIComponent(order.chargeId)}/cancel`,
+    { amount: { value: order.amountCents } }, `refund${order.idempotencyKey}`);
+  if (result?.id !== order.chargeId ||
+      Number(result.amount?.summary?.refunded || 0) < order.amountCents)
+    fail(409, "Devolução ainda não confirmada pelo PagBank. Verifique antes de repetir.");
+  order.status = "refunded";
+  order.verifiedAt = new Date();
+  await order.save();
+  return result;
+}
