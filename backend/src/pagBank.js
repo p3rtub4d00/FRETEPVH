@@ -1,4 +1,4 @@
-import { randomUUID, createPublicKey, verify as verifySignature } from "node:crypto";
+import { randomUUID, createHash, timingSafeEqual, createPublicKey, verify as verifySignature } from "node:crypto";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { Freight } from "./models.js";
@@ -81,6 +81,15 @@ export function verifyPagBankWebhook(rawBody, signatureHeader, publicKeyBase64) 
       catch { return false; }
     });
   } catch { return false; }
+}
+
+export function verifyLegacyPagBankWebhook(rawBody, header, token) {
+  if (!Buffer.isBuffer(rawBody) || rawBody.length > 50000 ||
+      !/^[a-f0-9]{64}$/i.test(String(header || "")) || !token) return false;
+  const expected = createHash("sha256")
+    .update(token).update("-").update(rawBody).digest();
+  const given = Buffer.from(String(header), "hex");
+  return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
 export async function syncPagBankOrder(order, remote) {
@@ -298,8 +307,13 @@ export async function pagBankGet(req, res) {
 export const pagBankWebhook = Router();
 pagBankWebhook.post("/webhook", async (req, res) => {
   if (!pagBankEnabled()) return res.sendStatus(503);
-  if (!verifyPagBankWebhook(req.body, req.headers["x-payload-signature"],
-      process.env.PAGBANK_WEBHOOK_PUBLIC_KEY)) return res.sendStatus(401);
+  const authenticated = verifyPagBankWebhook(
+    req.body, req.headers["x-payload-signature"],
+    process.env.PAGBANK_WEBHOOK_PUBLIC_KEY
+  ) || verifyLegacyPagBankWebhook(
+    req.body, req.headers["x-authenticity-token"], process.env.PAGBANK_TOKEN
+  );
+  if (!authenticated) return res.sendStatus(401);
   let event;
   try { event = JSON.parse(req.body.toString("utf8")); }
   catch { return res.sendStatus(400); }
