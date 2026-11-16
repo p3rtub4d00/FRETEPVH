@@ -143,7 +143,10 @@ finance.post("/requests/:id/finance", async (req, res) => {
       request.refundedBy = own(req.user);
     }
   } else if (action === "simulate_pix_payment" && isClient) {
-    if (realEnabled) fail(409, "O Pix deve ser confirmado pelo banco selecionado.");
+    if (realEnabled ||
+        await MercadoPagoOrder.exists({ freightId: request._id, kind: "freight" }) ||
+        await PagBankOrder.exists({ freightId: request._id, kind: "freight" }))
+      fail(409, "Este Pix deve ser confirmado pelo provedor de pagamento, não por simulação.");
     if (request.paymentMethod !== "pix_freteon" ||
         request.status !== "booked" || request.paymentStatus !== "awaiting")
       fail(409, "O pagamento simulado só pode ser confirmado após contratar o motorista.");
