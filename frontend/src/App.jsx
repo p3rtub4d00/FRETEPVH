@@ -231,6 +231,57 @@ function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhot
   );
 }
 
+function DriverOpenFreightProposal({ request, driverId, commissionRate, available, onSubmit, onReport }) {
+  const [expandedPhoto, setExpandedPhoto] = useState(-1);
+  const currentProposal = request.proposals?.find(proposal => proposal.driverId === driverId);
+  return (
+    <div className="driver-open-layout">
+      <section className="driver-open-brief" aria-label="Resumo do pedido">
+        <div className="driver-open-route">
+          <div><span>Retirada</span><strong>{request.origin}</strong></div>
+          <div><span>Entrega</span><strong>{request.destination}</strong></div>
+        </div>
+        <div className="driver-open-meta">
+          <span><Clock3 size={15}/> {request.date ? new Date(`${request.date}T12:00:00`).toLocaleDateString("pt-BR") : "Data a combinar"} · {request.time}</span>
+          <span><Users size={15}/> {request.helper ? "Cliente precisa de ajudante" : "Sem ajudante solicitado"}</span>
+        </div>
+        {request.paymentMethod && <PaymentLabel method={request.paymentMethod}/>}
+        <details className="driver-open-extra">
+          <summary><Package size={18}/><span>Descrição, fotos e rota</span>{request.photos?.length > 0 && <small>{request.photos.length} foto(s)</small>}<ChevronRight size={18}/></summary>
+          <div className="driver-open-extra-body">
+            {request.description && <p className="driver-open-description">{request.description}</p>}
+            {request.vehicle && <p className="muted">Veículo solicitado: {request.vehicle}</p>}
+            {request.originAddress?.complement && <p className="muted">Complemento da retirada: {request.originAddress.complement}</p>}
+            {request.originAddress?.reference && <p className="muted">Referência da retirada: {request.originAddress.reference}</p>}
+            {request.destinationAddress?.complement && <p className="muted">Complemento da entrega: {request.destinationAddress.complement}</p>}
+            {request.destinationAddress?.reference && <p className="muted">Referência da entrega: {request.destinationAddress.reference}</p>}
+            {request.photos?.length > 0 && (
+              <div className="driver-open-photos">
+                {request.photos.map((photo, index) => (
+                  <button key={index} type="button" aria-label={`Ver foto ${index + 1} da carga`}
+                    aria-pressed={expandedPhoto === index}
+                    onClick={() => setExpandedPhoto(previous => previous === index ? -1 : index)}>
+                    <FreightPhotoImage src={photo} alt={`Foto ${index + 1} da carga`}/>
+                  </button>
+                ))}
+                {expandedPhoto >= 0 && <FreightPhotoImage className="driver-open-expanded-photo"
+                  src={request.photos[expandedPhoto]} alt={`Foto ampliada da carga ${expandedPhoto + 1}`} eager />}
+              </div>
+            )}
+            <RouteDistance request={request}/>
+          </div>
+        </details>
+        {currentProposal && <p className="driver-open-existing">Você já enviou uma proposta. É possível atualizar o preço e os serviços enquanto o pedido estiver aberto.</p>}
+        <button type="button" className="driver-open-report" onClick={onReport}>
+          <Flag size={15}/> Denunciar problema neste pedido
+        </button>
+      </section>
+      <ProposalForm key={request.id} request={request} driverId={driverId}
+        commissionRate={commissionRate} available={available} onSubmit={onSubmit}/>
+    </div>
+  );
+}
+
 function RequestForm({ onCreate, onClose, requestError }) {
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
@@ -1593,6 +1644,26 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 }
               }}
             />
+          ) : area === "motorista" && selected.status === "open" ? (
+            <DriverOpenFreightProposal
+              key={selected.id}
+              request={selected}
+              driverId={user.id}
+              commissionRate={commissionRate}
+              available={
+                state.user.verified &&
+                !state.wallet?.blocked &&
+                (selected.paymentMethod !== "card_driver" || state.user.acceptsCard) &&
+                !busy
+              }
+              onReport={() => setModal({ type: "report", id: selected.id })}
+              onSubmit={(proposal) =>
+                mutate(`/requests/${selected.id}/proposals`, "POST", proposal, () => {
+                  setModal(null);
+                  setNotice("Proposta enviada ao cliente.");
+                })
+              }
+            />
           ) : (
             <>
           <span className={`status ${selected.status}`}>
@@ -2126,90 +2197,71 @@ function IssueForm({ onSubmit, busy }) {
   );
 }
 
-function ProposalForm({ request, available, driverId, onSubmit, focusOnOpen = false, commissionRate = 10 }) {
-  const headingRef = useRef(null);
-  useEffect(() => {
-    if (focusOnOpen) {
-      headingRef.current?.scrollIntoView({ block: "start" });
-      headingRef.current?.focus({ preventScroll: true });
-    }
-  }, [focusOnOpen]);
-  const previous = request.proposals.find(
-    (proposal) => proposal.driverId === driverId,
-  );
+function ProposalForm({ request, available, driverId, onSubmit, commissionRate = 10 }) {
+  const previous = request.proposals?.find(proposal => proposal.driverId === driverId);
   const [proposedPrice, setProposedPrice] = useState(String(previous?.price || ""));
+  const services = [
+    ["helper", "Ajudante incluso"],
+    ["blanket", "Proteção com mantas"],
+    ["disassembly", "Desmontagem e montagem"],
+    ["stairs", "Retirada/entrega em escadas"],
+    ["loading", "Carregamento e descarregamento"],
+    ["tieDown", "Amarração e fixação da carga"],
+  ];
+  const feeNote = request.paymentMethod === "card_driver"
+    ? `O cliente paga na sua maquininha. Considere as taxas bancárias no preço e repasse ${commissionRate}% ao FreteOn em até 72h após a confirmação do pagamento.`
+    : request.paymentMethod === "cash_driver"
+      ? `O cliente paga em dinheiro ao motorista. A comissão de ${commissionRate}% é repassada ao FreteOn em até 72h após a confirmação do pagamento.`
+      : request.paymentMethod === "pix_freteon"
+        ? "Pix pelo FreteOn em simulação. Após a entrega, solicite o repasse na carteira."
+        : "Confirme a forma de pagamento com as informações deste pedido.";
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        const data = new FormData(event.currentTarget);
-        onSubmit({
-          price: Number(data.get("price")),
-          time: data.get("time"),
-          services: data.getAll("services"),
-        });
-      }}
-    >
-      <h3 ref={headingRef} tabIndex={-1}>{previous ? "Atualizar minha proposta" : "Enviar proposta"}</h3>
-      <div className="payment-choice-notice">
-        <strong>Pagamento escolhido pelo cliente</strong>
-        <PaymentLabel method={request.paymentMethod} />
-        <p>{request.paymentMethod === "card_driver"
-          ? "Você recebe na sua maquininha e repassa 10% ao FreteOn em até 72h após a confirmação do pagamento."
-          : request.paymentMethod === "cash_driver"
-          ? "Você recebe em dinheiro e repassa 10% ao FreteOn em até 72h após a confirmação do pagamento."
-          : request.paymentMethod === "pix_freteon"
-          ? "Pix pelo FreteOn (simulação). Após a entrega, solicite seu repasse manual pela carteira."
-          : "Pedido anterior sem forma de pagamento definida."}</p>
-      </div>
-      <div className="form-grid">
-        <label>
-          Seu preço (R$)
-          <input
-            type="number"
-            name="price"
-            required
-            min="1"
-            max="100000"
-            step="0.01"
-            value={proposedPrice}
-            onChange={(event) => setProposedPrice(event.target.value)}
-            placeholder="0,00"
-          />
+    <form className="driver-proposal-form" onSubmit={event => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      onSubmit({
+        price: Number(data.get("price")),
+        time: data.get("time"),
+        services: data.getAll("services"),
+      });
+    }}>
+      <header className="driver-proposal-form-header">
+        <h3>{previous ? "Atualizar minha proposta" : "Enviar minha proposta"}</h3>
+        <p>Informe o valor total do transporte e o horário de retirada.</p>
+      </header>
+      <div className="driver-proposal-main-fields">
+        <label className="driver-proposal-price-field">
+          Seu preço total (R$)
+          <input type="number" name="price" inputMode="decimal" required min="1" max="100000"
+            step="0.01" value={proposedPrice} onChange={event => setProposedPrice(event.target.value)}
+            placeholder="0,00"/>
         </label>
-        <label>
+        <label className="driver-proposal-time-field">
           Horário de retirada
-          <input
-            type="time"
-            name="time"
-            required
-            defaultValue={previous?.time || request.time}
-          />
+          <input type="time" name="time" required defaultValue={previous?.time || request.time}/>
         </label>
       </div>
+      <p className="driver-proposal-payment-note">{feeNote}</p>
       <fieldset className="proposal-services">
-        <legend>Serviços incluídos na proposta</legend>
-        <p className="muted">Marque o que está incluído no valor. Não é permitido compartilhar contatos ou links antes da contratação.</p>
-        {[
-          ["helper", "Ajudante incluso"],
-          ["blanket", "Proteção com mantas"],
-          ["disassembly", "Desmontagem e montagem"],
-          ["stairs", "Retirada/entrega em escadas"],
-          ["loading", "Carregamento e descarregamento"],
-          ["tieDown", "Amarração e fixação da carga"],
-        ].map(([key, label]) => (
-          <label key={key} className="proposal-service-option">
-            <input type="checkbox" name="services" value={key}
-              defaultChecked={previous?.services?.includes(key)}/>
-            {label}
-          </label>
-        ))}
+        <legend>Serviços incluídos no valor</legend>
+        <p className="muted">Marque somente os serviços que você realmente fornecerá. O preço deve incluir os serviços selecionados.</p>
+        <div className="driver-proposal-services-grid">
+          {services.map(([key, label]) => (
+            <label key={key} className="proposal-service-option">
+              <input type="checkbox" name="services" value={key}
+                defaultChecked={previous?.services?.includes(key)}/>
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
       </fieldset>
-      <CommissionPreview price={proposedPrice} method={request.paymentMethod} rate={commissionRate} />
-      <button className="primary full" disabled={!available}>
-        {available ? "Enviar proposta" : "Verifique seus documentos, carteira e meios de pagamento"}
-        <ArrowRight size={18} />
-      </button>
+      <CommissionPreview price={proposedPrice} method={request.paymentMethod} rate={commissionRate}/>
+      <div className="driver-proposal-submit">
+        <button type="submit" className="primary full" disabled={!available}>
+          {available ? previous ? "Atualizar proposta" : "Enviar proposta" : "Verifique seus documentos, carteira e meios de pagamento"}
+          <ArrowRight size={18}/>
+        </button>
+      </div>
     </form>
   );
 }
