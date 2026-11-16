@@ -33,7 +33,7 @@ export function mercadoPagoEnabled() {
 }
 
 const cleanId = value => String(value || "").trim();
-const validCpf = input => {
+export const validCpf = input => {
   const digits = String(input || "").replace(/\D/g, "");
   if (!/^\d{11}$/.test(digits) || /^(\d)\1{10}$/.test(digits)) return false;
   for (const size of [9, 10]) {
