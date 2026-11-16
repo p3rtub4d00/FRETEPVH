@@ -1752,7 +1752,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           busy={busy}
           onClose={() => setModal(null)}
         >
-          <RefundPanel request={selected} role={area} busy={busy} onAction={walletAction} />
+          <RefundPanel request={selected} role={area} busy={busy} onAction={walletAction} canManage={masterOwner || user.adminPermissions?.includes("finance.refund")}/>
           <div className="completion-modal-content">
             <div className="completion-modal-headline">
               <CheckCircle2 size={35} />
@@ -1894,7 +1894,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             {statusLabels[selected.status]}
           </span>
           <Route request={selected} />
-          <RefundPanel key={`refund-${selected.id}`} request={selected} role={area} busy={busy} onAction={walletAction} />
+          <RefundPanel key={`refund-${selected.id}`} request={selected} role={area} busy={busy} onAction={walletAction} canManage={masterOwner || user.adminPermissions?.includes("finance.refund")}/>
           {selected.paymentMethod && (
             <div className="freight-payment-panel">
               <PaymentLabel method={selected.paymentMethod} />
