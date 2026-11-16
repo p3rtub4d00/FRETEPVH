@@ -4266,3 +4266,48 @@ a.maps-route-button:focus-visible { outline: 3px solid #ff8a35; outline-offset: 
 .freight-gallery-collapsible[open] > summary::after { content: "−"; }
 .freight-gallery-collapsible .freight-gallery-images { padding: 0 14px 14px; }
 .freight-gallery-collapsible > summary:focus-visible { outline: 2px solid #fb8b32; outline-offset: -3px; border-radius: 12px; }
+
+/* Modal compacto de frete contratado: somente perfil motorista. */
+dialog:has(.driver-compact) { max-width: 620px; overscroll-behavior: contain; }
+.driver-compact { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.driver-compact-status { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #216a45; font-size: 13px; }
+.driver-compact-status .status { margin-left: auto; }
+.driver-compact > .route { margin: 2px 0 3px; }
+.driver-compact-payment { display: grid; gap: 11px; background: #f8fafc; border: 1px solid #dce6f0; border-radius: 13px; padding: 14px; }
+.driver-compact-payment .payment-tag { justify-self: start; }
+.driver-compact-values { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 7px 12px; font-size: 13px; }
+.driver-compact-values > span { color: #61748a; }
+.driver-compact-values > strong { color: #10243e; text-align: right; font-size: 14px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.driver-compact-values > .driver-compact-net-label { border-top: 1px solid #dde6ee; padding-top: 10px; font-weight: 700; color: #193c31; }
+.driver-compact-values > .driver-compact-net { border-top: 1px solid #dde6ee; padding-top: 10px; font-size: 19px; color: #218358; }
+.driver-compact-payment > small { font-size: 11px; color: #66798d; line-height: 1.5; }
+.driver-compact-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 15px; font-size: 12px; color: #566d82; }
+.driver-compact-meta span, .driver-compact-vehicle { display: inline-flex; align-items: center; gap: 6px; }
+.driver-compact-meta svg { flex-shrink: 0; }
+.driver-compact-vehicle { color: #63778b; font-size: 12px; margin: 0; }
+.driver-compact-expand { border: 1px solid #e0e9f1; border-radius: 11px; background: #fff; overflow: hidden; }
+.driver-compact-expand > summary { display: flex; align-items: center; gap: 9px; padding: 12px; color: #304d68; cursor: pointer; font-size: 13px; font-weight: 700; list-style: none; }
+.driver-compact-expand > summary::-webkit-details-marker { display: none; }
+.driver-compact-expand > summary > svg:last-child { margin-left: auto; transition: transform .15s ease; }
+.driver-compact-expand[open] > summary > svg:last-child { transform: rotate(90deg); }
+.driver-compact-expand > p { margin: 0; padding: 0 12px 13px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+.driver-compact-expand > .freight-gallery-images { padding: 0 12px 13px; }
+.driver-compact-link { display: flex; align-items: center; width: 100%; gap: 10px; padding: 13px 14px; background: #eff4f9; color: #163b5c; border: 1px solid #dce6f0; border-radius: 11px; font-weight: 700; font-size: 14px; text-align: left; min-height: 47px; }
+.driver-compact-link > span { flex: 1; }
+.driver-compact-chevron-open { transform: rotate(90deg); }
+.driver-compact .freight-chat-panel { margin: 3px 0 0; }
+.driver-compact .freight-distance { margin: 0; padding: 2px 0 0; border: 0; }
+.driver-compact .maps-route-help { display: none; }
+.driver-compact-footer { position: sticky; bottom: -1px; z-index: 4; padding: 12px 0 2px; background: #fff; border-top: 1px solid #edf1f5; box-shadow: 0 -6px 12px -12px #0f2545; }
+.driver-compact-footer .primary { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; }
+.driver-compact-footer .info { margin: 0 0 9px; font-size: 12px; }
+.driver-compact-expand > summary:focus-visible, .driver-compact-link:focus-visible { outline: 3px solid #f98c35; outline-offset: 2px; }
+@media (max-width:600px) {
+  dialog:has(.driver-compact) { padding: 16px; width: calc(100% - 20px); max-height: 94dvh; }
+  dialog:has(.driver-compact) .modal-head { margin-bottom: 11px; }
+  dialog:has(.driver-compact) .modal-head h2 { font-size: 17px; }
+  .driver-compact { gap: 10px; }
+  .driver-compact-payment { padding: 12px; }
+  .driver-compact-footer { margin-bottom: -6px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) { .driver-compact-expand > summary > svg:last-child { transition: none; } }
