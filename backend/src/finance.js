@@ -117,7 +117,8 @@ finance.post("/requests/:id/finance", async (req, res) => {
     fail(409, "Este frete anterior não possui pagamento registrado.");
   const action = req.body.action;
   const gateway = await getPaymentProvider();
-  // Não voltar à simulação se alguma conta real já estiver configurada.\n  const realEnabled = gateway.enabled || gateway.anyReady;
+  // Não voltar ao modo de teste se alguma conta real estiver configurada.
+  const realEnabled = gateway.enabled || gateway.anyReady;
   const isClient = req.user.role === "cliente" && request.clientId === own(req.user);
   const isDriver = req.user.role === "motorista" && request.driverId === own(req.user);
   const isMaster = req.user.role === "master";
