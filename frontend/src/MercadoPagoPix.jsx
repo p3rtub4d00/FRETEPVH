@@ -9,6 +9,7 @@ export default function MercadoPagoPix({ requestId, kind, onPaid, gateway }) {
   const [cpf, setCpf] = useState("");
   const [order, setOrder] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const notified = useRef(false);
@@ -20,6 +21,7 @@ export default function MercadoPagoPix({ requestId, kind, onPaid, gateway }) {
     notified.current = false;
     setOrder(null);
     setError("");
+    setChecking(true);
     async function fetchStatus() {
       try {
         const result = await api(`/payments/orders/${requestId}/${kind}`);
@@ -31,6 +33,8 @@ export default function MercadoPagoPix({ requestId, kind, onPaid, gateway }) {
         }
       } catch (cause) {
         if (live) setError(cause.message);
+      } finally {
+        if (live) setChecking(false);
       }
     }
     fetchStatus();
@@ -77,16 +81,21 @@ export default function MercadoPagoPix({ requestId, kind, onPaid, gateway }) {
     } catch { setError("Copie o código Pix pelo campo abaixo."); }
   }
   const approved = order?.status === "approved";
+  const unavailable = Boolean(order?.unavailable) || (!gateway?.enabled && !order?.qrCode && !approved);
   const provider = order?.provider || gateway?.preferred || "mercadopago";
   const providerName = provider === "pagbank" ? "PagBank" : "Mercado Pago";
   const sandbox = provider === "pagbank" && gateway?.pagbankEnvironment === "sandbox";
   return <section className="mp-pix-panel" aria-label={labels[kind]}>
     <div className="mp-pix-head"><QrCode size={20}/><strong>{labels[kind]} · {providerName}</strong></div>
     {sandbox && <p className="muted">Ambiente PagBank de testes: este Pix não representa cobrança real.</p>}
-    {approved ? (
+    {checking ? (
+      <p className="muted" role="status">Consultando situação do Pix no banco...</p>
+    ) : approved ? (
       <div className="mp-pix-success" role="status">
         <CheckCircle2 size={22}/>
-        <span>Pagamento confirmado pelo {providerName}. O financeiro do FreteOn foi atualizado.</span>
+        <span>{order?.reviewRequired
+          ? `Pagamento identificado no ${providerName}, aguardando conferência do Master.`
+          : `Pagamento confirmado pelo ${providerName}. O financeiro do FreteOn foi atualizado.`}</span>
       </div>
     ) : order?.qrCode ? (
       <div className="mp-pix-payment">
@@ -105,8 +114,8 @@ export default function MercadoPagoPix({ requestId, kind, onPaid, gateway }) {
           <RefreshCw size={17}/> {busy ? "Consultando..." : "Verificar pagamento"}
         </button>
       </div>
-    ) : order?.unavailable ? (
-      <p className="wallet-note">O banco responsável por esta cobrança não está configurado no servidor. Contate o Master antes de tentar outro Pix.</p>
+    ) : unavailable ? (
+      <p className="wallet-note" role="status">Pagamento por Pix indisponível: {providerName} ainda não está habilitado no Render. O Master precisa configurar as credenciais e liberar o ambiente de produção. Nenhum pagamento foi registrado.</p>
     ) : order?.status && order.status !== "none" && order.status !== "created" ? (
       <div className="mp-pix-payment">
         <p className="muted">Cobrança: {order.status === "pending" ? "Aguardando pagamento" :
