@@ -651,7 +651,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   let requests = state.requests;
   if (page === "historico")
     requests = state.requests.filter((request) =>
-      ["completed", "cancelled"].includes(request.status),
+      ["completed", "cancelled"].includes(request.status) &&
+      (area !== "motorista" || request.driverId === user.id),
     );
   else if (area === "motorista")
     requests =
@@ -734,6 +735,45 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <ChevronRight size={21} className="client-proposals-cta-arrow"/>
           </button>
         ) : <button className="card-link" onClick={() => setModal({ type: "detail", id: request.id })}>Ver detalhes <ArrowRight size={18}/></button>}
+      </article>
+    );
+  }
+
+  function driverHistoryCard(request) {
+    const completed = request.status === "completed";
+    const date = request.completedAt || request.updatedAt || request.createdAt;
+    const dateLabel = date && !Number.isNaN(new Date(date).getTime())
+      ? new Date(date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+      : request.date
+        ? new Date(`${request.date}T12:00:00`).toLocaleDateString("pt-BR")
+        : "Data não informada";
+    return (
+      <article className="driver-history-card" key={request.id}>
+        <div className="driver-history-heading">
+          <span className={`status ${request.status}`}>
+            {completed ? <CheckCircle2 size={15} /> : <X size={15} />}
+            {statusLabels[request.status]}
+          </span>
+          <span className="driver-history-date"><Clock3 size={14} /> {dateLabel}</span>
+        </div>
+        <h3>{request.title}</h3>
+        <div className="driver-history-addresses">
+          <div><span>Retirada</span><strong>{request.origin}</strong></div>
+          <div><span>Entrega</span><strong>{request.destination}</strong></div>
+        </div>
+        {Number.isFinite(request.agreedPriceCents) && (
+          <div className="driver-history-price">
+            <span>Valor combinado</span>
+            <strong>{money(request.agreedPriceCents / 100)}</strong>
+          </div>
+        )}
+        {request.commissionStatus === "pending" && (
+          <p className="driver-history-pending">Comissão pendente · Acompanhe em Minha carteira</p>
+        )}
+        <button type="button" className="driver-history-details"
+          onClick={() => setModal({ type: "detail", id: request.id })}>
+          Ver detalhes do frete <ArrowRight size={18}/>
+        </button>
       </article>
     );
   }
@@ -1257,7 +1297,18 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   <div className="section-heading"><h2>Seus fretes contratados</h2></div>
                   <div className="cards">{requests.filter(request => request.status !== "open").map(request => requestCard(request))}</div>
                 </>}
-              </> : <div className="cards">{requests.map(request => requestCard(request))}</div>}
+              </> : area === "motorista" && page === "historico" ? (
+                <div className="driver-history-carousel">
+                  <FreightCarousel
+                    requests={[...requests].sort((a, b) =>
+                      new Date(b.completedAt || b.updatedAt || b.createdAt || 0).getTime() -
+                      new Date(a.completedAt || a.updatedAt || a.createdAt || 0).getTime())}
+                    renderCard={driverHistoryCard}
+                    ariaLabel="Histórico de fretes do motorista"
+                    itemName="frete"
+                  />
+                </div>
+              ) : <div className="cards">{requests.map(request => requestCard(request))}</div>}
               {!requests.length && !(area === "motorista" && page === "inicio") && (
                 <Empty title="Nenhum frete por aqui">
                   Novos pedidos e atualizações aparecerão nesta área.
