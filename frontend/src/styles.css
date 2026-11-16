@@ -4725,3 +4725,37 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 @media (prefers-reduced-motion: reduce) {
   .client-pix-disclosure > summary svg:last-child { transition: none; }
 }
+
+
+/* Financeiro Master: receita de comissões confirmadas, distinta da homologação. */
+.wallet-commission-revenue {
+  display: grid;
+  gap: 7px;
+  padding: 14px 17px;
+  border: 1px solid #c9dfd6;
+  border-radius: 13px;
+  background: #f7fbf9;
+}
+.wallet-commission-revenue > div { display: grid; gap: 4px; min-width: 0; }
+.wallet-commission-revenue span { color: #425d53; font-size: 12px; font-weight: 750; }
+.wallet-commission-revenue strong {
+  color: #14634b; font-size: clamp(23px, 3vw, 31px);
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+}
+.wallet-commission-revenue small { color: #62766c; font-size: 11px; line-height: 1.5; }
+.wallet-commission-revenue-test { color: #687d8d; font-size: 11px; margin: 1px 0 0; }
+.wallet-homologation-balances {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.wallet-homologation-balances > div {
+  display: grid; gap: 5px; padding: 11px 12px; border-radius: 11px;
+  border: 1px solid #e0e9f0; background: #f8fafc; min-width: 0;
+}
+.wallet-homologation-balances span { font-size: 11px; color: #687d90; }
+.wallet-homologation-balances strong { color: #213b55; font-size: 17px; font-variant-numeric: tabular-nums; }
+@media (max-width: 440px) {
+  .wallet-commission-revenue { padding: 12px; }
+  .wallet-homologation-balances > div { padding: 10px; }
+}
