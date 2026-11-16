@@ -106,6 +106,8 @@ const freightSchema = new mongoose.Schema(
     },
     paymentProvider: { type: String, enum: ["mercadopago", "pagbank", null], default: null },
     commissionProvider: { type: String, enum: ["mercadopago", "pagbank", null], default: null },
+    paymentProviderEnvironment: { type: String, enum: ["sandbox", "production", null], default: null },
+    commissionProviderEnvironment: { type: String, enum: ["sandbox", "production", null], default: null },
     refundStatus: { type: String, enum: ["none", "pending", "approved", "rejected", "refunded_simulated", "refunded_mp", "refunded_pagbank"], default: "none" },
     refundReason: { type: String, default: "", maxlength: 500 },
     refundDecisionReason: { type: String, default: "", maxlength: 500 },
