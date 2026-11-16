@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import { Freight } from "./models.js";
 import { fail } from "./auth.js";
 import { notifyAccounts, notifyMasters } from "./webPush.js";
-import { canCreateMercadoPagoPix } from "./mercadoPago.js";
+import { canCreateMercadoPagoPix, validCpf } from "./mercadoPago.js";
 import { providerReady } from "./paymentProviderSettings.js";
 
 const schema = new mongoose.Schema({
@@ -215,7 +215,7 @@ export async function pagBankCreate(req, res) {
   const phone = String(req.user.phone || "").replace(/\D/g, "");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200)
     fail(400, "Informe um e-mail válido.");
-  if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf))
+  if (!validCpf(cpf))
     fail(400, "Informe um CPF válido.");
   if (!/^\d{11}$/.test(phone)) fail(409, "Atualize seu celular no perfil.");
   let order = await PagBankOrder.findOne({ freightId: freight._id, kind: req.params.kind });
