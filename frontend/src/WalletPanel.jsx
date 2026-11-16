@@ -454,7 +454,7 @@ export default function WalletPanel({ role, user, wallet, requests, drivers, bus
           Mostrar mais {Math.min(5, masterRows.length - masterVisibleCount)} registro(s)
           <ChevronRight size={16}/>
         </button>
-      )
+      )}
       <p className="wallet-legal">Valores ilustrativos, sem movimentação bancária. As comissões de dinheiro e cartão vencem 72 horas após a confirmação da entrega e do recebimento. Contestação aberta suspende a cobrança automática.</p>
     </section>
   );
