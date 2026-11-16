@@ -3,8 +3,8 @@ import { money } from './format.js';
 
 export const refundBlocked = request => ['pending', 'approved', 'refunded_simulated', 'refunded_mp', 'refunded_pagbank'].includes(request.refundStatus);
 const labels = {
-  pending: 'Reembolso em análise', approved: 'Reembolso aprovado · aguardando simulação',
-  rejected: 'Reembolso recusado', refunded_simulated: 'Reembolsado (simulação)',
+  pending: 'Reembolso em análise', approved: 'Reembolso aprovado · aguardando confirmação do banco',
+  rejected: 'Reembolso recusado', refunded_simulated: 'Registro antigo: devolução não conciliada',
   refunded_mp: 'Reembolso confirmado pelo Mercado Pago',
   refunded_pagbank: 'Reembolso confirmado pelo PagBank',
 };
@@ -19,7 +19,7 @@ export default function RefundPanel({ request, role, busy, onAction }) {
   const gatewayPix = ['paid_mp', 'refunded_mp', 'paid_pagbank', 'refunded_pagbank'].includes(request.paymentStatus);
   const sandboxPix = ['paid_pagbank', 'refunded_pagbank'].includes(request.paymentStatus) && request.paymentProviderEnvironment === 'sandbox';
   const realPix = gatewayPix && !sandboxPix;
-  const canAsk = role === 'cliente' && request.canRequestRefund;
+  const canAsk = role === 'cliente' && request.canRequestRefund && gatewayPix;
   if (status === 'none' && !canAsk) return null;
   async function submit(action) {
     setError('');
@@ -30,8 +30,9 @@ export default function RefundPanel({ request, role, busy, onAction }) {
   return <section className="refund-panel" aria-label="Cancelamento e reembolso">
     <h3>{labels[status] || 'Cancelamento e reembolso Pix'}</h3>
     <p className="muted">{realPix
-      ? "Pagamento real. O Master analisa o pedido e a devolução é processada pelo banco responsável, sem confirmação fictícia."
-      : sandboxPix ? "Ambiente de homologação PagBank: qualquer devolução será apenas de teste." : "Somente simulação. Nenhum dinheiro será devolvido ou movimentado nesta versão."}</p>
+      ? "O Master analisa o pedido e solicita a devolução pelo banco que recebeu o Pix."
+      : sandboxPix ? "Operação no ambiente PagBank de homologação, sem movimentação bancária real."
+      : "Registro anterior sem pagamento bancário confirmado. Consulte a administração."}</p>
     {status !== 'none' && <>
       <p><strong>Valor integral: {money(request.refundAmountCents / 100)}</strong></p>
       <p>Solicitado em {date(request.refundRequestedAt)} · Etapa: {stages[request.refundStage] || request.refundStage}</p>
@@ -40,7 +41,7 @@ export default function RefundPanel({ request, role, busy, onAction }) {
       {request.refundDecisionReason && <p><strong>Decisão do Master:</strong> {request.refundDecisionReason} · {date(request.refundReviewedAt)}</p>}
       {status === 'rejected' && <p>O frete mantém a etapa anterior. Confira a justificativa acima.</p>}
       {status === 'approved' && <p>O frete foi cancelado. A aprovação ainda não representa uma devolução concluída.</p>}
-      {request.refundedAt && <p>Devolução simulada registrada em {date(request.refundedAt)}.</p>}
+      {request.refundedAt && <p>Devolução registrada anteriormente em {date(request.refundedAt)}. Confira o comprovante bancário.</p>}
     </>}
     {canAsk && !editing && <button type="button" className="secondary full" disabled={busy} onClick={() => setEditing(true)}>Cancelar e solicitar reembolso</button>}
     {(canAsk && editing || role === 'master' && status === 'pending') && <form onSubmit={event => { event.preventDefault(); submit(role === 'master' ? 'approve_refund' : 'request_refund'); }}>
@@ -48,8 +49,8 @@ export default function RefundPanel({ request, role, busy, onAction }) {
         <textarea required minLength={10} maxLength={500} rows={3} value={reason} onChange={event => setReason(event.target.value)} placeholder="Descreva em pelo menos 10 caracteres" />
       </label>
       {role === 'master' ? <>
-        <p>Analise a etapa do transporte e o motivo. A aprovação cancela o frete e autoriza o reembolso integral simulado.</p>
-        <button className="primary full" disabled={busy}>{gatewayPix ? `Aprovar e devolver via ${request.paymentStatus === "paid_pagbank" ? "PagBank" : "Mercado Pago"}${sandboxPix ? " (teste)" : ""}` : "Aprovar reembolso integral (simulação)"}</button>
+        <p>Analise a etapa do transporte e o motivo. A aprovação cancela o frete e solicita a devolução pelo provedor do pagamento.</p>
+        <button className="primary full" disabled={busy || !gatewayPix}>{gatewayPix ? `Aprovar e devolver via ${request.paymentStatus === "paid_pagbank" ? "PagBank" : "Mercado Pago"}${sandboxPix ? " (teste)" : ""}` : "Reembolso bancário indisponível para registro antigo"}</button>
         <button type="button" className="secondary full" disabled={busy || reason.trim().length < 10} onClick={() => submit('reject_refund')}>Recusar com justificativa</button>
       </> : <>
         <p>Solicitação de {money(request.agreedPriceCents / 100)}. O pedido ficará suspenso para análise; não há aprovação automática.</p>
@@ -57,7 +58,7 @@ export default function RefundPanel({ request, role, busy, onAction }) {
         <button type="button" className="secondary full" disabled={busy} onClick={() => setEditing(false)}>Voltar</button>
       </>}
     </form>}
-    {role === 'master' && status === 'approved' && !gatewayPix && <button className="primary full" disabled={busy} onClick={() => submit('simulate_refund')}>Simular devolução de {money(request.refundAmountCents / 100)}</button>}
+    {role === 'master' && status === 'approved' && !gatewayPix && <p className="wallet-note">Registro antigo sem pagamento conciliado. Não efetue devolução pelo sistema; confira os registros anteriores.</p>}
     {error && <p className="error" role="alert">{error}</p>}
   </section>;
 }
