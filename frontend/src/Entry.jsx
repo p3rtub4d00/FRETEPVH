@@ -248,13 +248,16 @@ export default function Entry() {
           </div>
         </main>
       )}
-      <footer className="public-footer">
-        <span>FreteOn · Porto Velho, RO</span>
-        <details className="public-legal-links"><summary>Informações legais</summary><div>
+      <footer className="public-footer rubli-footer">
+        <div className="rubli-footer-brand">
+          <strong>Frete<span>On</span></strong>
+          <small>Conectando você ao frete certo.</small>
+        </div>
+        <nav className="rubli-footer-links" aria-label="Links institucionais">
+          <a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Privacidade</a>
           <a href="/termos" onClick={event => { event.preventDefault(); navigate("/termos"); }}>Termos de Uso</a>
-          <a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Política de Privacidade</a>
-          <small>Intermediação de fretes · Pix mediante confirmação bancária</small>
-        </div></details>
+        </nav>
+        <p className="rubli-footer-credit">© {new Date().getFullYear()} FreteOn · Uma plataforma do <strong>Grupo Rubli</strong>. O FreteOn atua na intermediação de fretes entre clientes e motoristas parceiros.</p>
       </footer>
     </div>
     {invitation}
