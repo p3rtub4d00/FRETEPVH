@@ -4838,3 +4838,11 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .rubli-footer-credit { margin:0; font-size:11px; line-height:1.7; color:#8996a4; }
 .rubli-footer-credit strong, .dashboard-footer-compact strong { font-weight:600; }
 @media(max-width:600px) { .public-footer.rubli-footer { gap:19px; padding:28px 22px 22px; } .rubli-footer-links { justify-content:space-between; gap:10px 16px; } }
+
+/* Ajuda discreta para usuários autenticados; informações legais ficam no modal. */
+.dashboard-help-link { display:block; margin:10px auto 14px; padding:9px 12px; border:0; background:transparent; color:#718092; font-size:12px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+.help-about-rubli { padding:14px 16px; margin-bottom:16px; border:1px solid #dce6f0; border-radius:12px; background:#f8fafc; }
+.help-about-rubli h3 { margin:0 0 6px; font-size:15px; color:#173550; }
+.help-about-rubli p { margin:0 0 12px; font-size:13px; line-height:1.5; color:#526477; }
+.help-about-links { display:flex; gap:12px 18px; flex-wrap:wrap; }
+.help-about-links a { font-size:12px; color:#1765c1; text-decoration:underline; }
