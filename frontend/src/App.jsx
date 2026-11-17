@@ -1677,7 +1677,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             </section>
           )}
           <footer className="dashboard-footer-compact">
-            <span>FreteOn · Porto Velho, RO</span>
+            <span>© {new Date().getFullYear()} FreteOn · Uma plataforma do <strong>Grupo Rubli</strong></span>
             <details className="dashboard-legal-disclosure">
               <summary>Informações legais</summary>
               <div>
