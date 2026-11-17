@@ -1676,17 +1676,16 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               )}
             </section>
           )}
-          <footer className="dashboard-footer-compact">
-            <span>© {new Date().getFullYear()} FreteOn · Uma plataforma do <strong>Grupo Rubli</strong></span>
-            <details className="dashboard-legal-disclosure">
-              <summary>Informações legais</summary>
-              <div>
-                <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
-                <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
-              </div>
-            </details>
-            <button type="button" onClick={() => setModal({ type: "help" })}>Ajuda</button>
-          </footer>
+          {area !== "master" && (
+            <button type="button" className="dashboard-help-link" onClick={() => setModal({ type: "help" })}>Ajuda e informações legais</button>
+          )}
+          {area === "master" && (
+            <footer className="dashboard-footer-compact">
+              <span>© {new Date().getFullYear()} FreteOn · Grupo Rubli</span>
+              <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
+              <a href="/privacidade" target="_blank" rel="noopener noreferrer">Privacidade</a>
+            </footer>
+          )}
         </main>
         {area !== "master" && <nav className="mobile-nav" aria-label="Navegação principal">
           {menu.map(([key, label, Icon]) => (
@@ -2368,6 +2367,14 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           title="Como funciona o FreteOn"
           onClose={() => setModal(null)}
         >
+          <section className="help-about-rubli">
+            <h3>Sobre o FreteOn</h3>
+            <p>O FreteOn é uma plataforma do <strong>Grupo Rubli</strong>, que conecta clientes e motoristas parceiros para a intermediação de fretes.</p>
+            <div className="help-about-links">
+              <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
+              <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
+            </div>
+          </section>
           <div className="help-step">
             <MapPin />
             <div>
