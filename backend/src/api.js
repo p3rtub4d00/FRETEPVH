@@ -22,6 +22,7 @@ import { getPaymentProvider, paymentProviderSettingsRouter } from "./paymentProv
 import { PagBankOrder } from "./pagBank.js";
 import { teamManagement } from "./teamManagement.js";
 import { helpRouter } from "./helpCenter.js";
+import { campaignsRouter } from "./campaigns.js";
 
 export const api = Router();
 api.use(authenticate);
@@ -38,6 +39,7 @@ api.use((req, res, next) => {
 });
 api.use(teamManagement);
 api.use(helpRouter);
+api.use(campaignsRouter);
 api.use(finance);
 api.use(mercadoPagoPrivate);
 api.use(paymentGatewayRouter);
