@@ -5,7 +5,7 @@ export async function recoverPush({ subscription, publicKey, permission, endpoin
   const rawKey = subscription.options?.applicationServerKey;
   if (rawKey) {
     const current = Array.from(new Uint8Array(rawKey));
-    const expected = Array.from(Uint8Array.from(atob(publicKey.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0)));
+    const expected = Array.from(Uint8Array.from(atob(publicKey.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(publicKey.length / 4) * 4, "=")), c => c.charCodeAt(0)));
     if (current.length !== expected.length || current.some((v, i) => v !== expected[i])) return false;
   }
   const hash = await digest(subscription.endpoint);
