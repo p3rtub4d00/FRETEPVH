@@ -4846,3 +4846,28 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .help-about-rubli p { margin:0 0 12px; font-size:13px; line-height:1.5; color:#526477; }
 .help-about-links { display:flex; gap:12px 18px; flex-wrap:wrap; }
 .help-about-links a { font-size:12px; color:#1765c1; text-decoration:underline; }
+
+/* Central de Ajuda: busca, categorias, respostas e edição administrativa. */
+.help-center { display:grid; gap:15px; width:100%; min-width:0; }
+.help-center-heading { display:flex; align-items:flex-start; gap:12px; }
+.help-center-heading h2 { margin:0; font-size:21px; color:#173550; }
+.help-center-heading p { margin:5px 0 0; font-size:13px; color:#64748b; }
+.help-search { display:flex; align-items:center; gap:9px; padding:0 13px; border:1px solid #d5e0ec; border-radius:12px; background:white; }
+.help-search input { border:0!important; outline:0; box-shadow:none!important; min-height:47px; width:100%; min-width:0; font-size:14px; background:transparent; }
+.help-categories { display:flex; overflow-x:auto; gap:8px; padding:3px 0 8px; }
+.help-categories button { flex:none; border:1px solid #dce6f0; background:#fff; color:#526477; border-radius:20px; padding:8px 13px; font-size:12px; }
+.help-categories button.selected { color:#fff; background:#173550; border-color:#173550; }
+.help-results { display:grid; gap:8px; }
+.help-article { background:white; border:1px solid #dce6f0; border-radius:12px; overflow:hidden; }
+.help-question { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; text-align:left; padding:14px; border:0; background:transparent; font-size:14px; font-weight:600; color:#19334b; }
+.help-question svg { flex-shrink:0; }
+.help-question[aria-expanded="true"] svg { transform:rotate(180deg); }
+.help-answer { border-top:1px solid #edf1f5; padding:14px; }
+.help-answer p { white-space:pre-wrap; margin:0 0 13px; font-size:13px; line-height:1.65; color:#465a70; }
+.help-feedback,.help-editor-actions { display:flex; align-items:center; flex-wrap:wrap; gap:9px; font-size:12px; }
+.help-feedback button,.help-editor-actions button { display:inline-flex; align-items:center; gap:5px; border:1px solid #d5e0ec; background:#f8fafc; border-radius:8px; padding:7px 12px; font-size:12px; }
+.help-editor { display:grid; gap:12px; padding:16px; border:1px solid #dce6f0; border-radius:12px; }
+.help-editor label { display:grid; gap:5px; font-size:13px; }
+.help-editor input:not([type="checkbox"]),.help-editor textarea,.help-editor select { width:100%; min-width:0; border:1px solid #d5e0ec; border-radius:8px; padding:10px; }
+.help-editor label:has(input[type="checkbox"]) { display:flex; align-items:center; }
+.help-contact { font-size:12px; line-height:1.5; color:#64748b; }
