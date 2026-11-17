@@ -13,7 +13,7 @@ import { privacyRouter } from "./privacyChannel.js";
 import { mercadoPagoPublic, MercadoPagoOrder } from "./mercadoPago.js";
 import { pagBankWebhook, PagBankOrder } from "./pagBank.js";
 import { PaymentProviderSettings } from "./paymentProviderSettings.js";
-import { dispatchDueCampaigns } from "./campaigns.js";
+import { dispatchDueCampaigns, campaignMedia } from "./campaigns.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -44,6 +44,7 @@ app.use("/api/mercadopago", express.json({ limit: "50kb" }), mercadoPagoPublic);
 app.use("/api/pagbank", express.raw({ type: "application/json", limit: "50kb" }), pagBankWebhook);
 // As consultas de mapas não dependem do MongoDB; a sessão e os fretes continuam protegidos.
 app.use("/api/maps", maps);
+app.get("/api/campaigns/media/:id", campaignMedia);
 app.get("/api/health", (req, res) =>
   res.status(mongoose.connection.readyState === 1 ? 200 : 503).json({
     status: mongoose.connection.readyState === 1 ? "ok" : "unavailable",
