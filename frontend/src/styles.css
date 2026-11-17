@@ -4880,3 +4880,25 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .fretinho-help-button small { font-size:11px; color:#66788b; line-height:1.4; }
 .fretinho-help-button > svg { flex-shrink:0; color:#e97820; }
 .fretinho-help-button:focus-visible { outline:3px solid #2563eb; outline-offset:2px; }
+
+/* Campanhas e comunicados: painel Master e caixa de entrada do usuário */
+.campaign-manager h2,.campaign-history-head,.campaign-inbox-toggle { display:flex;align-items:center;gap:9px; }
+.campaign-manager h2 { flex-wrap:wrap; }
+.campaign-form { display:grid;gap:14px;margin:18px 0 24px;max-width:620px; }
+.campaign-form label { display:grid;gap:7px;font-size:13px;font-weight:600;color:#34475d; }
+.campaign-form input,.campaign-form textarea,.campaign-form select { width:100%;min-width:0;border:1px solid #d5e0ec;border-radius:10px;padding:11px;background:#fff;color:#173550;font:inherit; }
+.campaign-form label svg { display:inline-block; }
+.campaign-form label small { text-align:right;color:#728197; }
+.campaign-preview { border:1px solid #f2d6b8;border-radius:13px;background:#fff8f1;padding:15px; }
+.campaign-preview p { margin:7px 0;white-space:pre-wrap;overflow-wrap:anywhere; }
+.campaign-preview small,.campaign-notice small { display:block;margin-top:6px;color:#738297;font-size:12px; }
+.campaign-history-head { justify-content:space-between;flex-wrap:wrap;margin:12px 0; }
+.campaign-notice { border:1px solid #dce5ef;background:white;border-radius:12px;padding:14px;margin:9px 0;overflow-wrap:anywhere; }
+.campaign-notice p { white-space:pre-wrap;line-height:1.5;font-size:13px;color:#43576d; }
+.campaign-notice.unread { border-left:4px solid #f28a2d; }
+.campaign-notice button { margin-top:10px; }
+.campaign-inbox { margin:0 0 15px; }
+.campaign-inbox-toggle { width:100%;border:1px solid #e4d3b9;border-radius:12px;background:#fffaf4;padding:12px 14px;text-align:left;font-size:13px;font-weight:600;color:#173550; }
+.campaign-inbox-toggle strong { margin-left:auto;background:#f28a2d;color:white;border-radius:12px;padding:3px 8px;font-size:11px; }
+.campaign-inbox-content { padding:8px 0; }
+.campaign-disclaimer { color:#65758a;font-size:12px;line-height:1.5; }
