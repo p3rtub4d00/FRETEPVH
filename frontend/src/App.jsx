@@ -49,6 +49,7 @@ import MercadoPagoPix from "./MercadoPagoPix.jsx";
 import FreightChatPanel from "./FreightChatPanel.jsx";
 import MasterFreightReports, { ReportFreightForm } from "./MasterFreightReports.jsx";
 import TeamManagement from "./TeamManagement.jsx";
+import HelpCenter from "./HelpCenter.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
 const navigation = {
@@ -77,6 +78,7 @@ const navigation = {
     ["auditoria", "Auditoria", History],
     ["recuperacao", "Recuperar senhas", ShieldCheck],
     ["privacidade", "Privacidade LGPD", ShieldCheck],
+    ["central-ajuda", "Central de Ajuda", CircleHelp],
     ["denuncias", "Denúncias", Flag],
   ],
 };
@@ -1528,6 +1530,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
              <TeamManagement auditOnly />
            ) : area === "master" && page === "privacidade" ? (
             <PrivacyMaster />
+          ) : area === "master" && page === "central-ajuda" ? (
+            <HelpCenter role="master" />
           ) : area === "master" && page === "recuperacao" ? (
             <RecoveryMaster />
           ) : page === "usuarios" ? (
@@ -2363,47 +2367,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         </Modal>
       )}
       {modal?.type === "help" && (
-        <Modal
-          error={notice}
-          busy={busy}
-          title="Como funciona o FreteOn"
-          onClose={() => setModal(null)}
-        >
-          <section className="help-about-rubli">
-            <h3>Sobre o FreteOn</h3>
-            <p>O FreteOn é uma plataforma do <strong>Grupo Rubli</strong>, que conecta clientes e motoristas parceiros para a intermediação de fretes.</p>
-            <div className="help-about-links">
-              <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
-              <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
-            </div>
-          </section>
-          <div className="help-step">
-            <MapPin />
-            <div>
-              <h3>Conte o que precisa levar</h3>
-              <p>Informe retirada, entrega, carga e horário.</p>
-            </div>
-          </div>
-          <div className="help-step">
-            <FileCheck2 />
-            <div>
-              <h3>Compare as propostas</h3>
-              <p>Veja preço, veículo e informações do motorista.</p>
-            </div>
-          </div>
-          <div className="help-step">
-            <Truck />
-            <div>
-              <h3>Escolha e acompanhe</h3>
-              <p>Confirme o motorista e avalie após a entrega.</p>
-            </div>
-          </div>
-          <p className="info">
-            Pedidos, propostas e pagamentos ficam registrados na conta.
-            Para motoristas com o painel aberto, contratações novas são verificadas
-            aproximadamente a cada 5 segundos. Dinheiro e cartão são recebidos pelo motorista;
-            o Pix ao FreteOn depende da aprovação bancária.
-          </p>
+        <Modal title="Central de Ajuda FreteOn" onClose={() => setModal(null)}>
+          <HelpCenter role={area} onClose={() => setModal(null)}/>
         </Modal>
       )}
       {(
