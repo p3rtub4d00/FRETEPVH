@@ -108,9 +108,28 @@ export default function PushNotificationsPanel({
                 });
               },
             });
+            // Chaves VAPID alteradas: uma assinatura antiga não recebe novos push.
+            // Com permissão já concedida, recriar silenciosamente a inscrição.
+            let healthy = restored;
+            if (!healthy && currentPermission === "granted" && settings.enabled && settings.publicKey) {
+              try {
+                if (subscription) await subscription.unsubscribe();
+                const renewed = await registration.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: decodeBase64Url(settings.publicKey),
+                });
+                await api("/push/subscribe", {
+                  method: "POST", headers: { "X-FreteOn-Role": role },
+                  body: { subscription: renewed.toJSON() },
+                });
+                healthy = true;
+              } catch (recoveryError) {
+                if (live) setError("A inscrição push precisa ser renovada. Toque em Ativar notificações no perfil.");
+              }
+            }
             if (live) {
-              setActive(Boolean(restored));
-              if (restored) setCount(Math.max(1, status.deviceCount || 0));
+              setActive(Boolean(healthy));
+              if (healthy) setCount(Math.max(1, status.deviceCount || 0));
             }
           }
         }
