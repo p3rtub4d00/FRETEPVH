@@ -13,6 +13,7 @@ import { privacyRouter } from "./privacyChannel.js";
 import { mercadoPagoPublic, MercadoPagoOrder } from "./mercadoPago.js";
 import { pagBankWebhook, PagBankOrder } from "./pagBank.js";
 import { PaymentProviderSettings } from "./paymentProviderSettings.js";
+import { dispatchDueCampaigns } from "./campaigns.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -167,10 +168,15 @@ try {
   console.error(`Falha em ${startupStage}. Tipo: ${error.name}. Código: ${errorCode}. ${diagnostic}`);
   process.exit(1);
 }
+// O agendador roda apenas enquanto a instância Render está ativa.
+const campaignTimer = setInterval(() => { void dispatchDueCampaigns().catch(e => console.warn("Agendador de campanhas:", e?.name)); }, 30000);
+campaignTimer.unref();
+void dispatchDueCampaigns().catch(e => console.warn("Campanhas pendentes:", e?.name));
 const server = app.listen(process.env.PORT || 3001, "0.0.0.0", () =>
   console.log("FreteOn iniciado."),
 );
 function shutdown() {
+  clearInterval(campaignTimer);
   server.close(async () => {
     await mongoose.disconnect();
     process.exit(0);
