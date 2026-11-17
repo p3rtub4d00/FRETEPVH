@@ -4825,3 +4825,16 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
   .team-member-operations button { flex:1 1 auto; }
   .staff-password-card { padding:18px; }
 }
+
+/* Rodapé institucional FreteOn / Grupo Rubli, inspirado no catálogo ClubeOn. */
+.public-footer.rubli-footer { display:flex; flex-direction:column; align-items:stretch; gap:18px; padding:32px clamp(18px,5vw,48px) 24px; background:#f7f9fc; border-top:1px solid #e2e8f0; color:#66788b; font-size:13px; }
+.rubli-footer-brand { display:flex; flex-direction:column; gap:3px; }
+.rubli-footer-brand strong { font-size:27px; letter-spacing:-1px; line-height:1.1; color:#173550; }
+.rubli-footer-brand strong span { color:#f97316; }
+.rubli-footer-brand small { color:#738496; font-size:12px; letter-spacing:.03em; }
+.rubli-footer-links { display:flex; flex-wrap:wrap; gap:12px 28px; }
+.rubli-footer-links a { color:#66788b; text-decoration:none; font-size:13px; }
+.rubli-footer-links a:hover { color:#155dc7; text-decoration:underline; }
+.rubli-footer-credit { margin:0; font-size:11px; line-height:1.7; color:#8996a4; }
+.rubli-footer-credit strong, .dashboard-footer-compact strong { font-weight:600; }
+@media(max-width:600px) { .public-footer.rubli-footer { gap:19px; padding:28px 22px 22px; } .rubli-footer-links { justify-content:space-between; gap:10px 16px; } }
