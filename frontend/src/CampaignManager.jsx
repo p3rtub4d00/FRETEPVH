@@ -31,9 +31,10 @@ export function CampaignViewer({role}) {
 }
 export default function CampaignManager(){
  const [items,setItems]=useState([]),[enabled,setEnabled]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false);
+ const [diagnostics,setDiagnostics]=useState(null);
  const [form,setForm]=useState({title:"",body:"",audience:"todos",scheduledAt:"",expiresAt:"",imageData:""});
  async function refresh(){try{const data=await api("/master/campaigns");setItems(data.items||[]);setEnabled(data.pushEnabled);setError("");}catch(e){setError(e.message);}}
- useEffect(()=>{refresh();},[]);
+ useEffect(()=>{refresh();api("/master/push/diagnostics").then(setDiagnostics).catch(()=>{});},[]);
  async function uploadImage(event){
  const file=event.target.files?.[0];if(!file)return;
  if(!["image/png","image/jpeg","image/webp"].includes(file.type)){setError("Escolha PNG, JPG ou WebP.");return;}
@@ -46,6 +47,7 @@ export default function CampaignManager(){
  }catch(err){setError(err.message);}finally{setBusy(false);}}
  async function cancel(id){if(!window.confirm("Cancelar a campanha agendada?"))return;try{await api("/master/campaigns/"+id+"/cancel",{method:"POST",body:{}});await refresh();}catch(e){setError(e.message);}}
  return <section className="panel campaign-manager"><h2><Megaphone size={23}/> Campanhas e comunicados</h2><p>Envie avisos aos clientes e motoristas. As mensagens também ficam disponíveis dentro do aplicativo.</p>
+ {diagnostics&&<div className="campaign-push-diagnostics"><strong>Diagnóstico de notificações</strong><p>Servidor push: {diagnostics.configured?"Configurado":"Não configurado"} · Clientes: {diagnostics.users?.cliente||0} ({diagnostics.subscriptions?.cliente?.devices||0} dispositivos inscritos) · Motoristas: {diagnostics.users?.motorista||0} ({diagnostics.subscriptions?.motorista?.devices||0} dispositivos inscritos)</p><small>Inscrição não garante recebimento; teste em cada aparelho.</small></div>}
  {!enabled&&<p className="info">O Web Push não está configurado neste servidor. Os comunicados continuarão visíveis dentro do aplicativo, mas não chegarão como notificação externa.</p>}
  {error&&<p role="alert" className="error">{error}</p>}{notice&&<p role="status" className="info">{notice}</p>}
  <form className="campaign-form" onSubmit={submit}>
