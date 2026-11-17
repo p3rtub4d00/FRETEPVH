@@ -50,6 +50,7 @@ import FreightChatPanel from "./FreightChatPanel.jsx";
 import MasterFreightReports, { ReportFreightForm } from "./MasterFreightReports.jsx";
 import TeamManagement from "./TeamManagement.jsx";
 import HelpCenter from "./HelpCenter.jsx";
+import CampaignManager, { CampaignInbox } from "./CampaignManager.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
 const navigation = {
@@ -79,6 +80,7 @@ const navigation = {
     ["recuperacao", "Recuperar senhas", ShieldCheck],
     ["privacidade", "Privacidade LGPD", ShieldCheck],
     ["central-ajuda", "Central de Ajuda", CircleHelp],
+    ["campanhas", "Campanhas e comunicados", BellRing],
     ["denuncias", "Denúncias", Flag],
   ],
 };
@@ -1169,6 +1171,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           <button onClick={logout}>Sair desta conta</button>
         </div>
         <main>
+          {(area === "cliente" || area === "motorista") && <CampaignInbox />}
           {!loaded && <p role="status">Carregando seus dados…</p>}
           {area === "motorista" && !state.user.verified && (
             <div className="verification-action-banner" role="status">
@@ -1522,6 +1525,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 Sair da conta
               </button>
             </section>
+          ) : area === "master" && page === "campanhas" && masterOwner ? (
+            <CampaignManager />
           ) : area === "master" && page === "notificacoes" ? (
             <MasterNotifications notifications={masterNotifications} accountId={user.id} onNavigate={setPage}/>
           ) : area === "master" && page === "comissoes" ? (
