@@ -157,36 +157,48 @@ export async function notifyAccounts(userIds, message) {
   if (!pushEnabled()) return { attempted: 0, ok: 0, unavailable: true };
   const ids = [...new Set(userIds.filter(Boolean).map(String))];
   if (!ids.length) return { attempted: 0, ok: 0, noRecipients: true };
-  const subscriptions = await PushSubscription.find({ userId: { $in: ids } }).limit(300).lean();
   const safe = safeMessage(message);
-  let accepted = 0;
-  let expired = 0;
+  let accepted = 0, expired = 0, attempted = 0;
   const failures = {};
-  await Promise.allSettled(subscriptions.map(async (subscription) => {
-    try {
-      const result = await sendPush(subscription, safe);
-      if (result.ok) accepted += 1;
-      else {
-        const code = String(result.status || "unknown");
-        failures[code] = (failures[code] || 0) + 1;
+  // Process all devices in bounded batches instead of silently ignoring those
+  // after the old 300-subscription cap.
+  let cursor = null;
+  while (true) {
+    const filter = { userId: { $in: ids } };
+    if (cursor) filter._id = { $gt: cursor };
+    const subscriptions = await PushSubscription.find(filter).sort({ _id: 1 }).limit(80).lean();
+    if (!subscriptions.length) break;
+    cursor = subscriptions[subscriptions.length - 1]._id;
+    for (let i = 0; i < subscriptions.length; i += 12) {
+      const batch = subscriptions.slice(i, i + 12);
+      const results = await Promise.allSettled(batch.map(async subscription => {
+        const result = await sendPush(subscription, safe);
+        if (result.gone) await PushSubscription.deleteOne({ _id: subscription._id });
+        return result;
+      }));
+      for (const result of results) {
+        attempted++;
+        if (result.status === "fulfilled") {
+          if (result.value.ok) accepted++;
+          else {
+            const code = String(result.value.status || (result.value.unavailable ? "unavailable" : "unknown"));
+            failures[code] = (failures[code] || 0) + 1;
+          }
+          if (result.value.gone) expired++;
+        } else {
+          const code = result.reason?.name === "TimeoutError" ? "timeout" : "exception";
+          failures[code] = (failures[code] || 0) + 1;
+        }
       }
-      if (result.gone) {
-        expired += 1;
-        await PushSubscription.deleteOne({ _id: subscription._id });
-      }
-    } catch (error) {
-      // No endpoint URL or encrypted keys in logs.
-      const reason = error?.name === "TimeoutError" ? "timeout" : "exception";
-      failures[reason] = (failures[reason] || 0) + 1;
-      console.warn("Envio push não concluído:", error?.name || "Erro");
     }
-  }));
+    if (subscriptions.length < 80) break;
+  }
   return {
-    attempted: subscriptions.length,
+    attempted,
     ok: accepted,
     expired,
     failures,
-    noSubscriptions: subscriptions.length === 0,
+    noSubscriptions: attempted === 0,
   };
 }
 
