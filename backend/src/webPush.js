@@ -139,7 +139,8 @@ function safeMessage(msg) {
   const title = String(msg.title || "FreteOn").slice(0, 90);
   const body = String(msg.body || "Você tem uma atualização de frete.").slice(0, 180);
   const id = String(msg.id || "").slice(0, 80);
-  return { title, body, path: "/" + role, id, role };
+  const campaignId = /^[a-f0-9]{24}$/.test(String(msg.campaignId || "")) ? String(msg.campaignId) : "";
+  return { title, body, path: "/" + role, id, role, campaignId, image: campaignId && msg.image === "/api/campaigns/media/" + campaignId ? msg.image : undefined };
 }
 
 export async function notifyMasters(message) {
