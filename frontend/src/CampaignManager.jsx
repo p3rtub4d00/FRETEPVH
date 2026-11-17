@@ -2,22 +2,44 @@ import { useEffect,useState } from "react";
 import { Megaphone, Bell, RefreshCw, Send, CalendarClock } from "lucide-react";
 import { api } from "./api.js";
 const audienceLabel={todos:"Todos os usuários",cliente:"Clientes",motorista:"Motoristas"};
-export function CampaignInbox(){
- const [items,setItems]=useState([]),[error,setError]=useState(""),[open,setOpen]=useState(false);
- async function refresh(){try{const data=await api("/campaigns/inbox");setItems(data.items||[]);setError("");}catch(e){setError(e.message);}}
- useEffect(()=>{refresh();const id=setInterval(refresh,60000);return()=>clearInterval(id);},[]);
- const unread=items.filter(x=>!x.read).length;
- async function read(item){try{await api("/campaigns/"+item.id+"/read",{method:"POST",body:{}});setItems(old=>old.map(x=>x.id===item.id?{...x,read:true}:x));}catch(e){setError(e.message);}}
- return <section className="campaign-inbox">
- <button type="button" className="campaign-inbox-toggle" onClick={()=>setOpen(v=>!v)}><Bell size={19}/> Comunicados FreteOn {unread>0&&<strong>{unread} novo(s)</strong>}</button>
- {open&&<div className="campaign-inbox-content">{error&&<p role="alert" className="error">{error}</p>}{items.length===0?<p>Nenhum comunicado no momento.</p>:items.map(item=><article key={item.id} className={"campaign-notice"+(!item.read?" unread":"")}><h3>{item.title}</h3><p>{item.body}</p><small>{new Date(item.sentAt||item.createdAt).toLocaleString("pt-BR")}</small>{!item.read&&<button type="button" className="secondary" onClick={()=>read(item)}>Marcar como lido</button>}</article>)}</div>}
- </section>;
+export function CampaignViewer({role}) {
+ const [item,setItem]=useState(null),[error,setError]=useState("");
+ const close=()=>{setItem(null);const url=new URL(window.location.href);url.searchParams.delete("comunicado");window.history.replaceState(null,"",url.pathname+url.search+url.hash);};
+ async function show(id){
+  if(!/^[a-f0-9]{24}$/.test(String(id||"")))return;
+  try{
+   const data=await api("/campaigns/inbox");
+   const found=(data.items||[]).find(x=>x.id===id);
+   if(!found){setError("Comunicado indisponível ou expirado.");return;}
+   setItem(found);setError("");
+   if(!found.read)await api("/campaigns/"+id+"/read",{method:"POST",body:{}}).catch(()=>{});
+  }catch(e){setError(e.message||"Não foi possível abrir o comunicado.");}
+ }
+ useEffect(()=>{
+  const query=new URLSearchParams(window.location.search).get("comunicado");if(query)void show(query);
+  const handler=e=>{if(e.data?.type==="FRETEON_PUSH_EVENT"&&e.data.campaignId)void show(e.data.campaignId);};
+  navigator.serviceWorker?.addEventListener("message",handler);
+  return()=>navigator.serviceWorker?.removeEventListener("message",handler);
+ },[role]);
+ useEffect(()=>{if(!item)return;const timer=setTimeout(close,15000);return()=>clearTimeout(timer);},[item?.id]);
+ if(!item&&!error)return null;
+ return <div className="campaign-viewer-overlay" role="dialog" aria-modal="true" aria-label="Comunicado FreteOn"><div className="campaign-viewer">
+ <button type="button" className="campaign-viewer-close" onClick={close} aria-label="Fechar comunicado">×</button>
+ {item?<><span className="campaign-viewer-brand">FreteOn · Comunicado</span>{item.imageUrl&&<img src={item.imageUrl} alt="Imagem do comunicado" className="campaign-viewer-image"/>}<h2>{item.title}</h2><p>{item.body}</p><small>Esta mensagem será fechada automaticamente.</small></>:<p>{error}</p>}
+ <button type="button" className="secondary" onClick={close}>Voltar ao aplicativo</button>
+ </div></div>;
 }
 export default function CampaignManager(){
  const [items,setItems]=useState([]),[enabled,setEnabled]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[busy,setBusy]=useState(false);
- const [form,setForm]=useState({title:"",body:"",audience:"todos",scheduledAt:"",expiresAt:""});
+ const [form,setForm]=useState({title:"",body:"",audience:"todos",scheduledAt:"",expiresAt:"",imageData:""});
  async function refresh(){try{const data=await api("/master/campaigns");setItems(data.items||[]);setEnabled(data.pushEnabled);setError("");}catch(e){setError(e.message);}}
  useEffect(()=>{refresh();},[]);
+ async function uploadImage(event){
+ const file=event.target.files?.[0];if(!file)return;
+ if(!["image/png","image/jpeg","image/webp"].includes(file.type)){setError("Escolha PNG, JPG ou WebP.");return;}
+ if(file.size>350000){setError("Imagem acima de 350 KB. Comprima antes de enviar.");return;}
+ const reader=new FileReader();reader.onload=()=>{setForm(v=>({...v,imageData:String(reader.result||"")}));setError("");};reader.onerror=()=>setError("Não foi possível ler a imagem.");reader.readAsDataURL(file);
+ }
  async function submit(e){e.preventDefault();if(!window.confirm("Confirmar criação desta campanha para "+audienceLabel[form.audience]+"?"))return;setBusy(true);try{
   await api("/master/campaigns",{method:"POST",body:{...form,scheduledAt:form.scheduledAt?new Date(form.scheduledAt).toISOString():null,expiresAt:form.expiresAt?new Date(form.expiresAt).toISOString():null}});
   setNotice("Campanha registrada. O envio será processado pelo servidor na data programada.");setForm({title:"",body:"",audience:"todos",scheduledAt:"",expiresAt:""});await refresh();
@@ -32,11 +54,13 @@ export default function CampaignManager(){
  <label>Mensagem<textarea required rows={4} maxLength={180} value={form.body} onChange={e=>setForm({...form,body:e.target.value})} placeholder="Escreva seu comunicado..."/><small>{form.body.length}/180 caracteres</small></label>
  <label><CalendarClock size={16}/> Agendar envio (opcional)<input type="datetime-local" value={form.scheduledAt} onChange={e=>setForm({...form,scheduledAt:e.target.value})}/></label>
  <label>Validade do aviso (opcional)<input type="datetime-local" value={form.expiresAt} onChange={e=>setForm({...form,expiresAt:e.target.value})}/></label>
- <div className="campaign-preview"><strong>{form.title||"Prévia do título"}</strong><p>{form.body||"Sua mensagem aparecerá aqui."}</p><small>FreteOn · {audienceLabel[form.audience]}</small></div>
+ <label>Imagem da campanha (PNG, JPG ou WebP, até 350 KB)<input type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadImage}/></label>
+ {form.imageData&&<button type="button" className="secondary" onClick={()=>setForm({...form,imageData:""})}>Remover imagem</button>}
+ <div className="campaign-preview">{form.imageData&&<img className="campaign-preview-image" src={form.imageData} alt="Prévia da campanha"/>}<strong>{form.title||"Prévia do título"}</strong><p>{form.body||"Sua mensagem aparecerá aqui."}</p><small>FreteOn · {audienceLabel[form.audience]}</small></div>
  <button type="submit" disabled={busy}><Send size={17}/> {busy?"Salvando...":"Criar campanha"}</button>
  </form>
  <div className="campaign-history-head"><h3>Histórico de campanhas</h3><button type="button" className="secondary" onClick={refresh}><RefreshCw size={16}/> Atualizar</button></div>
- {items.length===0?<p>Nenhuma campanha cadastrada.</p>:items.map(item=><article className="campaign-notice" key={item.id}><strong>{item.title}</strong><p>{item.body}</p><small>{audienceLabel[item.audience]} · {item.status==="sent"?"Enviada":item.status==="scheduled"?"Agendada":item.status==="sending"?"Processando":"Cancelada"} · {new Date(item.scheduledAt).toLocaleString("pt-BR")}</small>{item.status==="sent"&&<small>Contas selecionadas: {item.recipients} · Push tentados: {item.attempted} · Aceitos pelo serviço: {item.accepted} · Falhas: {item.failed}</small>}{item.status==="scheduled"&&<button type="button" className="secondary" onClick={()=>cancel(item.id)}>Cancelar agendamento</button>}</article>)}
+ {items.length===0?<p>Nenhuma campanha cadastrada.</p>:items.map(item=><article className="campaign-notice" key={item.id}><strong>{item.title}</strong>{item.imageUrl&&<img className="campaign-preview-image" src={item.imageUrl} alt="Imagem da campanha"/>}<p>{item.body}</p><small>{audienceLabel[item.audience]} · {item.status==="sent"?"Enviada":item.status==="scheduled"?"Agendada":item.status==="sending"?"Processando":"Cancelada"} · {new Date(item.scheduledAt).toLocaleString("pt-BR")}</small>{item.status==="sent"&&<small>Contas selecionadas: {item.recipients} · Push tentados: {item.attempted} · Aceitos pelo serviço: {item.accepted} · Falhas: {item.failed}</small>}{item.status==="scheduled"&&<button type="button" className="secondary" onClick={()=>cancel(item.id)}>Cancelar agendamento</button>}</article>)}
  <p className="campaign-disclaimer">Campanhas apenas comunicam ofertas. Não modificam automaticamente comissões ou preços. Aceitação pelo serviço push não garante visualização pelo destinatário.</p>
  </section>;
 }
