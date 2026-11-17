@@ -4902,3 +4902,14 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .campaign-inbox-toggle strong { margin-left:auto;background:#f28a2d;color:white;border-radius:12px;padding:3px 8px;font-size:11px; }
 .campaign-inbox-content { padding:8px 0; }
 .campaign-disclaimer { color:#65758a;font-size:12px;line-height:1.5; }
+
+/* Comunicados somente por abertura do push, sem cards na tela principal. */
+.campaign-viewer-overlay { position:fixed;inset:0;z-index:9999;background:rgba(8,25,48,.82);display:flex;align-items:center;justify-content:center;padding:16px; }
+.campaign-viewer { position:relative;width:min(100%,480px);max-height:92dvh;overflow:auto;background:#fff;border-radius:20px;padding:24px;text-align:center;box-shadow:0 20px 65px #07182a66; }
+.campaign-viewer-close { position:absolute;top:10px;right:12px;width:38px;height:38px;border:0;border-radius:50%;background:#eef2f7;color:#173550;font-size:27px;cursor:pointer; }
+.campaign-viewer-brand {display:block;margin:0 36px 12px;font-weight:700;color:#f58220;font-size:13px;}
+.campaign-viewer-image,.campaign-preview-image {display:block;width:100%;max-height:50dvh;object-fit:contain;border-radius:12px;margin:12px auto;}
+.campaign-viewer h2 {font-size:21px;color:#173550;margin:14px 0 8px;}
+.campaign-viewer p {color:#465a70;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;}
+.campaign-viewer small {display:block;margin:10px 0;color:#64748b;}
+.campaign-preview-image {max-height:230px;}
