@@ -1,5 +1,5 @@
 import { useEffect,useState } from "react";
-import { Megaphone, Bell, RefreshCw, Send, CalendarClock } from "lucide-react";
+import { Megaphone, Bell, RefreshCw, Send, CalendarClock, Trash2, RotateCw } from "lucide-react";
 import { api } from "./api.js";
 const audienceLabel={todos:"Todos os usuários",cliente:"Clientes",motorista:"Motoristas"};
 export function CampaignViewer({role}) {
@@ -46,6 +46,26 @@ export default function CampaignManager(){
   setNotice("Campanha registrada. O envio será processado pelo servidor na data programada.");setForm({title:"",body:"",audience:"todos",scheduledAt:"",expiresAt:""});await refresh();
  }catch(err){setError(err.message);}finally{setBusy(false);}}
  async function cancel(id){if(!window.confirm("Cancelar a campanha agendada?"))return;try{await api("/master/campaigns/"+id+"/cancel",{method:"POST",body:{}});await refresh();}catch(e){setError(e.message);}}
+ async function resend(item){
+  if(busy)return;
+  if(!window.confirm("Reenviar \""+item.title+"\" para "+audienceLabel[item.audience]+"? Uma nova campanha será criada e enviada novamente, inclusive a quem já recebeu."))return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   await api("/master/campaigns/"+item.id+"/resend",{method:"POST",body:{}});
+   setNotice("Reenvio solicitado. Uma nova campanha foi criada e será processada pelo servidor.");
+   await refresh();
+  }catch(e){setError(e.message);}finally{setBusy(false);}
+ }
+ async function remove(item){
+  if(busy)return;
+  if(!window.confirm("Excluir definitivamente \""+item.title+"\"? A campanha e sua imagem serão removidas do histórico e não poderão mais ser abertas pelos usuários."))return;
+  setBusy(true);setError("");setNotice("");
+  try{
+   await api("/master/campaigns/"+item.id,{method:"DELETE"});
+   setNotice("Campanha excluída.");
+   await refresh();
+  }catch(e){setError(e.message);}finally{setBusy(false);}
+ }
  return <section className="panel campaign-manager"><h2><Megaphone size={23}/> Campanhas e comunicados</h2><p>Envie avisos aos clientes e motoristas. As mensagens também ficam disponíveis dentro do aplicativo.</p>
  {diagnostics&&<div className="campaign-push-diagnostics"><strong>Diagnóstico de notificações</strong><p>Servidor push: {diagnostics.configured?"Configurado":"Não configurado"} · Clientes: {diagnostics.users?.cliente||0} ({diagnostics.subscriptions?.cliente?.devices||0} dispositivos inscritos) · Motoristas: {diagnostics.users?.motorista||0} ({diagnostics.subscriptions?.motorista?.devices||0} dispositivos inscritos)</p><small>Inscrição não garante recebimento; teste em cada aparelho.</small></div>}
  {!enabled&&<p className="info">O Web Push não está configurado neste servidor. Os comunicados continuarão visíveis dentro do aplicativo, mas não chegarão como notificação externa.</p>}
@@ -62,7 +82,11 @@ export default function CampaignManager(){
  <button type="submit" disabled={busy}><Send size={17}/> {busy?"Salvando...":"Criar campanha"}</button>
  </form>
  <div className="campaign-history-head"><h3>Histórico de campanhas</h3><button type="button" className="secondary" onClick={refresh}><RefreshCw size={16}/> Atualizar</button></div>
- {items.length===0?<p>Nenhuma campanha cadastrada.</p>:items.map(item=><article className="campaign-notice" key={item.id}><strong>{item.title}</strong>{item.imageUrl&&<img className="campaign-preview-image" src={item.imageUrl} alt="Imagem da campanha"/>}<p>{item.body}</p><small>{audienceLabel[item.audience]} · {item.status==="sent"?"Enviada":item.status==="scheduled"?"Agendada":item.status==="sending"?"Processando":"Cancelada"} · {new Date(item.scheduledAt).toLocaleString("pt-BR")}</small>{item.status==="sent"&&<small>Contas selecionadas: {item.recipients} · Push tentados: {item.attempted} · Aceitos pelo serviço: {item.accepted} · Falhas: {item.failed}</small>}{item.status==="scheduled"&&<button type="button" className="secondary" onClick={()=>cancel(item.id)}>Cancelar agendamento</button>}</article>)}
+ {items.length===0?<p>Nenhuma campanha cadastrada.</p>:items.map(item=><article className="campaign-notice" key={item.id}><strong>{item.title}</strong>{item.imageUrl&&<img className="campaign-preview-image" src={item.imageUrl} alt="Imagem da campanha"/>}<p>{item.body}</p><small>{audienceLabel[item.audience]} · {item.status==="sent"?"Enviada":item.status==="scheduled"?"Agendada":item.status==="sending"?"Processando":"Cancelada"} · {new Date(item.scheduledAt).toLocaleString("pt-BR")}</small>{item.status==="sent"&&<small>Contas selecionadas: {item.recipients} · Push tentados: {item.attempted} · Aceitos pelo serviço: {item.accepted} · Falhas: {item.failed}</small>}<div className="campaign-history-actions">
+ {item.status!=="sending"&&<button type="button" className="secondary" disabled={busy} onClick={()=>resend(item)}><RotateCw size={16}/> Reenviar</button>}
+ {item.status==="scheduled"&&<button type="button" className="secondary" disabled={busy} onClick={()=>cancel(item.id)}>Cancelar agendamento</button>}
+ {item.status!=="sending"&&<button type="button" className="secondary campaign-delete" disabled={busy} onClick={()=>remove(item)}><Trash2 size={16}/> Excluir</button>}
+ </div></article>)}
  <p className="campaign-disclaimer">Campanhas apenas comunicam ofertas. Não modificam automaticamente comissões ou preços. Aceitação pelo serviço push não garante visualização pelo destinatário.</p>
  </section>;
 }
