@@ -4913,3 +4913,5 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .campaign-viewer p {color:#465a70;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;}
 .campaign-viewer small {display:block;margin:10px 0;color:#64748b;}
 .campaign-preview-image {max-height:230px;}
+
+.campaign-history-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}.campaign-history-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px;margin:0;min-height:38px;padding:8px 12px;font-size:13px}.campaign-history-actions .campaign-delete{color:#a52727;border-color:#e9b9b9;background:#fff9f9}@media(max-width:420px){.campaign-history-actions button{flex:1 1 auto}}
