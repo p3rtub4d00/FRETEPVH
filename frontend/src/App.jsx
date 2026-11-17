@@ -50,7 +50,7 @@ import FreightChatPanel from "./FreightChatPanel.jsx";
 import MasterFreightReports, { ReportFreightForm } from "./MasterFreightReports.jsx";
 import TeamManagement from "./TeamManagement.jsx";
 import HelpCenter from "./HelpCenter.jsx";
-import CampaignManager, { CampaignInbox } from "./CampaignManager.jsx";
+import CampaignManager, { CampaignViewer } from "./CampaignManager.jsx";
 
 const areas = { cliente: "Cliente", motorista: "Motorista", master: "Master" };
 const navigation = {
@@ -1171,7 +1171,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           <button onClick={logout}>Sair desta conta</button>
         </div>
         <main>
-          {(area === "cliente" || area === "motorista") && <CampaignInbox />}
+          {(area === "cliente" || area === "motorista") && <CampaignViewer role={area} />}
           {!loaded && <p role="status">Carregando seus dados…</p>}
           {area === "motorista" && !state.user.verified && (
             <div className="verification-action-banner" role="status">
