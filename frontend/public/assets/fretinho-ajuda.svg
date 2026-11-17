@@ -1,1 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56"><image width="56" height="56" href="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABIMDRANCxIQDhAUExIVGywdGxgYGzYnKSAsQDlEQz85Pj1HUGZXR0thTT0+WXlaYWltcnNyRVV9hnxvhWZwcm7/2wBDARMUFBsXGzQdHTRuST5Jbm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm5ubm7/wAARCAA4ADgDASIAAhEBAxEB/8QAGgAAAwADAQAAAAAAAAAAAAAAAAQFAgMGAf/EAC8QAAIBAwMCAwgCAwEAAAAAAAECAwAEEQUSITFBBiJRExQVI2FxgZEkMiUzU/D/xAAYAQADAQEAAAAAAAAAAAAAAAABAgMEAP/EACIRAQACAgIBBQEBAAAAAAAAAAEAAhEhAzFREiJBcfGx0f/aAAwDAQACEQMRAD8A4as4YZLiVY4UaR26KoyaytbeS6uEhiGWY/gfWuhtVit7adLQlYY1+ZKOHmb0B7LSXv6dEetG0nDR44OL27SN/wDnGN7D79hW2LS7KeRY4pLouxwPKOTW+0iadARJCm4ZCg8jnuAKb06X4dqUVxKpdUbzbVOQKZoGRs5gLOsVMTbF4OsbaVI9U1ExvINyoBjj6npTE3g/RnXFvqe1yMgl1Iq3brd3iyyu9lPHKo9myjJXngdO3PHqa8NgXjH+PtsdcHg49MfakcHljgvgnB6poUmmqwkJZgNyugyrr2OewxRVjxzdRmC2tSU9rGxO1MfLXGAKKNM4g5AEkrS7bbYM+9Y3nyC7nAVB1/Z4p+zjWULa2oJjYlnlm8qkAc4HXHFKuoCWsbFQot0J3dOTzVLTzJPJNArxODbvtCxbFzwP7EZPWurUtx7+XP8AkLZpfXwfsymtWdIILMtKkoYhLUBQQODk0t8Kju5zb2+nSwzp/b5vI/eKo6ZZXj6bPaTr7tJ5lVyQBhsdCPqo4+tMXGhy3K28c2pRx3KxgmRc5fBPPb1xVKFKCBJXb2RkH3670cT2cDMjufNK398DoMdj60XF/rK2kck9zOIZR5GyAGqx4i003Jlu4riMlSqOoB54Hfv601LYWfwd7eUB1t4ztcnGCB16+tMNPEHv8zjNbiDewvEGBOvmHow60VuvDnw3Fu6ifj9Giocehr4UleTaW8gxqwu0S2trkxGUiP2OBjhgeOv0ppda23BJtVYgMgDPuye2Rj6VF0ScxLcCQboAoYjvuzxinlhSSVHPsIriXzIp3E89MnoM0tabddfspa+Qw9x+PxDJDJtv0LSRPuUqBjp0Ir278Q2N0v8AIti2GLKQdu3I5xxUdrW41GZ5/lqd2Cpbb0GfxWT6Y4Q7prRcKWOJMnitBQzlNzP606ZR+OQvp72NrAYomVhknPXkk5qQ80zqEMkjDAAXccfbFMQaeYZV/lWjb1PJbcAeMD7k1vJNsGkW+s2eM5VFjBzj8delPUxsIlt9sT1s+7WdrZZ84G9x6H/2aKS1ZzJfNKx/2KrAemR0orNxiV33L8rm2upjY3Cwl0lz7KUYbHUehqpHdwhjNLNbyyqFETszLsx6qBzRRRddQ092mY2U0aXvvQuoXl8x8y45IPPOPXNU11BEUlvdCT1YouSMY5Oee5/JooqXJy3LYz/Jbj4aNcpEbjVIGlYiaNd3ZIjgD8HGfrSLzWQdnaWSXJJ2JHtH7J4ooqtRNj39SFrDrHX3ELiZriZpGAGegHQDsKKKKcMaiLlzP//Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Fretinho, caminhão mascote FreteOn">
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#173b67"/><stop offset="1" stop-color="#081b36"/></linearGradient><linearGradient id="cab" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#d9e5f0"/></linearGradient><linearGradient id="box" x2="0" y2="1"><stop stop-color="#ffab4a"/><stop offset="1" stop-color="#f47c1e"/></linearGradient></defs>
+<circle cx="80" cy="80" r="77" fill="url(#bg)" stroke="#ff8a24" stroke-width="6"/>
+<ellipse cx="81" cy="131" rx="62" ry="10" fill="#051326" opacity=".5"/>
+<path d="M19 52Q19 41 31 41H103Q111 41 111 51V110H19Z" fill="url(#box)" stroke="#fff" stroke-width="3"/>
+<path d="M28 53H101V83H28Z" fill="#10345c" rx="5"/>
+<path d="M34 61h62" stroke="#fff" stroke-width="5" opacity=".9"/>
+<path d="M29 85h73" stroke="#fff" stroke-width="5"/>
+<path d="M91 77h29q7 0 11 7l11 18v27H87V86q0-9 4-9Z" fill="url(#cab)" stroke="#0c2a4a" stroke-width="4" stroke-linejoin="round"/>
+<path d="M108 85h11l12 17h-23Z" fill="#3479b0" stroke="#0c2a4a" stroke-width="3"/>
+<path d="M20 108h121v18H20Z" fill="#f9fafb" stroke="#0c2a4a" stroke-width="3"/>
+<path d="M22 109h120v8H22Z" fill="#ff8a24"/>
+<circle cx="48" cy="128" r="14" fill="#142a46" stroke="#fff" stroke-width="4"/><circle cx="48" cy="128" r="5" fill="#a9b9ca"/>
+<circle cx="118" cy="128" r="14" fill="#142a46" stroke="#fff" stroke-width="4"/><circle cx="118" cy="128" r="5" fill="#a9b9ca"/>
+<rect x="31" y="91" width="57" height="28" rx="12" fill="#f4f9ff" stroke="#173b67" stroke-width="3"/>
+<ellipse cx="48" cy="102" rx="8" ry="10" fill="#fff"/><ellipse cx="71" cy="102" rx="8" ry="10" fill="#fff"/>
+<circle cx="51" cy="103" r="5" fill="#173b67"/><circle cx="74" cy="103" r="5" fill="#173b67"/>
+<circle cx="52" cy="101" r="2" fill="#fff"/><circle cx="75" cy="101" r="2" fill="#fff"/>
+<path d="M51 113q10 9 20 0" fill="none" stroke="#173b67" stroke-width="3" stroke-linecap="round"/>
+<path d="M40 89q8-5 15 0M65 89q8-5 15 0" stroke="#173b67" stroke-width="3" fill="none" stroke-linecap="round"/>
+<circle cx="135" cy="114" r="5" fill="#ffd16a"/>
+</svg>
