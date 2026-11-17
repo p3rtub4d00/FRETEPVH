@@ -10,6 +10,7 @@ const campaignSchema = new mongoose.Schema({
  scheduledAt:{type:Date,required:true,index:true},
  status:{type:String,enum:["scheduled","sending","sent","cancelled"],default:"scheduled",index:true},
  createdBy:{type:String,required:true},sentAt:Date,expiresAt:Date,
+ imageData:{type:String,default:"",select:false},hasImage:{type:Boolean,default:false},
  recipients:{type:Number,default:0},attempted:{type:Number,default:0},accepted:{type:Number,default:0},failed:{type:Number,default:0},
  lastError:{type:String,default:""}
 },{timestamps:true});
@@ -21,7 +22,7 @@ export const campaignsRouter=Router();
 const isOwner=req=>req.user.role==="master"&&!req.user.staffAccountId;
 function owner(req){if(!isOwner(req))fail(403,"Somente o Master Principal pode gerenciar campanhas.");}
 const audienceFilter=a=>a==="todos"?["cliente","motorista"]:[a];
-const view=c=>({id:String(c._id),title:c.title,body:c.body,audience:c.audience,scheduledAt:c.scheduledAt,status:c.status,createdAt:c.createdAt,sentAt:c.sentAt,expiresAt:c.expiresAt,recipients:c.recipients,attempted:c.attempted,accepted:c.accepted,failed:c.failed,lastError:c.lastError});
+const view=c=>({id:String(c._id),title:c.title,body:c.body,audience:c.audience,scheduledAt:c.scheduledAt,status:c.status,createdAt:c.createdAt,sentAt:c.sentAt,expiresAt:c.expiresAt,recipients:c.recipients,attempted:c.attempted,accepted:c.accepted,failed:c.failed,lastError:c.lastError,hasImage:Boolean(c.hasImage||c.imageData),imageUrl:c.hasImage||c.imageData?"/api/campaigns/media/"+c._id:null});
 campaignsRouter.get("/master/campaigns",async(req,res,next)=>{try{owner(req);res.json({items:(await Campaign.find().sort({createdAt:-1}).limit(100).lean()).map(view),pushEnabled:pushEnabled()});}catch(e){next(e)}});
 campaignsRouter.post("/master/campaigns",async(req,res,next)=>{try{
  owner(req);
@@ -31,10 +32,24 @@ campaignsRouter.post("/master/campaigns",async(req,res,next)=>{try{
  if(req.body.scheduledAt){when=new Date(req.body.scheduledAt).getTime();if(!Number.isFinite(when)||when<now-60000||when>now+365*86400000)fail(400,"Agendamento inválido.");}
  const expiresAt=req.body.expiresAt?new Date(req.body.expiresAt):null;
  if(expiresAt&&(!Number.isFinite(expiresAt.getTime())||expiresAt.getTime()<=when))fail(400,"Validade deve ser posterior ao envio.");
- const item=await Campaign.create({title,body,audience,scheduledAt:new Date(Math.max(when,now)),expiresAt,createdBy:String(req.user._id)});
+ const imageData=String(req.body.imageData||"");
+ if(imageData&&!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(imageData))fail(400,"Imagem inválida: use PNG, JPG ou WebP.");
+ if(imageData.length>470000)fail(413,"Imagem muito grande. Use uma imagem de até 350 KB.");
+ const item=await Campaign.create({title,body,audience,scheduledAt:new Date(Math.max(when,now)),expiresAt,createdBy:String(req.user._id),imageData,hasImage:Boolean(imageData)});
  res.status(201).json({item:view(item)});
 }catch(e){next(e)}});
 campaignsRouter.post("/master/campaigns/:id/cancel",async(req,res,next)=>{try{owner(req);if(!mongoose.isValidObjectId(req.params.id))fail(400,"Campanha inválida.");const item=await Campaign.findOneAndUpdate({_id:req.params.id,status:"scheduled"},{$set:{status:"cancelled"}},{new:true});if(!item)fail(409,"Somente campanhas agendadas podem ser canceladas.");res.json({item:view(item)});}catch(e){next(e)}});
+// Imagens só são públicas após o envio e enquanto o comunicado estiver válido.
+export async function campaignMedia(req,res,next){try{
+ if(!mongoose.isValidObjectId(req.params.id))return res.sendStatus(404);
+ const now=new Date();
+ const item=await Campaign.findOne({_id:req.params.id,status:"sent",sentAt:{$lte:now},$or:[{expiresAt:null},{expiresAt:{$gt:now}}]}).select("+imageData").lean();
+ if(!item?.imageData)return res.sendStatus(404);
+ const match=/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(item.imageData);
+ if(!match)return res.sendStatus(404);
+ res.setHeader("Content-Type","image/"+match[1]);res.setHeader("Cache-Control","public,max-age=3600");res.setHeader("X-Content-Type-Options","nosniff");
+ res.send(Buffer.from(match[2],"base64"));
+}catch(e){next(e)}}
 campaignsRouter.get("/campaigns/inbox",async(req,res,next)=>{try{
  const role=req.user.role;if(!["cliente","motorista"].includes(role))return res.json({items:[]});
  const now=new Date();
@@ -66,7 +81,7 @@ export async function dispatchDueCampaigns(){
     // Small batches to avoid overwhelming push providers and the application.
     for(let i=0;i<subs.length;i+=12){
       const results=await Promise.allSettled(subs.slice(i,i+12).map(async sub=>{
-       const response=await sendPush(sub,{title:item.title,body:item.body,role:sub.role,id:String(item._id)});
+       const response=await sendPush(sub,{title:item.title,body:item.body,role:sub.role,id:String(item._id),campaignId:String(item._id),image:item.hasImage?"/api/campaigns/media/"+item._id:undefined});
        if(response.gone)await PushSubscription.deleteOne({_id:sub._id});
        return response.ok;
       }));
