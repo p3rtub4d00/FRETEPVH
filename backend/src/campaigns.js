@@ -77,6 +77,8 @@ export async function dispatchDueCampaigns(){
     const recipients=await Account.find({role:{$in:roles}}).select("_id").lean();
     const ids=recipients.map(r=>String(r._id));
     const subs=await PushSubscription.find({userId:{$in:ids}}).lean();
+    // Publica o comunicado antes do push para permitir carregar a imagem imediatamente.
+    await Campaign.updateOne({_id:item._id},{$set:{status:"sent",sentAt:new Date(),recipients:ids.length}});
     let accepted=0,failed=0,attempted=0;
     // Small batches to avoid overwhelming push providers and the application.
     for(let i=0;i<subs.length;i+=12){
