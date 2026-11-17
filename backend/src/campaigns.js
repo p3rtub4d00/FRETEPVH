@@ -39,6 +39,27 @@ campaignsRouter.post("/master/campaigns",async(req,res,next)=>{try{
  res.status(201).json({item:view(item)});
 }catch(e){next(e)}});
 campaignsRouter.post("/master/campaigns/:id/cancel",async(req,res,next)=>{try{owner(req);if(!mongoose.isValidObjectId(req.params.id))fail(400,"Campanha inválida.");const item=await Campaign.findOneAndUpdate({_id:req.params.id,status:"scheduled"},{$set:{status:"cancelled"}},{new:true});if(!item)fail(409,"Somente campanhas agendadas podem ser canceladas.");res.json({item:view(item)});}catch(e){next(e)}});
+campaignsRouter.post("/master/campaigns/:id/resend",async(req,res,next)=>{try{
+ owner(req);
+ if(!mongoose.isValidObjectId(req.params.id))fail(400,"Campanha inválida.");
+ const original=await Campaign.findById(req.params.id).select("+imageData").lean();
+ if(!original)fail(404,"Campanha não encontrada.");
+ if(original.status==="sending")fail(409,"Aguarde a conclusão do envio atual.");
+ const copy=await Campaign.create({
+  title:original.title,body:original.body,audience:original.audience,
+  imageData:original.imageData||"",hasImage:Boolean(original.hasImage),
+  scheduledAt:new Date(),expiresAt:null,createdBy:String(req.user._id)
+ });
+ res.status(201).json({item:view(copy)});
+}catch(e){next(e)}});
+campaignsRouter.delete("/master/campaigns/:id",async(req,res,next)=>{try{
+ owner(req);
+ if(!mongoose.isValidObjectId(req.params.id))fail(400,"Campanha inválida.");
+ const deleted=await Campaign.findOneAndDelete({_id:req.params.id,status:{$ne:"sending"}});
+ if(!deleted)fail(409,"Campanha inexistente ou ainda em processamento.");
+ await Read.deleteMany({campaignId:deleted._id});
+ res.json({ok:true});
+}catch(e){next(e)}});
 // Imagens só são públicas após o envio e enquanto o comunicado estiver válido.
 export async function campaignMedia(req,res,next){try{
  if(!mongoose.isValidObjectId(req.params.id))return res.sendStatus(404);
