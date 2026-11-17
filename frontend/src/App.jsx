@@ -1512,8 +1512,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 </details>
               )}
               {area !== "master" && (
-                <button type="button" className="dashboard-help-link" onClick={() => setModal({ type: "help" })}>
-                  <CircleHelp size={17} /> Ajuda e informações legais
+                <button type="button" className="fretinho-help-button" onClick={() => setModal({ type: "help" })} aria-label="Abrir Central de Ajuda FreteOn">
+                  <img src="/assets/fretinho-ajuda.svg" alt="" width="56" height="56" />
+                  <span><strong>Precisa de ajuda?</strong><small>Fale com o Fretinho · Central de Ajuda</small></span>
+                  <ChevronRight size={18} aria-hidden="true" />
                 </button>
               )}
               <button className="secondary" onClick={logout}>
