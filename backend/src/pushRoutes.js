@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
-import { PushSubscription } from "./models.js";
+import { PushSubscription, Account } from "./models.js";
 import { authorize, fail } from "./auth.js";
 import { checkSubscription, pushEnabled, sendPush } from "./webPush.js";
 
@@ -77,4 +77,19 @@ pushRouter.post("/push/test", roles, limit, async (req, res) => {
   if (result.ok === 0)
     return res.status(502).json({ error: "Serviço push não confirmou a entrega. Verifique as permissões e tente novamente." });
   res.json({ ok: true, acceptedByPushService: result.ok });
+});
+
+/** Aggregate-only diagnostics: no endpoint, phone or encryption keys are exposed. */
+pushRouter.get("/master/push/diagnostics", authorize("master"), async (req, res) => {
+  if (req.user.staffAccountId) fail(403, "Somente o Master Principal.");
+  const [users, subscriptions] = await Promise.all([
+    Account.aggregate([{ $match: { role: { $in: ["cliente", "motorista"] } } }, { $group: { _id: "$role", count: { $sum: 1 } } }]),
+    PushSubscription.aggregate([{ $group: { _id: "$role", devices: { $sum: 1 }, accounts: { $addToSet: "$userId" } } }]),
+  ]);
+  res.json({
+    configured: pushEnabled(),
+    users: Object.fromEntries(users.map(x => [x._id, x.count])),
+    subscriptions: Object.fromEntries(subscriptions.map(x => [x._id, { devices: x.devices, accounts: x.accounts.length }])),
+    note: "Assinaturas registradas não comprovam que a permissão do celular permanece ativa.",
+  });
 });
