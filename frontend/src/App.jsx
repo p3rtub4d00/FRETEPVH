@@ -1509,6 +1509,11 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   <PushNotificationsPanel role={area} accountId={user.id}/>
                 </details>
               )}
+              {area !== "master" && (
+                <button type="button" className="dashboard-help-link" onClick={() => setModal({ type: "help" })}>
+                  <CircleHelp size={17} /> Ajuda e informações legais
+                </button>
+              )}
               <button className="secondary" onClick={logout}>
                 Sair da conta
               </button>
@@ -1675,9 +1680,6 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 </Empty>
               )}
             </section>
-          )}
-          {area !== "master" && (
-            <button type="button" className="dashboard-help-link" onClick={() => setModal({ type: "help" })}>Ajuda e informações legais</button>
           )}
           {area === "master" && (
             <footer className="dashboard-footer-compact">
