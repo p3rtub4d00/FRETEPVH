@@ -16,7 +16,7 @@ test('HTTP finance routes enforce refund roles, freeze payouts and save reviewed
   delete process.env.VAPID_PUBLIC_KEY;
   t.after(() => { if (original !== undefined) process.env.VAPID_PUBLIC_KEY = original; });
   const app = express(); app.use(express.json());
-  app.use((req,res,next) => { const role = req.get('X-Test-Role'); req.user = { role, _id: { cliente:'client', motorista:'driver', master:'master' }[role] }; next(); });
+  app.use((req,res,next) => { const role = req.get('X-Test-Role'); req.user = { role, _id: { cliente:'client', motorista:'driver', master:'master' }[role], phone:'69999999999', phoneVerifiedNumber:'69999999999', phoneVerifiedAt:new Date() }; next(); });
   app.use(finance);
   app.use((error,req,res,next) => res.status(error.status || 500).json({ error:error.message }));
   const server = app.listen(0,'127.0.0.1');
