@@ -31,6 +31,8 @@ const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, maxlength: 100 },
     phone: { type: String, required: true, unique: true },
+    phoneVerifiedAt: { type: Date, default: null },
+    phoneVerifiedNumber: { type: String, default: "" },
     passwordHash: { type: String, required: true, select: false },
     role: {
       type: String,
@@ -250,6 +252,7 @@ export function publicUser(user) {
     id: String(user._id),
     name: user.name,
     phone: user.phone,
+    phoneVerified: Boolean(user.phoneVerifiedAt && user.phoneVerifiedNumber === user.phone),
     role: user.role === "staff" ? "master" : user.role,
     adminRole: user.staffAccountId || user.role === "staff" ? (user.teamRole || null) : user.role === "master" ? "owner" : null,
     adminPermissions: user.staffAccountId || user.role === "staff" ? (user.staffPermissions || []) : null,
