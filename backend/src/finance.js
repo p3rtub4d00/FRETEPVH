@@ -195,6 +195,9 @@ finance.post("/requests/:id/finance", async (req, res) => {
   if (!PAYMENT_METHODS.includes(request.paymentMethod))
     fail(409, "Este frete anterior não possui pagamento registrado.");
   const action = req.body.action;
+  if (action === "request_payout" && req.user.role === "motorista" &&
+      (!req.user.phoneVerifiedAt || req.user.phoneVerifiedNumber !== req.user.phone))
+    fail(403, "Verifique seu celular em Meu perfil antes de solicitar repasse.");
   const gateway = await getPaymentProvider();
   // Não voltar ao modo de teste se alguma conta real estiver configurada.
   const realEnabled = gateway.enabled || gateway.anyReady;
