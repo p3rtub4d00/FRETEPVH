@@ -1,3 +1,4 @@
+import { masterCleanup } from "./masterCleanup.js";
 import { normalizeAddress, formatAddress } from "../../frontend/src/addressFormat.js";
 import { refundBlocks, canRequestRefund } from "./refunds.js";
 import { Router } from "express";
@@ -39,6 +40,7 @@ api.use((req, res, next) => {
   next();
 });
 api.use(teamManagement);
+api.use(masterCleanup);
 api.use(helpRouter);
 api.use(campaignsRouter);
 api.use(phoneVerification);
