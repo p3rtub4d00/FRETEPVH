@@ -22,7 +22,7 @@ for (const scenario of ["legacy", "structured", "lookupFailure"]) test(`saved re
   t.after(()=>{ if(oldPublic!==undefined)process.env.VAPID_PUBLIC_KEY=oldPublic; if(oldMaps!==undefined)process.env.GOOGLE_MAPS_API_KEY=oldMaps; });
   const route=api.stack.find(layer=>layer.route?.path==='/requests'&&layer.route.methods.post).route;
   const app=express();app.use(express.json());
-  app.use((req,res,next)=>{req.user={_id:'507f1f77bcf86cd799439011',role:'cliente'};next()});
+  app.use((req,res,next)=>{req.user={_id:'507f1f77bcf86cd799439011',role:'cliente',phone:'69999999999',phoneVerifiedNumber:'69999999999',phoneVerifiedAt:new Date()};next()});
   app.post('/requests',...route.stack.map(layer=>layer.handle));
   app.use((error,req,res,next)=>res.status(error.status||500).json({error:error.message}));
   const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));t.after(()=>server.close());
