@@ -6,12 +6,39 @@ let mapsLoader;
 function loadGooglePlaces() {
   if (!googleKey) return Promise.resolve(null);
   if (!mapsLoader) mapsLoader = new Promise((resolve, reject) => {
-    if (window.google?.maps?.importLibrary) { window.google.maps.importLibrary('places').then(resolve, reject); return; }
+    const finish = () => {
+      if (!window.google?.maps?.places?.AutocompleteSuggestion) {
+        reject(new Error('Biblioteca Places indisponível. Verifique Maps JavaScript API e Places API (New).'));
+      } else resolve(window.google.maps.places);
+    };
+    if (window.google?.maps?.places?.AutocompleteSuggestion) { finish(); return; }
+    if (window.google?.maps?.importLibrary) {
+      window.google.maps.importLibrary('places').then(finish, reject);
+      return;
+    }
+    const callbackName = '__freteonGoogleMapsReady';
     const script = document.createElement('script');
-    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(googleKey) + '&v=weekly&loading=async';
+    let completed = false;
+    const timeout = setTimeout(() => {
+      if (!completed) { completed = true; delete window[callbackName]; reject(new Error('Tempo esgotado ao carregar Google Maps.')); }
+    }, 12000);
+    window[callbackName] = () => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(timeout);
+      delete window[callbackName];
+      finish();
+    };
+    script.src = 'https://maps.googleapis.com/maps/api/js?key=' +
+      encodeURIComponent(googleKey) + '&v=weekly&libraries=places&loading=async&callback=' + callbackName;
     script.async = true;
-    script.onload = () => window.google?.maps?.importLibrary('places').then(resolve, reject);
-    script.onerror = () => reject(new Error('Não foi possível carregar as sugestões do Google.'));
+    script.onerror = () => {
+      if (completed) return;
+      completed = true;
+      clearTimeout(timeout);
+      delete window[callbackName];
+      reject(new Error('Não foi possível carregar o script Google Maps.'));
+    };
     document.head.appendChild(script);
   }).catch(error => { mapsLoader = null; throw error; });
   return mapsLoader;
@@ -43,10 +70,7 @@ function GoogleAddressSearch({ value, onSelect }) {
         if (id === sequence.current) {
           setSuggestions([]);
           const details = String(error?.message || '');
-          const restricted = /referer|referrer|not authorized|permission|denied|api key|billing|REQUEST_DENIED|403/i.test(details);
-          setMessage(restricted
-            ? 'Google Maps recusou a consulta. Confira o domínio autorizado, as APIs permitidas e o faturamento no Google Cloud.'
-            : 'Não foi possível consultar os endereços agora. Preencha manualmente.');
+          setMessage('Busca automática indisponível: ' + (details || 'erro desconhecido') + '. Você pode preencher manualmente.');
         }
       } finally { if (id === sequence.current) setLoading(false); }
     }, 450);
