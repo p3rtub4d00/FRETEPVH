@@ -1477,7 +1477,18 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   <p>{state.user.phone} · Porto Velho, RO</p>
                 </>
               )}
-              {["cliente", "motorista"].includes(area) && <PhoneVerificationPanel onVerified={refresh} />}
+              {area === "cliente" && (
+                <details className="driver-profile-documents">
+                  <summary>
+                    <ShieldCheck size={20}/>
+                    <span><strong>Segurança da conta</strong>
+                      <small>{state.user.phoneVerified ? "Telefone confirmado" : "Confirme seu número de telefone"}</small>
+                    </span>
+                    <ChevronRight size={19} className="driver-profile-disclosure-arrow"/>
+                  </summary>
+                  <PhoneVerificationPanel onVerified={refresh}/>
+                </details>
+              )}
               {area === "motorista" && (
                 <>
                   <div className="driver-profile-overview">
@@ -1504,6 +1515,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                       </span>
                       <ChevronRight size={19} className="driver-profile-disclosure-arrow"/>
                     </summary>
+                    <PhoneVerificationPanel onVerified={refresh}/>
                     <DriverVerificationPanel
                       driverId={user.id} role="motorista"
                       onChange={refresh}
