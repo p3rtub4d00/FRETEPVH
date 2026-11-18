@@ -1221,6 +1221,18 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         <main>
           {(area === "cliente" || area === "motorista") && <CampaignViewer role={area} />}
           {!loaded && <p role="status">Carregando seus dados…</p>}
+          {loaded && area === "cliente" && !state.user.phoneVerified && (
+            <div className="phone-confirm-home-banner" role="status">
+              <ShieldCheck size={23} aria-hidden="true"/>
+              <div>
+                <strong>Confirme seu celular para solicitar fretes</strong>
+                <p>Para proteger sua conta, confirme seu número pelo código enviado pela equipe no WhatsApp. Após a confirmação, este aviso desaparecerá automaticamente.</p>
+                <button type="button" className="primary" onClick={() => setPage("perfil")}>
+                  Confirmar meu celular <ArrowRight size={16}/>
+                </button>
+              </div>
+            </div>
+          )}
           {area === "motorista" && !state.user.verified && (
             <div className="verification-action-banner" role="status">
               <ShieldCheck size={23}/>
