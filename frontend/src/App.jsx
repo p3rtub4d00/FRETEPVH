@@ -1,3 +1,4 @@
+import { readFreightDraft, saveFreightDraft, deleteFreightDraft } from "./freightDraft.js";
 import { PhoneVerificationPanel, PhoneVerificationMaster } from "./PhoneVerification.jsx";
 import { mapsRouteUrl } from "./addressFormat.js";
 import FreightCarousel from "./FreightCarousel.jsx";
@@ -405,11 +406,14 @@ function DriverOpenFreightProposal({ request, driverId, commissionRate, availabl
   );
 }
 
-function RequestForm({ onCreate, onClose, requestError }) {
+function RequestForm({ onCreate, onClose, requestError, userId }) {
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [photoProcessing, setPhotoProcessing] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftFound, setDraftFound] = useState(null);
+  const [draftStatus, setDraftStatus] = useState("");
   const [data, setData] = useState({
     title: "",
     origin: "",
@@ -424,6 +428,35 @@ function RequestForm({ onCreate, onClose, requestError }) {
     time: "",
     photos: [],
   });
+  useEffect(() => {
+    let active = true;
+    readFreightDraft(userId).then(draft => {
+      if (!active) return;
+      if (draft?.data) setDraftFound(draft);
+    }).catch(() => {
+      if (active) setDraftStatus('Armazenamento local indisponível; os dados podem não ser recuperados.');
+    }).finally(() => { if (active) setDraftReady(true); });
+    return () => { active = false; };
+  }, [userId]);
+  useEffect(() => {
+    if (!draftReady || draftFound) return undefined;
+    const timer = setTimeout(() => {
+      saveFreightDraft(userId, data, step).then(() => setDraftStatus('Rascunho salvo automaticamente'))
+        .catch(() => setDraftStatus('Não foi possível salvar o rascunho neste aparelho.'));
+    }, 650);
+    return () => clearTimeout(timer);
+  }, [userId, data, step, draftReady, draftFound]);
+  function restoreDraft() {
+    setData(draftFound.data);
+    setStep(Math.max(0, Math.min(3, Number(draftFound.step) || 0)));
+    setDraftFound(null);
+    setDraftStatus('Rascunho recuperado');
+  }
+  async function discardDraft() {
+    try { await deleteFreightDraft(userId); } catch { setDraftStatus('Não foi possível apagar o rascunho salvo.'); }
+    setDraftFound(null);
+    setDraftStatus('Novo frete iniciado');
+  }
   const update = (event) =>
     setData((previous) => ({
       ...previous,
@@ -453,7 +486,11 @@ function RequestForm({ onCreate, onClose, requestError }) {
     }
     setLoading(true);
     try {
-      await onCreate(data);
+      const published = await onCreate(data);
+      if (published) {
+        // Limpa somente após confirmação de publicação, preservando o rascunho em caso de falha.
+        try { await deleteFreightDraft(userId); } catch { /* pode ser apagado na próxima abertura */ }
+      }
     } finally {
       setLoading(false);
     }
@@ -467,7 +504,16 @@ function RequestForm({ onCreate, onClose, requestError }) {
           </span>
         ))}
       </div>
-      <form onSubmit={submit}>
+      {draftFound && <div className="freight-draft-prompt" role="status">
+        <strong>Você tem um frete não finalizado</strong>
+        <p>Encontramos um rascunho salvo neste aparelho. Deseja continuar de onde parou?</p>
+        <div className="freight-draft-actions">
+          <button type="button" className="primary" onClick={restoreDraft}>Continuar rascunho</button>
+          <button type="button" className="secondary" onClick={discardDraft}>Descartar e começar novo</button>
+        </div>
+      </div>}
+      {!draftFound && draftStatus && <small className="freight-draft-status" role="status">{draftStatus}</small>}
+      <form onSubmit={submit} style={draftFound ? { display: 'none' } : undefined}>
         {step === 0 && (
           <RoutePicker
             data={data}
@@ -1744,6 +1790,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         <RequestForm
           requestError={notice}
           onCreate={createRequest}
+          userId={user.id}
           onClose={() => setModal(null)}
         />
       )}
