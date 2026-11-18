@@ -59,7 +59,8 @@ function GoogleAddressSearch({ value, onSelect }) {
         const result = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
           input: query.trim(),
           includedRegionCodes: ['br'],
-          locationBias: { center: { lat: -8.7612, lng: -63.9004 }, radius: 50000 },
+          locationBias: { center: { lat: -8.7612, lng: -63.9004 }, radius: 20000 },
+          region: 'br',
           language: 'pt-BR',
         });
         if (id !== sequence.current) return;
@@ -87,14 +88,21 @@ function GoogleAddressSearch({ value, onSelect }) {
       const get = type => parts.find(part => part.types?.includes(type));
       const street = get('route')?.longText || '';
       const number = get('street_number')?.longText || '';
-      const neighborhood = get('sublocality_level_1')?.longText || get('sublocality')?.longText || get('neighborhood')?.longText || '';
-      const city = get('administrative_area_level_2')?.longText || get('locality')?.longText || value.city;
+      // Distrito/localidade não é bairro. Nunca inferir bairro a partir de locality ou administrative_area_level_3.
+      const neighborhood = get('neighborhood')?.longText || get('sublocality_level_1')?.longText || get('sublocality')?.longText || '';
+      const district = get('administrative_area_level_3')?.longText || '';
+      const locality = get('locality')?.longText || '';
+      const city = get('administrative_area_level_2')?.longText || locality || value.city;
       const state = get('administrative_area_level_1')?.shortText || value.state;
       onSelect({ ...value, street: street || value.street, number: number || value.number,
-        noNumber: number ? false : value.noNumber, neighborhood: neighborhood || value.neighborhood,
+        noNumber: number ? false : value.noNumber,
+        // Limpar o bairro anterior: uma nova escolha não pode herdar o bairro de outro endereço.
+        neighborhood: neighborhood && neighborhood.toLocaleLowerCase('pt-BR') !== district.toLocaleLowerCase('pt-BR') ? neighborhood : '',
         city, state: states.includes(state) ? state : value.state });
       setQuery(place.formattedAddress || item.placePrediction.text?.text || '');
-      setMessage('Endereço selecionado. Confira número e bairro antes de continuar.');
+      setMessage(district
+        ? 'Endereço selecionado. Localidade/distrito informado pelo Google: ' + district + '. Confirme o bairro e o número; distrito não é bairro.'
+        : 'Endereço selecionado. Confira número e bairro antes de continuar.');
     } catch (error) { console.error('[FreteOn Google Places] Falha ao obter endereço:', error); setMessage('Não foi possível preencher automaticamente. Digite os dados abaixo.'); }
     finally { setLoading(false); }
   }
