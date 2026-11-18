@@ -1,3 +1,4 @@
+import { PhoneVerificationPanel, PhoneVerificationMaster } from "./PhoneVerification.jsx";
 import { mapsRouteUrl } from "./addressFormat.js";
 import FreightCarousel from "./FreightCarousel.jsx";
 import RefundPanel, { refundBlocked } from "./RefundPanel.jsx";
@@ -78,6 +79,7 @@ const navigation = {
     ["equipe", "Gestão de equipe", ShieldCheck],
     ["auditoria", "Auditoria", History],
     ["recuperacao", "Recuperar senhas", ShieldCheck],
+    ["verificacao-telefone", "Verificar telefones", ShieldCheck],
     ["privacidade", "Privacidade LGPD", ShieldCheck],
     ["central-ajuda", "Central de Ajuda", CircleHelp],
     ["campanhas", "Campanhas e comunicados", BellRing],
@@ -1475,6 +1477,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                   <p>{state.user.phone} · Porto Velho, RO</p>
                 </>
               )}
+              {["cliente", "motorista"].includes(area) && <PhoneVerificationPanel onVerified={refresh} />}
               {area === "motorista" && (
                 <>
                   <div className="driver-profile-overview">
@@ -1539,6 +1542,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <PrivacyMaster />
           ) : area === "master" && page === "central-ajuda" ? (
             <HelpCenter role="master" />
+          ) : area === "master" && page === "verificacao-telefone" && masterOwner ? (
+            <PhoneVerificationMaster />
           ) : area === "master" && page === "recuperacao" ? (
             <RecoveryMaster />
           ) : page === "usuarios" ? (
