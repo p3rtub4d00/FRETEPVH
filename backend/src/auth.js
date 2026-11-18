@@ -235,7 +235,7 @@ auth.patch("/profile", authenticate, authorize("cliente", "motorista"),
     }
 
     req.user.name = name;
-    if (changingPhone) req.user.phone = phone;
+    if (changingPhone) { req.user.phone = phone; req.user.phoneVerifiedAt = null; req.user.phoneVerifiedNumber = ""; }
     try {
       await req.user.save();
     } catch (error) {
