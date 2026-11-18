@@ -22,7 +22,9 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        "img-src": ["'self'", "data:", "blob:"],
+        "script-src": ["'self'", "https://maps.googleapis.com", "https://maps.gstatic.com"],
+        "connect-src": ["'self'", "https://maps.googleapis.com", "https://places.googleapis.com"],
+        "img-src": ["'self'", "data:", "blob:", "https://maps.googleapis.com", "https://maps.gstatic.com"],
         "style-src": [
           "'self'",
           "'unsafe-inline'",
