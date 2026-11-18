@@ -1,10 +1,96 @@
 import { MapPin, Navigation2, ExternalLink } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+
+const googleKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+let mapsLoader;
+function loadGooglePlaces() {
+  if (!googleKey) return Promise.resolve(null);
+  if (!mapsLoader) mapsLoader = new Promise((resolve, reject) => {
+    if (window.google?.maps?.importLibrary) return resolve(window.google.maps.importLibrary('places'));
+    const script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(googleKey) + '&v=weekly&loading=async';
+    script.async = true;
+    script.onload = () => window.google?.maps?.importLibrary('places').then(resolve, reject);
+    script.onerror = () => reject(new Error('Não foi possível carregar as sugestões do Google.'));
+    document.head.appendChild(script);
+  }).catch(error => { mapsLoader = null; throw error; });
+  return mapsLoader;
+}
+function GoogleAddressSearch({ value, onSelect }) {
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const sequence = useRef(0);
+  useEffect(() => {
+    const id = ++sequence.current;
+    if (!googleKey || query.trim().length < 3) { setSuggestions([]); setMessage(''); return; }
+    const timer = setTimeout(async () => {
+      try {
+        setLoading(true);
+        const { AutocompleteSuggestion } = await loadGooglePlaces();
+        const result = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+          input: query.trim(),
+          includedRegionCodes: ['br'],
+          locationBias: { center: { lat: -8.7612, lng: -63.9004 }, radius: 100000 },
+          language: 'pt-BR',
+        });
+        if (id !== sequence.current) return;
+        setSuggestions((result.suggestions || []).filter(item => item.placePrediction).slice(0, 5));
+        setMessage('');
+      } catch {
+        if (id === sequence.current) { setSuggestions([]); setMessage('Sugestões indisponíveis. Preencha o endereço manualmente.'); }
+      } finally { if (id === sequence.current) setLoading(false); }
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [query]);
+  async function choose(item) {
+    sequence.current++;
+    setSuggestions([]);
+    try {
+      setLoading(true);
+      const place = item.placePrediction.toPlace();
+      await place.fetchFields({ fields: ['addressComponents', 'formattedAddress'] });
+      const parts = place.addressComponents || [];
+      const get = type => parts.find(part => part.types?.includes(type));
+      const street = get('route')?.longText || '';
+      const number = get('street_number')?.longText || '';
+      const neighborhood = get('sublocality_level_1')?.longText || get('sublocality')?.longText || get('neighborhood')?.longText || '';
+      const city = get('administrative_area_level_2')?.longText || get('locality')?.longText || value.city;
+      const state = get('administrative_area_level_1')?.shortText || value.state;
+      onSelect({ ...value, street: street || value.street, number: number || value.number,
+        noNumber: number ? false : value.noNumber, neighborhood: neighborhood || value.neighborhood,
+        city, state: states.includes(state) ? state : value.state });
+      setQuery(place.formattedAddress || item.placePrediction.text?.text || '');
+      setMessage('Endereço selecionado. Confira número e bairro antes de continuar.');
+    } catch { setMessage('Não foi possível preencher automaticamente. Digite os dados abaixo.'); }
+    finally { setLoading(false); }
+  }
+  if (!googleKey) return null;
+  return <div className="google-address-search">
+    <label>Buscar endereço no Google
+      <input type="search" value={query} onChange={e => setQuery(e.target.value)}
+        placeholder="Digite rua, número ou local" autoComplete="off" aria-label="Buscar endereço no Google" />
+    </label>
+    {loading && <small role="status">Buscando endereços…</small>}
+    {suggestions.length > 0 && <div className="google-address-suggestions" role="listbox" aria-label="Sugestões de endereço">
+      {suggestions.map((item, index) => <button type="button" role="option" aria-selected="false"
+        key={item.placePrediction.placeId || index} onClick={() => choose(item)}>
+        {item.placePrediction.text?.text || 'Selecionar endereço'}
+      </button>)}
+      <small>Dados de endereço fornecidos pelo Google</small>
+    </div>}
+    {message && <small role="status">{message}</small>}
+  </div>;
+}
+
 import { emptyAddress, formatAddress, mapsRouteUrl } from './addressFormat.js';
 const states = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 function AddressFields({ title, value, onChange, prefix }) {
   const update = (key, next) => onChange({ ...value, [key]: next });
   return <section className="manual-address" aria-label={title}>
     <h3><MapPin size={19}/> {title}</h3>
+    <GoogleAddressSearch value={value} onSelect={onChange}/>
     <label>Rua ou avenida<input name={`${prefix}-street`} value={value.street} onChange={e=>update('street',e.target.value)} required minLength={3} maxLength={60} placeholder="Ex.: Avenida Sete de Setembro" autoComplete="off"/></label>
     <div className="manual-address-grid">
       <label>Número<input name={`${prefix}-number`} value={value.number} onChange={e=>update('number',e.target.value)} required={!value.noNumber} disabled={value.noNumber} maxLength={12} placeholder="Ex.: 123"/></label>
