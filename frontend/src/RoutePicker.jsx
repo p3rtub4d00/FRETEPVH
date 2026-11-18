@@ -59,7 +59,7 @@ function GoogleAddressSearch({ value, onSelect }) {
         const result = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
           input: query.trim(),
           includedRegionCodes: ['br'],
-          locationBias: { center: { lat: -8.7612, lng: -63.9004 }, radius: 100000 },
+          locationBias: { center: { lat: -8.7612, lng: -63.9004 }, radius: 50000 },
           language: 'pt-BR',
         });
         if (id !== sequence.current) return;
