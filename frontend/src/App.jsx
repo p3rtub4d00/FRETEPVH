@@ -1,3 +1,4 @@
+import MasterCleanup from "./MasterCleanup.jsx";
 import { readFreightDraft, saveFreightDraft, deleteFreightDraft } from "./freightDraft.js";
 import { PhoneVerificationPanel, PhoneVerificationMaster } from "./PhoneVerification.jsx";
 import { mapsRouteUrl } from "./addressFormat.js";
@@ -77,6 +78,7 @@ const navigation = {
     ["financeiro", "Financeiro", FileCheck2],
     ["comissoes", "Taxas de comissão", FileCheck2],
     ["usuarios", "Usuários", Users],
+    ["exclusoes", "Excluir registros", Users],
     ["equipe", "Gestão de equipe", ShieldCheck],
     ["auditoria", "Auditoria", History],
     ["recuperacao", "Recuperar senhas", ShieldCheck],
@@ -89,7 +91,7 @@ const navigation = {
 };
 
 const masterPagePermissions = {
-  inicio: "dashboard.view", notificacoes: "notifications.view",
+  exclusoes: "owner.only", inicio: "dashboard.view", notificacoes: "notifications.view",
   motoristas: "drivers.view", fretes: "freights.view",
   financeiro: "finance.view", comissoes: "finance.view",
   usuarios: "users.view", denuncias: "support.view", auditoria: "audit.view"
@@ -1616,6 +1618,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <PhoneVerificationMaster />
           ) : area === "master" && page === "recuperacao" ? (
             <RecoveryMaster />
+          ) : area === "master" && page === "exclusoes" && masterOwner ? (
+            <MasterCleanup />
           ) : page === "usuarios" ? (
             <section className="panel">
               <h2>Usuários cadastrados</h2>
