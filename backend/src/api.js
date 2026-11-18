@@ -439,6 +439,7 @@ api.post("/requests/:id/calculate-route", rateLimit({
 api.post(
   "/requests/:id/proposals",
   authorize("motorista"),
+  requireVerifiedPhone,
   async (req, res) => {
     driverApproved(req.user);
     if (await overdueDriver(own(req.user)))
@@ -492,6 +493,7 @@ api.patch("/requests/:id", async (req, res) => {
   const previousStatus = request.status;
   if (req.user.role === "cliente" && request.clientId === own(req.user)) {
     if (req.body.status === "booked" && request.status === "open") {
+      requireVerifiedPhone(req, res, () => {});
       const proposal = request.proposals.find(
         (item) => item.id === req.body.selectedId,
       );
