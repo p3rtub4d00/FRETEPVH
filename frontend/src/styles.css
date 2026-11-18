@@ -4930,3 +4930,11 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .compact-address-extras[open]{display:grid;gap:10px}
 .compact-address-extras label{margin-top:10px}
 .compact-address .google-address-suggestions{max-height:190px;overflow-y:auto}
+
+/* Recuperação de rascunhos do formulário de frete */
+.freight-draft-prompt{padding:15px;border:1px solid #d7e4f0;background:#f4f8fc;border-radius:12px;margin:12px 0;color:#17324d}
+.freight-draft-prompt strong{font-size:15px}
+.freight-draft-prompt p{font-size:13px;line-height:1.5;margin:8px 0 12px}
+.freight-draft-actions{display:flex;flex-wrap:wrap;gap:9px}
+.freight-draft-actions button{min-height:42px;flex:1 1 150px;font-size:13px}
+.freight-draft-status{display:block;font-size:12px;color:#54708b;margin:5px 0 10px}
