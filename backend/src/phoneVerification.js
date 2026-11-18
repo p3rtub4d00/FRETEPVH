@@ -36,7 +36,7 @@ phoneVerification.post("/phone-verification/request",authorize("cliente","motori
  if(recent)return res.json({message:"Solicitação já registrada. Aguarde o envio pelo Master."});
  await Verification.updateMany({userId:req.user._id,status:{$in:["pending","issued"]}},{$set:{status:"cancelled",codeHash:"",salt:""}});
  await Verification.create({userId:req.user._id,phone:req.user.phone,name:req.user.name,role:req.user.role});
- void notifyMasters({title:"Verificação de celular solicitada",body:"Há uma solicitação de confirmação de telefone no painel Master.",category:"usuarios",id:String(req.user._id)});
+ void notifyMasters({title:"Verificação de celular solicitada",body:"Há uma solicitação de confirmação de telefone no painel Master.",category:"geral",id:String(req.user._id)});
  res.json({message:"Solicitação enviada ao Master. Aguarde o código pelo WhatsApp."});
 });
 phoneVerification.post("/phone-verification/confirm",authorize("cliente","motorista"),limiter(12),async(req,res)=>{
