@@ -23,6 +23,7 @@ import { PagBankOrder } from "./pagBank.js";
 import { teamManagement } from "./teamManagement.js";
 import { helpRouter } from "./helpCenter.js";
 import { campaignsRouter } from "./campaigns.js";
+import { phoneVerification, requireVerifiedPhone } from "./phoneVerification.js";
 
 export const api = Router();
 api.use(authenticate);
@@ -40,6 +41,7 @@ api.use((req, res, next) => {
 api.use(teamManagement);
 api.use(helpRouter);
 api.use(campaignsRouter);
+api.use(phoneVerification);
 api.use(finance);
 api.use(mercadoPagoPrivate);
 api.use(paymentGatewayRouter);
@@ -312,7 +314,7 @@ api.patch("/availability", authorize("motorista"), (req, res) => {
     message: "O FreteOn agora disponibiliza os fretes automaticamente a motoristas verificados.",
   });
 });
-api.post("/requests", authorize("cliente"), rateLimit({
+api.post("/requests", authorize("cliente"), requireVerifiedPhone, rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 15,
   standardHeaders: "draft-7",
