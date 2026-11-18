@@ -4946,3 +4946,12 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .phone-confirm-home-banner strong{font-size:14px}
 .phone-confirm-home-banner p{font-size:12px;line-height:1.5;color:#52647b;margin:6px 0 10px}
 .phone-confirm-home-banner button{display:inline-flex;align-items:center;gap:7px;min-height:39px;padding:9px 13px;font-size:13px;width:auto;max-width:100%}
+
+.master-cleanup-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.master-cleanup-tabs button{flex:1 1 105px;min-height:40px;font-size:13px}
+.master-cleanup .person-row{gap:10px;flex-wrap:wrap}
+.master-cleanup .person-row>div{flex:1;min-width:130px}
+.master-cleanup .person-row button{width:auto;min-height:36px;padding:8px 12px}
+.master-cleanup-confirm{margin-top:16px;border:1px solid #e7c8c8;background:#fff9f8;border-radius:12px;padding:14px}
+.master-cleanup-confirm p{font-size:13px}
+.master-cleanup-confirm input{width:100%;max-width:360px}
