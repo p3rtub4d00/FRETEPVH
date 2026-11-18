@@ -6,7 +6,7 @@ let mapsLoader;
 function loadGooglePlaces() {
   if (!googleKey) return Promise.resolve(null);
   if (!mapsLoader) mapsLoader = new Promise((resolve, reject) => {
-    if (window.google?.maps?.importLibrary) return resolve(window.google.maps.importLibrary('places'));
+    if (window.google?.maps?.importLibrary) { window.google.maps.importLibrary('places').then(resolve, reject); return; }
     const script = document.createElement('script');
     script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(googleKey) + '&v=weekly&loading=async';
     script.async = true;
@@ -38,8 +38,16 @@ function GoogleAddressSearch({ value, onSelect }) {
         if (id !== sequence.current) return;
         setSuggestions((result.suggestions || []).filter(item => item.placePrediction).slice(0, 5));
         setMessage('');
-      } catch {
-        if (id === sequence.current) { setSuggestions([]); setMessage('Sugestões indisponíveis. Preencha o endereço manualmente.'); }
+      } catch (error) {
+        console.error('[FreteOn Google Places] Falha ao buscar sugestões:', error);
+        if (id === sequence.current) {
+          setSuggestions([]);
+          const details = String(error?.message || '');
+          const restricted = /referer|referrer|not authorized|permission|denied|api key|billing|REQUEST_DENIED|403/i.test(details);
+          setMessage(restricted
+            ? 'Google Maps recusou a consulta. Confira o domínio autorizado, as APIs permitidas e o faturamento no Google Cloud.'
+            : 'Não foi possível consultar os endereços agora. Preencha manualmente.');
+        }
       } finally { if (id === sequence.current) setLoading(false); }
     }, 450);
     return () => clearTimeout(timer);
@@ -63,7 +71,7 @@ function GoogleAddressSearch({ value, onSelect }) {
         city, state: states.includes(state) ? state : value.state });
       setQuery(place.formattedAddress || item.placePrediction.text?.text || '');
       setMessage('Endereço selecionado. Confira número e bairro antes de continuar.');
-    } catch { setMessage('Não foi possível preencher automaticamente. Digite os dados abaixo.'); }
+    } catch (error) { console.error('[FreteOn Google Places] Falha ao obter endereço:', error); setMessage('Não foi possível preencher automaticamente. Digite os dados abaixo.'); }
     finally { setLoading(false); }
   }
   if (!googleKey) return null;
