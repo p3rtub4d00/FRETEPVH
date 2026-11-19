@@ -95,3 +95,9 @@ test("solicitações de bloqueio notificam apenas o Master Principal",()=>{
     staffPermissions:["notifications.view","dashboard.view"]}).includes("revisao-conta"),false);
   assert.deepEqual(masterRecipientFilter("revisao-conta"),{$or:[{role:"master"}]});
 });
+
+test("somente uma solicitação pendente por conta pode existir", () => {
+  const indexes=BlockedAppeal.schema.indexes();
+  assert.ok(indexes.some(([keys,options]) => keys.userId===1 &&
+    keys.status===1 && options.unique === true && options.partialFilterExpression?.status === "pending"));
+});

@@ -11,6 +11,7 @@ const schema = new mongoose.Schema({
   reviewedBy: { type: String, default: "" },
 }, { timestamps: true });
 schema.index({ userId: 1, createdAt: -1 });
+schema.index({ userId: 1, status: 1 }, { unique: true, partialFilterExpression: { status: "pending" } });
 schema.index({ status: 1, createdAt: -1 });
 export const BlockedAppeal = mongoose.models.FreteOnBlockedAppeal ||
   mongoose.model("FreteOnBlockedAppeal", schema);

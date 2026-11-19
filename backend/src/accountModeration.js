@@ -111,7 +111,7 @@ accountModeration.post("/master/accounts/:id/moderation", async (req, res) => {
         await BlockedAppeal.updateMany(
           { userId: account._id, status: "pending" },
           { $set: { status: "reviewed",
-            reviewNote: "Conta reativada pela equipe FreteOn.",
+            reviewNote: ("Conta reativada. " + reason).slice(0, 500),
             reviewedAt: new Date(), reviewedBy: String(req.user._id) } },
           { session }
         );

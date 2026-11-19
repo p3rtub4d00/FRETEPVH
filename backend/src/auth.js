@@ -208,10 +208,17 @@ auth.post("/blocked-appeal", appealLimit, async (req, res) => {
   if (pending)
     return res.json({ ok: true, status: "pending",
       message: "Sua solicitação já está registrada. Consulte o andamento nesta tela." });
-  await BlockedAppeal.create({
-    userId: user._id, role: user.role, phone: user.phone,
-    name: user.name, message, status: "pending"
-  });
+  try {
+    await BlockedAppeal.create({
+      userId: user._id, role: user.role, phone: user.phone,
+      name: user.name, message, status: "pending"
+    });
+  } catch (error) {
+    if (error.code === 11000)
+      return res.json({ ok: true, status: "pending",
+        message: "Já existe uma solicitação aguardando análise." });
+    throw error;
+  }
   void notifyMasters({
     title: "Revisão de bloqueio solicitada",
     body: "Um cliente ou motorista pediu revisão de conta. Abra Usuários para analisar.",
