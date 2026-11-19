@@ -112,6 +112,8 @@ export function staffAccessForRequest(req) {
     return method === "GET" && allowed(req, "finance.view");
   if (pathname === "/master/commission")
     return method === "GET" && allowed(req, "finance.view");
+  if (/^\/master\/freights\/[a-f\d]{24}\/chat$/i.test(pathname))
+    return method === "GET" && allowed(req, "freights.view") && allowed(req, "support.view");
   if (pathname.startsWith("/master/team")) return false;
   if (pathname.startsWith("/master/audit")) return method === "GET" && allowed(req, "audit.view");
   if (/^\/master\/reports(?:\/|$)/.test(pathname))

@@ -89,3 +89,14 @@ test("colaboradores não podem usar exclusões do Master", () => {
   assert.equal(staffAccessForRequest(request(staff, "/master/cleanup/clients/" + id, "DELETE")), false);
   assert.equal(staffAccessForRequest(request(staff, "/master/cleanup/freights/" + id, "DELETE")), false);
 });
+
+test("consulta do chat Master depende das permissões de fretes e suporte", () => {
+  const id = "507f1f77bcf86cd799439011";
+  const check = (perms, method = "GET") => staffAccessForRequest(request(
+    employee(perms), "/master/freights/" + id + "/chat", method));
+  assert.equal(check(["dashboard.view","freights.view","support.view"]), true);
+  assert.equal(check(["dashboard.view","freights.view"]), false);
+  assert.equal(check(["dashboard.view","support.view"]), false);
+  assert.equal(check(["dashboard.view","finance.view"]), false);
+  assert.equal(check(["dashboard.view","freights.view","support.view"], "POST"), false);
+});

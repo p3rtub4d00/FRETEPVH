@@ -51,7 +51,7 @@ export default function FreightChatPanel({ requestId, currentUserId, onReport })
         <button className="secondary" type="button" onClick={onReport}><Flag size={15}/> Denunciar</button>
       </div>
       <p className="freight-chat-safety"><ShieldCheck size={16}/>
-        Conversa liberada após a contratação. Evite contatos, links e negociações fora do FreteOn. Mensagens podem ser analisadas em caso de denúncia, conforme nossa Política de Privacidade.
+        Conversa liberada após a contratação. Evite contatos, links e negociações fora do FreteOn. Administradores autorizados podem consultar as mensagens para segurança, suporte ou prevenção de fraude, com auditoria, conforme nossa Política de Privacidade.
       </p>
       <div className="freight-chat-messages" role="log" aria-label="Histórico das mensagens">
         {messages.length ? messages.map((item) => (

@@ -5004,3 +5004,42 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .master-users-event small{color:#64748b}
 .master-users-event p{margin-top:5px}
 @media(max-width:650px){.master-users-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.master-users-tabs button{padding:9px 6px;font-size:12px}.master-users-actions{width:100%;margin-left:58px}.master-users-actions button{flex:1 1 auto;justify-content:center}.master-users-person-info{flex:1 1 150px}}
+
+/* Detalhes operacionais e fiscalização somente leitura no Master. */
+.master-freight-detail{display:grid;gap:12px;min-width:0;overflow-wrap:anywhere}
+.master-freight-detail h3{margin:12px 0 0;color:#10243e;font-size:15px}
+.master-freight-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.master-freight-heading small{font-size:11px;color:#64748b}
+.master-freight-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.master-freight-info-grid>div{display:grid;gap:4px;padding:11px;border:1px solid #e3eaf1;border-radius:10px;min-width:0}
+.master-freight-info-grid small{font-size:11px;color:#61758a}
+.master-freight-info-grid strong{font-size:13px;color:#173550;overflow-wrap:anywhere}
+.master-freight-info-grid span{font-size:12px;color:#64748b}
+.master-freight-address{display:grid;gap:4px;border-left:3px solid #ed842f;background:#f7f9fc;padding:10px 12px;border-radius:8px;font-size:13px}
+.master-freight-address small{font-size:12px;color:#64748b}
+.master-freight-map{display:inline-flex;align-items:center;gap:6px;color:#204e7c;font-weight:600;font-size:12px}
+.master-freight-description{font-size:13px;line-height:1.6;margin:0}
+.master-freight-financial{display:grid;gap:9px}
+.master-freight-photos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.master-freight-photos img{width:100%;max-height:170px;object-fit:contain;border:1px solid #e3e9ef;border-radius:9px}
+.master-freight-proposal{border:1px solid #e0e7ef;border-radius:10px;padding:11px;display:grid;gap:6px;font-size:13px}
+.master-freight-proposal>div{display:flex;justify-content:space-between;gap:7px;align-items:center;flex-wrap:wrap}
+.master-freight-proposal p{margin:0;font-size:12px}
+.master-freight-proposal small{color:#64748b}
+.master-freight-chosen{border-radius:99px;background:#e8f7ed;color:#216a45;font-size:11px;padding:3px 8px}
+.master-freight-chat{border-top:1px solid #dce5ee;padding-top:13px;display:grid;gap:10px}
+.master-freight-chat-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.master-freight-chat-heading h3{display:flex;gap:7px;align-items:center;margin:0}
+.master-freight-chat-heading button{width:auto;min-height:36px;display:inline-flex;align-items:center;gap:6px;font-size:12px}
+.master-freight-chat-notice{display:flex;gap:8px;align-items:flex-start;background:#f0f6fc;border-radius:9px;padding:11px;font-size:12px;line-height:1.5;color:#435e79;margin:0}
+.master-freight-chat-notice svg{flex:none}
+.master-freight-chat-list{display:flex;flex-direction:column;gap:9px;max-height:470px;overflow-y:auto;overscroll-behavior:contain}
+.master-freight-chat-item{display:grid;gap:6px;border:1px solid #e1e8ef;background:#f7f9fc;border-radius:11px;padding:10px 12px}
+.master-freight-chat-item.motorista{background:#fff6ee;border-color:#f1dfd1}
+.master-freight-chat-item>div{display:flex;justify-content:space-between;gap:7px;flex-wrap:wrap}
+.master-freight-chat-item strong{font-size:12px;color:#12304e}
+.master-freight-chat-item small{font-size:11px;color:#64748b}
+.master-freight-chat-item p{font-size:13px;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.master-freight-chat .master-freight-older{justify-self:start;width:auto;min-height:35px;font-size:12px}
+.master-freight-chat>small{display:flex;gap:6px;align-items:flex-start;font-size:11px;line-height:1.5}
+@media(max-width:560px){.master-freight-info-grid{grid-template-columns:1fr}.master-freight-photos{grid-template-columns:repeat(2,minmax(0,1fr))}}

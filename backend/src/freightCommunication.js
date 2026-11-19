@@ -5,6 +5,7 @@ import { Freight, FreightChat, FreightReport } from "./models.js";
 import { authorize, fail } from "./auth.js";
 import { canChat, safeChatMessage } from "./antiBypass.js";
 import { notifyInBackground, notifyMasters } from "./webPush.js";
+import { staffHas, TeamAuditEvent } from "./teamAccess.js";
 
 export const freightCommunication = Router();
 const own = (req) => String(req.user._id);
@@ -84,8 +85,42 @@ freightCommunication.post("/requests/:id/report", authorize("cliente", "motorist
   res.status(201).json({ ok: true, message: "Denúncia registrada para análise do Master." });
 });
 
-// A administração consulta o histórico de mensagens SOMENTE para um frete
-// com denúncia registrada, para avaliar a evidência da ocorrência.
+
+export function canInspectFreightChat(user) {
+  return user?.role === "master" && staffHas(user, "freights.view") && staffHas(user, "support.view");
+}
+// Consulta humana sob demanda: somente leitura, paginada e obrigatoriamente auditada.
+freightCommunication.get("/master/freights/:id/chat", authorize("master"), async (req, res) => {
+  if (!canInspectFreightChat(req.user))
+    fail(403, "Seu nível administrativo não autoriza a consulta de conversas.");
+  const request = await getRequest(req);
+  const before = req.query?.before;
+  if (before !== undefined && (typeof before !== "string" || !mongoose.isValidObjectId(before)))
+    fail(400, "Paginação inválida.");
+  const filter = { requestId: request._id };
+  if (before) filter._id = { $lt: new mongoose.Types.ObjectId(before) };
+  const rows = await FreightChat.find(filter).sort({ _id: -1 }).limit(101).lean();
+  const hasMore = rows.length > 100;
+  const page = rows.slice(0,100);
+  try {
+    await TeamAuditEvent.create({
+      actorId: String(req.user._id), actorRole: req.user.staffAccountId ? req.user.teamRole : "owner",
+      method: "GET", path: `/master/freights/${request._id}/chat`,
+      targetId: String(request._id), status: 200,
+    });
+  } catch {
+    fail(503, "Não foi possível registrar a auditoria da consulta.");
+  }
+  res.setHeader("Cache-Control", "no-store, private");
+  res.json({
+    messages: page.reverse().map(item => ({
+      id: String(item._id), authorId: item.authorId, authorRole: item.authorRole,
+      content: item.content, createdAt: item.createdAt,
+    })),
+    hasMore, nextBefore: hasMore && page.length ? String(page[0]._id) : null,
+  });
+});
+// A consulta vinculada a uma denúncia permanece disponível para apuração.
 freightCommunication.get("/master/reports/:reportId/chat", authorize("master"), async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.reportId)) fail(404, "Denúncia não encontrada.");
   const report = await FreightReport.findById(req.params.reportId);

@@ -51,6 +51,7 @@ import DriverVerificationPanel from "./DriverVerificationPanel.jsx";
 import WalletPanel, { PaymentLabel, CommissionPreview } from "./WalletPanel.jsx";
 import MercadoPagoPix from "./MercadoPagoPix.jsx";
 import FreightChatPanel from "./FreightChatPanel.jsx";
+import MasterFreightDetails from "./MasterFreightDetails.jsx";
 import MasterFreightReports, { ReportFreightForm } from "./MasterFreightReports.jsx";
 import TeamManagement from "./TeamManagement.jsx";
 import HelpCenter from "./HelpCenter.jsx";
@@ -1975,6 +1976,15 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               onPhoto={index => setModal({ type: "photo", id: selected.id, index, returnTo: "detail" })}
               onReport={() => setModal({ type: "report", id: selected.id })}
               onCancel={() => setModal({ type: "cancel", id: selected.id })}
+            />
+          ) : area === "master" ? (
+            <MasterFreightDetails key={selected.id} request={selected}
+              users={state.users} drivers={state.drivers}
+              canViewChat={masterOwner || (
+                user.adminPermissions?.includes("freights.view") &&
+                user.adminPermissions?.includes("support.view"))}
+              canViewContacts={masterOwner || user.adminPermissions?.includes("users.view")}
+              canViewFinance={masterOwner || user.adminPermissions?.includes("finance.view")}
             />
           ) : (
             <>
