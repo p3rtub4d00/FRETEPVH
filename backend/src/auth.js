@@ -10,6 +10,7 @@ import { rateLimit } from "express-rate-limit";
 import { Account, Session, PushSubscription, publicUser } from "./models.js";
 import { pushLogoutFilter } from "./pushLogout.js";
 import { LEGAL_VERSION } from "./legalVersion.js";
+import { BlockedAppeal } from "./blockedAppeals.js";
 import { notifyMasters } from "./webPush.js";
 import { staffAccessForRequest, trackAdministrativeAction } from "./teamAccess.js";
 
@@ -179,9 +180,55 @@ auth.post("/login", limit, async (req, res) => {
   if (user.role === "staff" && (!user.staffEnabled || user.status !== "approved"))
     fail(403, "Conta da equipe bloqueada. Consulte o Master Principal.");
   if (["cliente", "motorista"].includes(user.role) && user.blockedAt)
-    fail(403, "Sua conta foi bloqueada. Entre em contato com a equipe FreteOn para solicitar revisão.");
+    return res.status(403).json({ code: "ACCOUNT_BLOCKED", error: "Sua conta está bloqueada. Você pode solicitar uma revisão à equipe FreteOn." });
   res.json({ user: await issueSession(req, res, user) });
 });
+
+const appealLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, limit: 8,
+  standardHeaders: "draft-7", legacyHeaders: false,
+  message: { error: "Muitas tentativas. Aguarde 15 minutos." }
+});
+async function verifyAppealOwner(body) {
+  if (!["cliente", "motorista"].includes(body?.role))
+    fail(400, "Selecione Cliente ou Motorista.");
+  const phone = phoneNumber(body?.phone);
+  const user = await Account.findOne({ phone, role: body.role }).select("+passwordHash");
+  const stored = user?.passwordHash || `${"0".repeat(32)}:${"0".repeat(128)}`;
+  if (!(await verifyPassword(body?.password, stored)) || !user)
+    fail(401, "Confira o celular e a senha para solicitar a revisão.");
+  if (!user.blockedAt)
+    fail(409, "Esta conta não está bloqueada. Entre normalmente no aplicativo.");
+  return user;
+}
+auth.post("/blocked-appeal", appealLimit, async (req, res) => {
+  const user = await verifyAppealOwner(req.body);
+  const message = text(req.body?.message, 15, 500, "Descrição");
+  const pending = await BlockedAppeal.findOne({ userId: user._id, status: "pending" });
+  if (pending)
+    return res.json({ ok: true, status: "pending",
+      message: "Sua solicitação já está registrada. Consulte o andamento nesta tela." });
+  await BlockedAppeal.create({
+    userId: user._id, role: user.role, phone: user.phone,
+    name: user.name, message, status: "pending"
+  });
+  void notifyMasters({
+    title: "Revisão de bloqueio solicitada",
+    body: "Um cliente ou motorista pediu revisão de conta. Abra Usuários para analisar.",
+    category: "revisao-conta", id: String(user._id)
+  });
+  res.status(201).json({ ok: true, status: "pending",
+    message: "Pedido enviado ao Master. Você pode consultar o andamento por aqui." });
+});
+auth.post("/blocked-appeal/status", appealLimit, async (req, res) => {
+  const user = await verifyAppealOwner(req.body);
+  const item = await BlockedAppeal.findOne({ userId: user._id })
+    .sort({ createdAt: -1 }).lean();
+  res.json({ status: item?.status || "none", createdAt: item?.createdAt || null,
+    reviewNote: item?.status === "reviewed" ? (item.reviewNote || "") : "",
+    blocked: true });
+});
+
 auth.post("/staff/password", authenticate, authorize("master"), limit, async (req, res) => {
   if (!req.user.staffAccountId) fail(403, "Esta função é exclusiva da equipe.");
   const account = await Account.findOne({ _id: req.user.staffAccountId, role: "staff",

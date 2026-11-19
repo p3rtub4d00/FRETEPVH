@@ -1,6 +1,6 @@
 const permissions = {
   motoristas: "drivers.view", fretes: "freights.view", financeiro: "finance.view",
-  denuncias: "support.view", recuperacao: null, "verificacao-telefone": null, geral: "dashboard.view"
+  denuncias: "support.view", recuperacao: null, "verificacao-telefone": null, "revisao-conta": null, geral: "dashboard.view"
 };
 export function masterCategories(user) {
   if (user.role === "master" && !user.staffAccountId) return Object.keys(permissions);

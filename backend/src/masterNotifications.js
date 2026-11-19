@@ -5,7 +5,7 @@ import { masterCategories } from "./masterNotificationAccess.js";
 const schema = new mongoose.Schema({
   title: { type: String, required: true, maxlength: 90 },
   body: { type: String, required: true, maxlength: 180 },
-  category: { type: String, enum: ["motoristas","fretes","financeiro","recuperacao","denuncias","verificacao-telefone","geral"], default: "geral" },
+  category: { type: String, enum: ["motoristas","fretes","financeiro","recuperacao","denuncias","verificacao-telefone","revisao-conta","geral"], default: "geral" },
   targetId: { type: String, default: "" },
   readBy: { type: [String], default: [] }
 }, { timestamps: true });
@@ -14,7 +14,7 @@ const Event = mongoose.models.FreteOnMasterNotification || mongoose.model("Frete
 export async function recordMasterNotification(message) {
   const title = String(message.title || "Aviso FreteOn").slice(0,90);
   const body = String(message.body || "Há uma nova ocorrência.").slice(0,180);
-  const category = ["motoristas","fretes","financeiro","recuperacao","denuncias","verificacao-telefone","geral"].includes(message.category) ? message.category : "geral";
+  const category = ["motoristas","fretes","financeiro","recuperacao","denuncias","verificacao-telefone","revisao-conta","geral"].includes(message.category) ? message.category : "geral";
   return Event.create({ title, body, category, targetId: String(message.id || "").slice(0,80) });
 }
 export const masterNotifications = Router();

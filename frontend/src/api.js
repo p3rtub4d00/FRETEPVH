@@ -27,6 +27,7 @@ export async function api(path, options = {}) {
       data.error || "Não foi possível concluir. Tente novamente.",
     );
     error.status = response.status;
+    error.code = data.code || "";
     throw error;
   }
   return data;

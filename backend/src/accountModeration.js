@@ -3,6 +3,7 @@ import { Router } from "express";
 import { Account, Freight, Session, PushSubscription } from "./models.js";
 import { authorize, fail } from "./auth.js";
 import { isPrincipal } from "./teamAccess.js";
+import { BlockedAppeal } from "./blockedAppeals.js";
 
 // Trilha específica de moderação: a justificativa não aparece no perfil público.
 const moderationSchema = new mongoose.Schema({
@@ -28,6 +29,32 @@ const nonAdmin = { $in: ["cliente", "motorista"] };
 export function moderationMayProceed(activeFreight) {
   return !activeFreight || !["booked", "transit"].includes(activeFreight.status);
 }
+
+accountModeration.get("/master/accounts/appeals", async (_req, res) => {
+  const rows = await BlockedAppeal.find({ status: "pending" })
+    .sort({ createdAt: -1 }).limit(100).lean();
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json({ appeals: rows.map(row => ({
+    id: String(row._id), userId: String(row.userId),
+    role: row.role, name: row.name, phone: row.phone,
+    message: row.message, status: row.status, createdAt: row.createdAt
+  })) });
+});
+accountModeration.post("/master/accounts/appeals/:id/review", async (req, res) => {
+  validId(req.params.id);
+  const reviewNote = typeof req.body?.reviewNote === "string"
+    ? req.body.reviewNote.trim() : "";
+  if (reviewNote.length < 10 || reviewNote.length > 500)
+    fail(400, "Informe uma resposta entre 10 e 500 caracteres.");
+  const updated = await BlockedAppeal.findOneAndUpdate(
+    { _id: req.params.id, status: "pending" },
+    { $set: { status: "reviewed", reviewNote,
+      reviewedAt: new Date(), reviewedBy: String(req.user._id) } },
+    { new: true }
+  );
+  if (!updated) fail(409, "Esta solicitação já foi analisada ou não existe.");
+  res.json({ ok: true });
+});
 accountModeration.get("/master/accounts/:id/moderation", async (req, res) => {
   validId(req.params.id);
   const account = await Account.findOne({ _id: req.params.id, role: nonAdmin });
@@ -81,6 +108,13 @@ accountModeration.post("/master/accounts/:id/moderation", async (req, res) => {
         account.blockedAt = null;
         account.blockedBy = "";
         account.blockedReason = "";
+        await BlockedAppeal.updateMany(
+          { userId: account._id, status: "pending" },
+          { $set: { status: "reviewed",
+            reviewNote: "Conta reativada pela equipe FreteOn.",
+            reviewedAt: new Date(), reviewedBy: String(req.user._id) } },
+          { session }
+        );
       }
       await account.save({ session });
       await Moderation.create([{
