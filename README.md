@@ -1,5 +1,7 @@
 # FreteOn
 
+> **Situação em novembro de 2026:** o FreteOn possui cadastro de clientes/motoristas, verificação manual de celular, avaliação documental, pedidos com propostas, rascunho local de frete (IndexedDB), busca de endereços com Google Places, pagamentos Pix PagBank em **Sandbox**, fluxo financeiro separado de teste/produção, notificações push e painel Master com níveis de acesso. O cálculo automático de quilômetros pela Routes API permanece intencionalmente em espera. Aprovação de testes automatizados **não substitui homologação bancária nem testes manuais em dispositivos reais**. A descrição de etapas históricas abaixo serve como registro da evolução e pode citar recursos já substituídos.
+
 Plataforma de fretes com propostas de motoristas, começando por Porto Velho, RO.
 
 ## Acessos

@@ -21,3 +21,11 @@ test('financial movement and disputes protect freight history', () => {
     ['refundStatus','pending'],['disputeStatus','open']
   ]) assert.equal(safeFreight({...open(), [key]:value}), false, key);
 });
+
+test('document cleanup collects unique verified GridFS IDs only', async () => {
+  const { driverDocumentIds } = await import('../src/masterCleanup.js');
+  const id = '507f1f77bcf86cd799439011';
+  assert.deepEqual(driverDocumentIds({ verification: { documents: [
+    {fileId:id}, {fileId:id}, {fileId:'invalid'}] } }).map(String), [id]);
+  assert.deepEqual(driverDocumentIds({verification:{documents:[]}}), []);
+});

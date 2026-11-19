@@ -81,3 +81,11 @@ test("serialização não expõe papel staff como Master Principal", () => {
   assert.equal(user.adminRole, "atendimento");
   assert.equal(user.mustChangePassword, true);
 });
+
+test("colaboradores não podem usar exclusões do Master", () => {
+  const staff = employee(TEAM_PERMISSION_KEYS);
+  const id = "507f1f77bcf86cd799439011";
+  assert.equal(staffAccessForRequest(request(staff, "/master/cleanup")), false);
+  assert.equal(staffAccessForRequest(request(staff, "/master/cleanup/clients/" + id, "DELETE")), false);
+  assert.equal(staffAccessForRequest(request(staff, "/master/cleanup/freights/" + id, "DELETE")), false);
+});

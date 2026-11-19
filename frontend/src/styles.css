@@ -4955,3 +4955,16 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .master-cleanup-confirm{margin-top:16px;border:1px solid #e7c8c8;background:#fff9f8;border-radius:12px;padding:14px}
 .master-cleanup-confirm p{font-size:13px}
 .master-cleanup-confirm input{width:100%;max-width:360px}
+
+/* No celular, evitar seleção acidental ao manter pressionados elementos de navegação.
+   Entradas, textos jurídicos, endereços, mensagens e dados copiáveis permanecem selecionáveis. */
+@media (hover: none) and (pointer: coarse) {
+  button, .steps, .status, .section-heading, .card-top, .mobile-nav,
+  .master-drawer, .master-drawer-heading, .freight-card h3,
+  .freight-draft-prompt strong, .phone-confirm-home-banner strong {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  button, .mobile-nav a { touch-action: manipulation; }
+}
