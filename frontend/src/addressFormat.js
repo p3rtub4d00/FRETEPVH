@@ -15,6 +15,10 @@ export function normalizeAddress(input) {
   if (!result.noNumber && (!result.number || result.number.length > 12)) throw new Error('Informe o número ou marque Sem número.');
   return result;
 }
+export function isCompleteAddress(address) {
+  try { normalizeAddress(address); return true; }
+  catch { return false; }
+}
 export function mapsRouteUrl(origin, destination) {
   return 'https://www.google.com/maps/dir/?' + new URLSearchParams({ api:'1', origin, destination, travelmode:'driving' }).toString();
 }

@@ -21,7 +21,7 @@ masterCleanup.get("/master/cleanup", async (_req, res) => {
     freights: freights.map(f => ({ id: String(f._id), title: f.title, status: f.status, deletable: safeFreight(f) })),
   });
 });
-function safeFreight(f) {
+export function safeFreight(f) {
   return f.status === "open" && !f.selectedId && !f.driverId &&
     !(f.proposals?.length) && (f.paymentStatus || "none") === "none" &&
     (f.commissionStatus || "none") === "none" && (f.payoutStatus || "none") === "none" &&

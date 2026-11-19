@@ -48,9 +48,11 @@ function GoogleAddressSearch({ value, onSelect }) {
   const [suggestions, setSuggestions] = useState([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectionComplete, setSelectionComplete] = useState(false);
   const sequence = useRef(0);
   useEffect(() => {
     const id = ++sequence.current;
+    if (selectionComplete) { setSuggestions([]); return; }
     if (!googleKey || query.trim().length < 3) { setSuggestions([]); setMessage(''); return; }
     const timer = setTimeout(async () => {
       try {
@@ -76,7 +78,7 @@ function GoogleAddressSearch({ value, onSelect }) {
       } finally { if (id === sequence.current) setLoading(false); }
     }, 450);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, selectionComplete]);
   async function choose(item) {
     sequence.current++;
     setSuggestions([]);
@@ -99,6 +101,7 @@ function GoogleAddressSearch({ value, onSelect }) {
         // Limpar o bairro anterior: uma nova escolha não pode herdar o bairro de outro endereço.
         neighborhood: neighborhood && neighborhood.toLocaleLowerCase('pt-BR') !== district.toLocaleLowerCase('pt-BR') ? neighborhood : '',
         city, state: states.includes(state) ? state : value.state }, place.formattedAddress || item.placePrediction.text?.text || '');
+      setSelectionComplete(true);
       setQuery(place.formattedAddress || item.placePrediction.text?.text || '');
       setMessage(district
         ? 'Endereço selecionado. Localidade/distrito informado pelo Google: ' + district + '. Confirme o bairro e o número; distrito não é bairro.'
@@ -109,7 +112,7 @@ function GoogleAddressSearch({ value, onSelect }) {
   if (!googleKey) return null;
   return <div className="google-address-search">
     <label>Buscar endereço no Google
-      <input type="search" value={query} onChange={e => setQuery(e.target.value)}
+      <input type="search" value={query} onChange={e => { setSelectionComplete(false); setQuery(e.target.value); }}
         placeholder="Digite rua, número ou local" autoComplete="off" aria-label="Buscar endereço no Google" />
     </label>
     {loading && <small role="status">Buscando endereços…</small>}
@@ -124,24 +127,22 @@ function GoogleAddressSearch({ value, onSelect }) {
   </div>;
 }
 
-import { emptyAddress, formatAddress, mapsRouteUrl } from './addressFormat.js';
+import { emptyAddress, formatAddress, isCompleteAddress, mapsRouteUrl } from './addressFormat.js';
 const states = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 function AddressFields({ title, value, onChange, prefix }) {
-  const [selectedAddress, setSelectedAddress] = useState('');
-  const [manual, setManual] = useState(false);
   const update = (key, next) => onChange({ ...value, [key]: next });
-  const selected = Boolean(selectedAddress) && !manual;
+  // Salvar a seleção na estrutura do endereço evita perder o resumo ao voltar
+  // uma etapa ou restaurar um rascunho.
+  const selected = Boolean(value.googleSelected) && isCompleteAddress(value);
   return <section className="manual-address compact-address" aria-label={title}>
     <h3><MapPin size={19}/> {title}</h3>
-    <GoogleAddressSearch value={value} onSelect={(address, label) => {
-      onChange(address);
-      setSelectedAddress(label);
-      setManual(false);
+    <GoogleAddressSearch value={value} onSelect={address => {
+      onChange({ ...address, googleSelected: true });
     }}/>
     {selected && <div className="compact-address-selected" role="status">
       <strong>Endereço selecionado</strong>
-      <span>{selectedAddress}</span>
-      <button type="button" onClick={() => { setSelectedAddress(''); setManual(true); }}>Corrigir dados do endereço</button>
+      <span>{formatAddress(value)}</span>
+      <button type="button" onClick={() => onChange({ ...value, googleSelected: false })}>Corrigir dados do endereço</button>
     </div>}
     {!selected && <label>Rua ou avenida<input name={`${prefix}-street`} value={value.street} onChange={e=>update('street',e.target.value)} required minLength={3} maxLength={60} placeholder="Ex.: Avenida Sete de Setembro" autoComplete="off"/></label>}
     <div className="manual-address-grid">
@@ -169,8 +170,7 @@ export default function RoutePicker({ data, onChange, mode = "both" }) {
     [field + "Point"]: null,
     routeEstimate: null
   });
-  const ready = a => a.street.trim().length >= 3 && a.neighborhood.trim().length >= 2 &&
-    a.city.trim().length >= 2 && (a.noNumber || a.number.trim());
+  const ready = isCompleteAddress;
   return <div className="manual-route-picker">
     <p className="muted">
       {mode === "origin"

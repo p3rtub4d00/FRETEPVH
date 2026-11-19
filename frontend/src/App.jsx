@@ -1,5 +1,5 @@
 import MasterCleanup from "./MasterCleanup.jsx";
-import { readFreightDraft, saveFreightDraft, deleteFreightDraft } from "./freightDraft.js";
+import { readFreightDraft, saveFreightDraft, deleteFreightDraft, hasFreightDraftContent } from "./freightDraft.js";
 import { PhoneVerificationPanel, PhoneVerificationMaster } from "./PhoneVerification.jsx";
 import { mapsRouteUrl } from "./addressFormat.js";
 import FreightCarousel from "./FreightCarousel.jsx";
@@ -434,28 +434,30 @@ function RequestForm({ onCreate, onClose, requestError, userId }) {
     let active = true;
     readFreightDraft(userId).then(draft => {
       if (!active) return;
-      if (draft?.data) setDraftFound(draft);
+      if (draft?.data && hasFreightDraftContent(draft.data)) setDraftFound(draft);
+      else if (draft?.data) void deleteFreightDraft(userId).catch(() => {});
     }).catch(() => {
       if (active) setDraftStatus('Armazenamento local indisponível; os dados podem não ser recuperados.');
     }).finally(() => { if (active) setDraftReady(true); });
     return () => { active = false; };
   }, [userId]);
   useEffect(() => {
-    if (!draftReady || draftFound) return undefined;
-    const timer = setTimeout(() => {
-      saveFreightDraft(userId, data, step).then(() => setDraftStatus('Rascunho salvo automaticamente'))
-        .catch(() => setDraftStatus('Não foi possível salvar o rascunho neste aparelho.'));
-    }, 650);
-    return () => clearTimeout(timer);
+    if (!draftReady || draftFound || !hasFreightDraftContent(data)) return;
+    // Gravar a cada alteração: o último campo ou foto não fica dependente
+    // de um temporizador que pode ser cancelado ao fechar o aplicativo.
+    void saveFreightDraft(userId, data, step)
+      .then(() => setDraftStatus('Rascunho salvo automaticamente'))
+      .catch(() => setDraftStatus('Não foi possível salvar o rascunho neste aparelho.'));
   }, [userId, data, step, draftReady, draftFound]);
   function restoreDraft() {
-    setData(draftFound.data);
+    setData(previous => ({ ...previous, ...draftFound.data }));
     setStep(Math.max(0, Math.min(3, Number(draftFound.step) || 0)));
     setDraftFound(null);
     setDraftStatus('Rascunho recuperado');
   }
   async function discardDraft() {
-    try { await deleteFreightDraft(userId); } catch { setDraftStatus('Não foi possível apagar o rascunho salvo.'); }
+    try { await deleteFreightDraft(userId); }
+    catch { setDraftStatus('Não foi possível apagar o rascunho salvo.'); return; }
     setDraftFound(null);
     setDraftStatus('Novo frete iniciado');
   }
@@ -497,8 +499,13 @@ function RequestForm({ onCreate, onClose, requestError, userId }) {
       setLoading(false);
     }
   }
+  const closeWithDraft = () => {
+    if (draftReady && !draftFound && hasFreightDraftContent(data))
+      void saveFreightDraft(userId, data, step).catch(() => {});
+    onClose();
+  };
   return (
-    <Modal title="Solicitar frete" onClose={onClose} error={requestError}>
+    <Modal title="Solicitar frete" onClose={closeWithDraft} error={requestError}>
       <div className="steps request-steps" aria-label="Etapas da solicitação">
         {["Retirada", "Entrega", "Carga", "Agendar"].map((label, index) => (
           <span key={label} className={index <= step ? "active" : ""}>
@@ -697,6 +704,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     user,
   });
   const [page, setPage] = useState("inicio");
+  const [phoneVerificationOpen, setPhoneVerificationOpen] = useState(false);
   const [masterMenuOpen, setMasterMenuOpen] = useState(false);
   useEffect(() => { setMasterMenuOpen(false); }, [area]);
   useEffect(() => { if (!masterMenuOpen) return; const onKey = (event) => { if (event.key === "Escape") setMasterMenuOpen(false); }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [masterMenuOpen]);
@@ -1229,7 +1237,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <div>
                 <strong>Confirme seu celular para solicitar fretes</strong>
                 <p>Para proteger sua conta, confirme seu número pelo código enviado pela equipe no WhatsApp. Após a confirmação, este aviso desaparecerá automaticamente.</p>
-                <button type="button" className="primary" onClick={() => setPage("perfil")}>
+                <button type="button" className="primary" onClick={() => { setPhoneVerificationOpen(true); setPage("perfil"); }}>
                   Confirmar meu celular <ArrowRight size={16}/>
                 </button>
               </div>
@@ -1538,7 +1546,8 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 </>
               )}
               {area === "cliente" && (
-                <details className="driver-profile-documents">
+                <details className="driver-profile-documents" open={phoneVerificationOpen}
+                  onToggle={event => setPhoneVerificationOpen(event.currentTarget.open)}>
                   <summary>
                     <ShieldCheck size={20}/>
                     <span><strong>Segurança da conta</strong>
