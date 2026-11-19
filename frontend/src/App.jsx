@@ -1791,7 +1791,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           ))}
         </nav>}
       </div>
-      {area === "master" && <div className={`master-drawer-layer${masterMenuOpen ? " open" : ""}`} aria-hidden={!masterMenuOpen}>
+      {area === "master" && masterMenuOpen && <div className="master-drawer-layer open">
         <button type="button" className="master-drawer-backdrop" aria-label="Fechar menu" tabIndex={masterMenuOpen ? 0 : -1} onClick={() => setMasterMenuOpen(false)} />
         <aside id="master-mobile-drawer" className="master-mobile-drawer" aria-label="Menu administrativo" inert={!masterMenuOpen}>
           <div className="master-drawer-heading"><strong>Menu Master</strong><button type="button" aria-label="Fechar menu" onClick={() => setMasterMenuOpen(false)}><X size={23}/></button></div>
