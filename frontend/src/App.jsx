@@ -1601,7 +1601,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               )}
               {area !== "master" && (
                 <button type="button" className="fretinho-help-button" onClick={() => setModal({ type: "help" })} aria-label="Abrir Central de Ajuda FreteOn">
-                  <img src="/assets/fretinho-ajuda.svg" alt="" width="56" height="56" />
+                  <div className="fretinho-help-icon" aria-hidden="true"><CircleHelp size={25} strokeWidth={1.9}/></div>
                   <span><strong>Precisa de ajuda?</strong><small>Fale com o Fretinho · Central de Ajuda</small></span>
                   <ChevronRight size={18} aria-hidden="true" />
                 </button>
