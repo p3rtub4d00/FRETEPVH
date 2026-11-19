@@ -277,9 +277,42 @@ function AuthForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
   const [visible, setVisible] = useState(false);
+  const [appealAuth, setAppealAuth] = useState(null);
+  const [appealOpen, setAppealOpen] = useState(false);
+  const [appealText, setAppealText] = useState("");
+  const [appealBusy, setAppealBusy] = useState(false);
+  const [appealMessage, setAppealMessage] = useState("");
+  const [appealError, setAppealError] = useState("");
+  const [appealResult, setAppealResult] = useState(null);
+  async function submitAppeal(event) {
+    event.preventDefault();
+    if (!appealAuth || appealBusy || appealText.trim().length < 15) return;
+    setAppealBusy(true); setAppealError(""); setAppealMessage("");
+    try {
+      const data = await api("/auth/blocked-appeal", {
+        method: "POST", body: { ...appealAuth, message: appealText.trim() },
+      });
+      setAppealMessage(data.message);
+      setAppealResult({ status: data.status });
+      setAppealText(""); setAppealOpen(false);
+    } catch (e) { setAppealError(e.message); }
+    finally { setAppealBusy(false); }
+  }
+  async function checkAppeal() {
+    if (!appealAuth || appealBusy) return;
+    setAppealBusy(true); setAppealError(""); setAppealMessage("");
+    try {
+      setAppealResult(await api("/auth/blocked-appeal/status", {
+        method: "POST", body: appealAuth,
+      }));
+    } catch (e) { setAppealError(e.message); }
+    finally { setAppealBusy(false); }
+  }
   async function submit(event) {
     event.preventDefault();
     setError("");
+    setAppealAuth(null); setAppealOpen(false); setAppealError("");
+    setAppealMessage(""); setAppealResult(null);
     const fields = Object.fromEntries(new FormData(event.currentTarget));
     if (register && fields.password !== fields.confirmPassword) {
       setError("As senhas precisam ser iguais.");
@@ -300,6 +333,13 @@ function AuthForm({
       authenticated(result.user);
     } catch (error) {
       setError(error.message);
+      if (!register && ["cliente", "motorista"].includes(area) &&
+          error.code === "ACCOUNT_BLOCKED") {
+        // Guardar credenciais apenas nesta tela, em memória; não enviar nem salvar
+        // a senha junto ao registro administrativo da contestação.
+        setAppealAuth({ role: area, phone: fields.phone, password: fields.password });
+        setAppealOpen(true);
+      }
     } finally {
       setBusy(false);
     }
@@ -464,6 +504,36 @@ function AuthForm({
             {error}
           </p>
         )}
+        {appealAuth && !register && !user && <section className="blocked-account-appeal" aria-label="Solicitar revisão do bloqueio">
+          <h2>Fale com a equipe FreteOn</h2>
+          <p>Você pode solicitar a revisão do bloqueio sem entrar na conta. Basta explicar o ocorrido. A equipe receberá sua mensagem no painel Master.</p>
+          {appealOpen && <form onSubmit={submitAppeal}>
+            <label>Conte o que aconteceu
+              <textarea value={appealText} required minLength={15} maxLength={500} rows={3}
+                placeholder="Explique brevemente por que deseja a revisão..."
+                onChange={e => setAppealText(e.target.value)}/>
+            </label>
+            <button type="submit" className="primary full"
+              disabled={appealBusy || appealText.trim().length < 15}>
+              {appealBusy ? "Enviando..." : "Enviar pedido de revisão"}
+            </button>
+          </form>}
+          <div className="blocked-account-appeal-actions">
+            {!appealOpen && <button type="button" className="secondary"
+              onClick={()=>{setAppealOpen(true);setAppealError("");}}>Solicitar nova revisão</button>}
+            <button type="button" className="secondary" disabled={appealBusy} onClick={checkAppeal}>
+              Consultar resposta da equipe
+            </button>
+          </div>
+          {appealMessage && <p className="info" role="status">{appealMessage}</p>}
+          {appealResult?.status === "pending" && <p className="info" role="status">Sua solicitação está aguardando análise pelo Master.</p>}
+          {appealResult?.status === "reviewed" && <p className="info" role="status">
+            <strong>Resposta da equipe:</strong> {appealResult.reviewNote || "Sua solicitação foi analisada."}
+          </p>}
+          {appealResult?.status === "none" && <p className="muted">Nenhuma solicitação encontrada para esta conta.</p>}
+          {appealError && <p className="error" role="alert">{appealError}</p>}
+          <small>Não compartilhe sua senha, códigos, dados bancários ou documentos na mensagem.</small>
+        </section>}
         {!user && area !== "master" && (
           <p className="auth-alternative">
             {register ? "Já tem uma conta?" : "Ainda não tem conta?"}{" "}

@@ -21,6 +21,37 @@ export default function MasterUsers({ users = [], canManage, onRefresh, onNaviga
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [appeals, setAppeals] = useState([]);
+  const [appealsError, setAppealsError] = useState("");
+  const [selectedAppeal, setSelectedAppeal] = useState(null);
+  const [appealResponse, setAppealResponse] = useState("");
+  const [appealBusy, setAppealBusy] = useState(false);
+  async function loadAppeals() {
+    if (!canManage) return;
+    try { const data=await api("/master/accounts/appeals");setAppeals(data.appeals||[]);setAppealsError(""); }
+    catch (err) { setAppealsError(err.message); }
+  }
+  useEffect(()=>{void loadAppeals();},[canManage]);
+  async function decideAppeal(action) {
+    if (!selectedAppeal || appealBusy || appealResponse.trim().length < 10) return;
+    setAppealBusy(true);setAppealsError("");setMessage("");
+    try {
+      if (action === "unblock") {
+        await api("/master/accounts/"+selectedAppeal.userId+"/moderation",{
+          method:"POST",body:{action:"unblock",reason:appealResponse.trim()}
+        });
+        setMessage("Conta desbloqueada. O pedido foi concluído e o usuário já pode entrar.");
+      } else {
+        await api("/master/accounts/appeals/"+selectedAppeal.id+"/review",{
+          method:"POST",body:{reviewNote:appealResponse.trim()}
+        });
+        setMessage("Resposta registrada. O bloqueio foi mantido e o titular pode consultar a resposta.");
+      }
+      setSelectedAppeal(null);setAppealResponse("");
+      await loadAppeals();await onRefresh();
+    } catch (err) { setAppealsError(err.message); }
+    finally { setAppealBusy(false); }
+  }
   const visibleTabs = canManage ? tabs : tabs.filter(item => item.id !== "master");
   const matching = useMemo(() => users.filter(item => {
     if (item.role !== tab) return false;
@@ -65,6 +96,7 @@ export default function MasterUsers({ users = [], canManage, onRefresh, onNaviga
       }
       resetAction();
       await onRefresh();
+      if (canManage) await loadAppeals();
     } catch (err) { setError(err.message); }
     finally { setBusy(false); }
   }
@@ -74,6 +106,40 @@ export default function MasterUsers({ users = [], canManage, onRefresh, onNaviga
         <p className="muted">Cadastros separados por perfil, com ferramentas de segurança para o Master Principal.</p>
       </div>
     </div>
+    {canManage && <section className="master-users-appeals">
+      <div className="master-users-appeals-heading">
+        <h3>Pedidos de revisão de bloqueio ({appeals.length})</h3>
+        <button type="button" className="secondary" onClick={loadAppeals}>Atualizar</button>
+      </div>
+      {appealsError && <p className="error" role="alert">{appealsError}</p>}
+      {!appeals.length && <p className="muted">Nenhum pedido aguardando análise.</p>}
+      {appeals.map(item => <article className="master-users-appeal" key={item.id}>
+        <div><strong>{item.name}</strong>
+          <small>{item.role === "cliente" ? "Cliente" : "Motorista"} · {item.phone} · {new Date(item.createdAt).toLocaleString("pt-BR")}</small>
+          <p>{item.message}</p>
+        </div>
+        <button type="button" className="secondary" onClick={()=>{
+          setSelectedAppeal(item);setAppealResponse("");setAppealsError("");
+        }}>Analisar pedido</button>
+      </article>)}
+      {selectedAppeal && <div className="master-users-appeal-response" role="region" aria-label="Análise do bloqueio">
+        <strong>Analisar pedido de {selectedAppeal.name}</strong>
+        <p>Escreva a resposta que o usuário poderá consultar na tela de login. O desbloqueio não acontece automaticamente ao receber uma mensagem.</p>
+        <label>Resposta ou justificativa
+          <textarea rows={3} minLength={10} maxLength={500} required
+            value={appealResponse} onChange={e=>setAppealResponse(e.target.value)}
+            placeholder="Informe o resultado da análise..."/>
+        </label>
+        <div className="master-users-appeal-actions">
+          <button type="button" className="secondary" disabled={appealBusy}
+            onClick={()=>setSelectedAppeal(null)}>Cancelar</button>
+          <button type="button" className="secondary" disabled={appealBusy || appealResponse.trim().length < 10}
+            onClick={()=>decideAppeal("keep")}>Manter bloqueio e responder</button>
+          <button type="button" className="primary" disabled={appealBusy || appealResponse.trim().length < 10}
+            onClick={()=>decideAppeal("unblock")}>Desbloquear conta</button>
+        </div>
+      </div>}
+    </section>}
     <div className="master-users-tabs" role="tablist" aria-label="Perfis de usuário">
       {visibleTabs.map(({ id, title, Icon }) =>
         <button key={id} type="button" role="tab" aria-selected={tab === id}
