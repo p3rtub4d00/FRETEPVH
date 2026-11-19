@@ -79,6 +79,7 @@ async function findSessionUser(token) {
   if (!session) return null;
   const user = await Account.findById(session.userId);
   if (user?.role === "staff" && (!user.staffEnabled || user.status !== "approved")) return null;
+  if (["cliente", "motorista"].includes(user?.role) && user.blockedAt) return null;
   return user;
 }
 
@@ -177,6 +178,8 @@ auth.post("/login", limit, async (req, res) => {
     fail(403, "Use a página de entrada correspondente ao seu perfil.");
   if (user.role === "staff" && (!user.staffEnabled || user.status !== "approved"))
     fail(403, "Conta da equipe bloqueada. Consulte o Master Principal.");
+  if (["cliente", "motorista"].includes(user.role) && user.blockedAt)
+    fail(403, "Sua conta foi bloqueada. Entre em contato com a equipe FreteOn para solicitar revisão.");
   res.json({ user: await issueSession(req, res, user) });
 });
 auth.post("/staff/password", authenticate, authorize("master"), limit, async (req, res) => {

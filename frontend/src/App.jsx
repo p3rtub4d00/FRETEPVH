@@ -1,4 +1,5 @@
 import MasterCleanup from "./MasterCleanup.jsx";
+import MasterUsers from "./MasterUsers.jsx";
 import { readFreightDraft, saveFreightDraft, deleteFreightDraft, hasFreightDraftContent } from "./freightDraft.js";
 import { PhoneVerificationPanel, PhoneVerificationMaster } from "./PhoneVerification.jsx";
 import { mapsRouteUrl } from "./addressFormat.js";
@@ -1629,24 +1630,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <RecoveryMaster />
           ) : area === "master" && page === "exclusoes" && masterOwner ? (
             <MasterCleanup />
-          ) : page === "usuarios" ? (
-            <section className="panel">
-              <h2>Usuários cadastrados</h2>
-              {state.users.map((person) => (
-                <div key={person.id} className="person-row">
-                  <Avatar account={person} />
-                  <div>
-                    <strong>{person.name}</strong>
-                    <p>
-                      {person.vehicle || areas[person.role]}{" "}
-                      {area === "master" && person.phone
-                        ? `· ${person.phone}`
-                        : ""}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </section>
+          ) : page === "usuarios" && area === "master" ? (
+            <MasterUsers users={state.users} canManage={masterOwner}
+              onRefresh={refresh} onNavigate={setPage} />
           ) : page === "denuncias" ? (
             <MasterFreightReports />
           ) : (

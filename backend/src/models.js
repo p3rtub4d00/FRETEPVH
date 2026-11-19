@@ -44,6 +44,10 @@ const userSchema = new mongoose.Schema(
     staffEnabled: { type: Boolean, default: true },
     mustChangePassword: { type: Boolean, default: false },
     staffCreatedBy: { type: String, default: "" },
+    // Moderação é independente da aprovação documental e preserva históricos.
+    blockedAt: { type: Date, default: null },
+    blockedBy: { type: String, default: "" },
+    blockedReason: { type: String, default: "", maxlength: 500 },
     vehicle: { type: String, default: "", maxlength: 100 },
     status: {
       type: String,
@@ -237,7 +241,7 @@ export function verificationStatus(user, now = new Date()) {
 
 export function isVerifiedDriver(user, now = new Date()) {
   if (user.role !== "motorista" || user.status !== "approved" ||
-      verificationStatus(user, now) !== "approved") return false;
+      Boolean(user.blockedAt) || verificationStatus(user, now) !== "approved") return false;
   const v = user.verification;
   return Boolean(
     ["cnh", "crlv", "selfie"].every((kind) =>
@@ -259,6 +263,7 @@ export function publicUser(user) {
     mustChangePassword: user.staffAccountId || user.role === "staff" ? Boolean(user.mustChangePassword) : false,
     vehicle: user.vehicle,
     status: user.status,
+    blocked: Boolean(user.blockedAt),
     available: user.role === "motorista" ? isVerifiedDriver(user) : Boolean(user.available),
     acceptsCard: Boolean(user.acceptsCard),
     verified: isVerifiedDriver(user),
