@@ -704,15 +704,15 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     wallet: { simulated: true },
     user,
   });
-  const [page, setPage] = useState("inicio");
+  const [page, setPage] = useState(() => area === "master" && (masterOwner || user.adminPermissions?.includes("notifications.view")) && new URLSearchParams(window.location.search).get("avisos") === "1" ? "notificacoes" : "inicio");
   const [phoneVerificationOpen, setPhoneVerificationOpen] = useState(false);
   const [masterMenuOpen, setMasterMenuOpen] = useState(false);
   useEffect(() => { setMasterMenuOpen(false); }, [area]);
   useEffect(() => { if (!masterMenuOpen) return; const onKey = (event) => { if (event.key === "Escape") setMasterMenuOpen(false); }; window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey); }, [masterMenuOpen]);
   const [commissionRate, setCommissionRate] = useState(10);
   useEffect(() => { if (area === "motorista") api("/commission/current").then(c => setCommissionRate(c.rate)).catch(() => {}); }, [area]);
-  const masterNotifications = useMasterNotifications(area === "master" && (masterOwner || user.adminPermissions?.includes("notifications.view")));
-  const masterUnreadByCategory = (key) => masterNotifications.items.filter(item => !item.read && item.category === key).length;
+  const masterNotifications = useMasterNotifications(area === "master" && (masterOwner || user.adminPermissions?.includes("notifications.view")), user.id);
+  const masterUnreadByCategory = (key) => masterNotifications.unreadByCategory[key] || 0;
   const [recoveryPending, setRecoveryPending] = useState(0);
   useEffect(() => {
     if (!masterOwner) return;
@@ -787,6 +787,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
     window.addEventListener("focus", checkOnReturn);
     document.addEventListener("visibilitychange", checkOnReturn);
     const serviceWorkerAlert = (event) => {
+      if (event.data?.type === "FRETEON_PUSH_EVENT" && event.data.openNotifications && area === "master" && (masterOwner || user.adminPermissions?.includes("notifications.view"))) setPage("notificacoes");
       if (event.data?.type === "FRETEON_PUSH_EVENT" &&
           (!event.data?.role || event.data.role === area) && !inFlight.current)
         refresh().catch(showError);
@@ -1794,7 +1795,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
         <button type="button" className="master-drawer-backdrop" aria-label="Fechar menu" tabIndex={masterMenuOpen ? 0 : -1} onClick={() => setMasterMenuOpen(false)} />
         <aside id="master-mobile-drawer" className="master-mobile-drawer" aria-label="Menu administrativo" inert={!masterMenuOpen}>
           <div className="master-drawer-heading"><strong>Menu Master</strong><button type="button" aria-label="Fechar menu" onClick={() => setMasterMenuOpen(false)}><X size={23}/></button></div>
-          <nav>{navigation.master.map(([key, label, Icon]) => <button type="button" key={key} className={page === key ? "selected" : ""} onClick={() => { setPage(key); setFilter("all"); setMasterMenuOpen(false); }}><Icon size={21}/><span>{label}</span>{((key === "motoristas" && pending.length > 0) || (key === "recuperacao" && recoveryPending > 0) || (key === "notificacoes" && masterNotifications.unread > 0)) && <span className="master-drawer-count">{key === "recuperacao" ? recoveryPending : key === "notificacoes" ? masterNotifications.unread : pending.length}</span>}</button>)}</nav>
+          <nav>{menu.map(([key, label, Icon]) => <button type="button" key={key} className={page === key ? "selected" : ""} onClick={() => { setPage(key); setFilter("all"); setMasterMenuOpen(false); }}><Icon size={21}/><span>{label}</span>{((key === "motoristas" && pending.length > 0) || (key === "recuperacao" && recoveryPending > 0) || (key === "notificacoes" && masterNotifications.unread > 0) || (["financeiro", "fretes", "denuncias"].includes(key) && masterUnreadByCategory(key) > 0)) && <span className="master-drawer-count">{key === "recuperacao" ? recoveryPending : key === "notificacoes" ? masterNotifications.unread : ["financeiro", "fretes", "denuncias"].includes(key) ? masterUnreadByCategory(key) : pending.length}</span>}</button>)}</nav>
         </aside>
       </div>}
       {modal?.type === "create" && (

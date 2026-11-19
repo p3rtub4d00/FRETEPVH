@@ -79,14 +79,18 @@ export default function PushNotificationsPanel({
 
   useEffect(() => {
     let live = true;
-    (async () => {
+    let checking = false;
+    const check = async () => {
+      if (!live || checking || document.hidden) return;
+      checking = true;
       try {
         const [settings, status] = await Promise.all([
-          api("/push/config"),
-          api("/push/status"),
+          api("/push/config", { headers: { "X-FreteOn-Role": role } }),
+          api("/push/status", { headers: { "X-FreteOn-Role": role } }),
         ]);
         if (!live) return;
         setConfig(settings);
+        setError("");
         setCount(status.deviceCount || 0);
         if (supported) {
           const registration = await navigator.serviceWorker.ready;
@@ -111,7 +115,7 @@ export default function PushNotificationsPanel({
             // Chaves VAPID alteradas: uma assinatura antiga não recebe novos push.
             // Com permissão já concedida, recriar silenciosamente a inscrição.
             let healthy = restored;
-            if (!healthy && currentPermission === "granted" && settings.enabled && settings.publicKey) {
+            if (!healthy && subscription && currentPermission === "granted" && settings.enabled && settings.publicKey) {
               try {
                 if (subscription) await subscription.unsubscribe();
                 const renewed = await registration.pushManager.subscribe({
@@ -137,9 +141,16 @@ export default function PushNotificationsPanel({
         if (live) setError(e.message || "Não foi possível verificar as notificações.");
       } finally {
         if (live) setLoaded(true);
+        checking = false;
       }
-    })();
-    return () => { live = false; };
+    };
+    check();
+    window.addEventListener("online", check);
+    document.addEventListener("visibilitychange", check);
+    return () => { live = false;
+      window.removeEventListener("online", check);
+      document.removeEventListener("visibilitychange", check);
+    };
   }, [role, accountId, supported]);
 
   async function enable() {
@@ -177,7 +188,7 @@ export default function PushNotificationsPanel({
         applicationServerKey: decodeBase64Url(config.publicKey),
       });
       await api("/push/subscribe", {
-        method: "POST",
+        method: "POST", headers: { "X-FreteOn-Role": role },
         body: { subscription: subscription.toJSON() },
       });
       setActive(true);
@@ -201,7 +212,7 @@ export default function PushNotificationsPanel({
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
         await api("/push/unsubscribe", {
-          method: "POST",
+          method: "POST", headers: { "X-FreteOn-Role": role },
           body: { subscription: subscription.toJSON() },
         });
         await subscription.unsubscribe();
@@ -223,7 +234,7 @@ export default function PushNotificationsPanel({
     setError("");
     setNotice("");
     try {
-      await api("/push/test", { method: "POST", body: { subscription: (await (await navigator.serviceWorker.ready).pushManager.getSubscription())?.toJSON() } });
+      await api("/push/test", { method: "POST", headers: { "X-FreteOn-Role": role }, body: { subscription: (await (await navigator.serviceWorker.ready).pushManager.getSubscription())?.toJSON() } });
       setNotice("O serviço push aceitou a notificação de teste. Confira se ela apareceu no celular. Se não apareceu, revise as permissões do aparelho.");
     } catch (e) {
       setError(e.message || "Não foi possível testar o envio.");
@@ -324,7 +335,7 @@ export default function PushNotificationsPanel({
         <div>
           <h2>Notificações push</h2>
           <p>
-            {role === "motorista"
+            {role === "master" ? "Receba avisos administrativos, solicitações e ocorrências para análise." : role === "motorista"
               ? "Saiba quando surgirem fretes e quando um cliente escolher sua proposta."
               : "Receba avisos de propostas, etapas da entrega e mensagens do chat."}
           </p>

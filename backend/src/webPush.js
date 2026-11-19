@@ -7,7 +7,10 @@ import {
   randomBytes,
   sign,
 } from "node:crypto";
+import { postPush } from "./pushTransport.js";
 import { PushSubscription, Account } from "./models.js";
+import { randomUUID } from "node:crypto";
+import { masterRecipientFilter } from "./masterNotificationAccess.js";
 import { recordMasterNotification } from "./masterNotifications.js";
 
 const enc = (buffer) => Buffer.from(buffer).toString("base64url");
@@ -114,9 +117,8 @@ export async function sendPush(subscription, message) {
   const endpoint = checked.endpoint;
   const body = encryptPush(message, checked.p256dh, checked.auth);
   const jwt = createVapidJwt(endpoint);
-  const response = await fetch(endpoint, {
+  const response = await postPush(endpoint, {
     method: "POST",
-    signal: AbortSignal.timeout(6500),
     headers: {
       Authorization: `vapid t=${jwt}, k=${process.env.VAPID_PUBLIC_KEY}`,
       "Content-Encoding": "aes128gcm",
@@ -145,9 +147,16 @@ function safeMessage(msg) {
 
 export async function notifyMasters(message) {
   try {
-    await recordMasterNotification(message);
-    const masters = await Account.find({ role: "master" }).select("_id").lean();
-    return await notifyAccounts(masters.map(x => String(x._id)), { ...message, role: "master" });
+    const saved = await recordMasterNotification(message).catch(error => {
+      console.warn("Registro de aviso Master indisponível:", error?.name || "Erro");
+      return null;
+    });
+    const masters = await Account.find(masterRecipientFilter(message.category)).select("_id").lean();
+    const result = await notifyAccounts(masters.map(x => String(x._id)), {
+      ...message, id: String(saved?._id || randomUUID()), role: "master"
+    });
+    console.info("Master Push", JSON.stringify({ category: message.category || "geral", ...result }));
+    return result;
   } catch (error) {
     console.warn("Aviso Master indisponível:", error?.name || "Erro");
   }

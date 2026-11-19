@@ -4,7 +4,7 @@ import { rateLimit } from "express-rate-limit";
 import { Freight, FreightChat, FreightReport } from "./models.js";
 import { authorize, fail } from "./auth.js";
 import { canChat, safeChatMessage } from "./antiBypass.js";
-import { notifyInBackground } from "./webPush.js";
+import { notifyInBackground, notifyMasters } from "./webPush.js";
 
 export const freightCommunication = Router();
 const own = (req) => String(req.user._id);
@@ -80,6 +80,7 @@ freightCommunication.post("/requests/:id/report", authorize("cliente", "motorist
     requestId: request._id, reporterId: reporter, reporterRole: req.user.role,
     reportedId, category, description,
   });
+  void notifyMasters({ title: "Nova denúncia recebida", body: "Há uma ocorrência para análise no painel Master.", category: "denuncias", id: String(request._id) });
   res.status(201).json({ ok: true, message: "Denúncia registrada para análise do Master." });
 });
 

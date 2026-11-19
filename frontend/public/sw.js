@@ -1,4 +1,4 @@
-const CACHE = "freteon-shell-v16";
+const CACHE = "freteon-shell-v17";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
@@ -97,17 +97,17 @@ self.addEventListener("notificationclick", (event) => {
   const targetPath = ["/cliente", "/motorista", "/master"].includes(event.notification.data?.path) ? event.notification.data.path : "/motorista";
   event.waitUntil((async () => {
     const campaignId = /^[a-f0-9]{24}$/.test(String(event.notification.data?.campaignId || "")) ? event.notification.data.campaignId : "";
-    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true }).catch(() => []);
     for (const client of windows) {
       try {
         const url = new URL(client.url);
         if (url.origin === self.location.origin && url.pathname === targetPath) {
           await client.focus();
-          client.postMessage({ type: "FRETEON_PUSH_EVENT", campaignId });
+          client.postMessage({ type: "FRETEON_PUSH_EVENT", campaignId, role: targetPath.slice(1), openNotifications: targetPath === "/master" });
           return;
         }
       } catch { /* ignore */ }
     }
-    if (self.clients.openWindow) await self.clients.openWindow(targetPath + (campaignId ? "?comunicado=" + campaignId : ""));
+    if (self.clients.openWindow) await self.clients.openWindow(targetPath + (campaignId ? "?comunicado=" + campaignId : targetPath === "/master" ? "?avisos=1" : ""));
   })());
 });

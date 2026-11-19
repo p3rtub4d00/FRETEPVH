@@ -1,4 +1,4 @@
-import { notifyInBackground } from "./webPush.js";
+import { notifyInBackground, notifyMasters } from "./webPush.js";
 import { Router } from "express";
 import mongoose from "mongoose";
 import { Readable } from "node:stream";
@@ -163,6 +163,7 @@ driverVerification.post("/driver-verification/submit", authorize("motorista"), a
   req.user.status = "pending";
   req.user.available = false;
   await req.user.save();
+  void notifyMasters({ title: "Documentos enviados para análise", body: "Um motorista enviou a documentação para revisão.", category: "motoristas", id: userId(req.user) });
   res.json({ verification: summary(req.user) });
 });
 

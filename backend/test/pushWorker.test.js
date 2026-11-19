@@ -18,3 +18,16 @@ test('chat push displays with panel closed even if window enumeration fails', as
     assert.equal(shown.at(-1)[1].tag, `freteon-${role}-chat-123`);
   }
 });
+
+test('Master notification click still opens the app when window enumeration fails', async () => {
+  const listeners={};const opened=[];
+  vm.runInNewContext(source,{self:{
+    addEventListener:(name,fn)=>listeners[name]=fn,
+    clients:{matchAll:async()=>{throw new Error('unavailable');},openWindow:async path=>opened.push(path)},
+    location:{origin:'https://fretepvh.onrender.com'}
+  },URL,Response});
+  let task;let closed=false;
+  listeners.notificationclick({notification:{data:{path:'/master'},close:()=>{closed=true;}},waitUntil:p=>task=p});
+  await task;
+  assert.equal(closed,true);assert.deepEqual(opened,['/master?avisos=1']);
+});
