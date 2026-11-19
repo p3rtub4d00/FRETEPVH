@@ -9,7 +9,9 @@ import { authorize, fail } from "./auth.js";
 import { isPrincipal } from "./teamAccess.js";
 
 export const masterCleanup = Router();
-masterCleanup.use(authorize("master"), (req, _res, next) => {
+// Limitar a autorização ao prefixo desta função. Uma guarda global aqui
+// bloquearia /state, /push e /phone-verification de clientes e motoristas.
+masterCleanup.use("/master/cleanup", authorize("master"), (req, _res, next) => {
   if (!isPrincipal(req.user)) fail(403, "Somente o Master Principal pode excluir registros.");
   next();
 });
