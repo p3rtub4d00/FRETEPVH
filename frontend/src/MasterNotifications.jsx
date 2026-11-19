@@ -3,7 +3,7 @@ import { BellRing, CheckCheck, RefreshCw } from "lucide-react";
 import { api } from "./api.js";
 import PushNotificationsPanel from "./PushNotificationsPanel.jsx";
 
-const labels = { motoristas:"Motoristas",fretes:"Fretes",financeiro:"Financeiro",recuperacao:"Recuperar senhas",denuncias:"Denúncias",geral:"Visão geral" };
+const labels = { motoristas:"Motoristas",fretes:"Fretes",financeiro:"Financeiro",recuperacao:"Recuperar senhas",denuncias:"Denúncias","verificacao-telefone":"Verificar telefones",geral:"Visão geral" };
 export function useMasterNotifications(active, accountId) {
  const [data,setData]=useState({items:[],unread:0,unreadByCategory:{}});
  const [error,setError]=useState("");
@@ -58,7 +58,7 @@ export default function MasterNotifications({notifications,onNavigate,accountId}
  <p className="muted">Exibindo os 100 avisos mais recentes. Os contadores incluem todos os avisos não lidos.</p>
  <label>Filtrar avisos<select value={category} onChange={e=>setCategory(e.target.value)}><option value="todas">Todas as categorias</option>{Object.entries(labels).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
  {error&&<p className="error" role="alert">{error}</p>}
- {loading?<p role="status">Carregando avisos...</p>:filtered.length===0?<p>Nenhum aviso registrado nesta categoria.</p>:filtered.map(item=><button type="button" className={"notification-row"+(!item.read?" master-unread":"")} key={item.id} onClick={async()=>{if(await markRead(item.id))onNavigate(item.category==="geral"?"inicio":item.category);}}><BellRing size={20}/><span><strong>{item.title}</strong><small>{item.body}</small><small>{labels[item.category]||"Geral"} · {new Date(item.createdAt).toLocaleString("pt-BR")}</small></span>{!item.read&&<span className="master-notification-dot" aria-label="Não lida"/>}</button>)}
+ {loading?<p role="status">Carregando avisos...</p>:filtered.length===0?<p>Nenhum aviso registrado nesta categoria.</p>:filtered.map(item=><button type="button" className={"notification-row"+(!item.read?" master-unread":"")} key={item.id} onClick={async()=>{if(await markRead(item.id))onNavigate(item.category==="verificacao-telefone" || item.title==="Verificação de celular solicitada" ? "verificacao-telefone" : item.category==="geral"?"inicio":item.category);}}><BellRing size={20}/><span><strong>{item.title}</strong><small>{item.body}</small><small>{labels[item.category]||"Geral"} · {new Date(item.createdAt).toLocaleString("pt-BR")}</small></span>{!item.read&&<span className="master-notification-dot" aria-label="Não lida"/>}</button>)}
  <details className="profile-push-settings"><summary><BellRing size={18}/> Configurar push neste aparelho</summary><PushNotificationsPanel role="master" accountId={accountId}/></details>
  </section>;
 }

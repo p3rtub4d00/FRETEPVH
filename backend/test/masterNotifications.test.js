@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 import { masterCategories, masterRecipientFilter } from '../src/masterNotificationAccess.js';
-import { masterNotifications } from '../src/masterNotifications.js';
+import { masterNotifications, recordMasterNotification } from '../src/masterNotifications.js';
 import { notifyMasters } from '../src/webPush.js';
 import { Account } from '../src/models.js';
 const Event = mongoose.model('FreteOnMasterNotification');
@@ -52,4 +52,19 @@ test('failure to record the Master inbox does not suppress the push attempt',asy
   const result=await notifyMasters({title:'Teste',category:'fretes'});
   assert.equal(queried,true);
   assert.ok(result);
+});
+
+test('verificação de celular gera aviso próprio acessível apenas ao Master Principal', async t => {
+  assert.ok(masterCategories(owner).includes('verificacao-telefone'));
+  const staff = {role:'master',staffAccountId:'staff',staffPermissions:[
+    'notifications.view','dashboard.view','drivers.view']};
+  assert.ok(!masterCategories(staff).includes('verificacao-telefone'));
+  assert.deepEqual(masterRecipientFilter('verificacao-telefone'), {$or:[{role:'master'}]});
+  let recorded;
+  t.mock.method(Event,'create',async value => {recorded=value;return {_id:'507f1f77bcf86cd799439011'};});
+  await recordMasterNotification({title:'Verificação de celular solicitada',
+    body:'Solicitação de confirmação.',category:'verificacao-telefone',
+    id:'507f1f77bcf86cd799439012'});
+  assert.equal(recorded.category,'verificacao-telefone');
+  assert.equal(recorded.targetId,'507f1f77bcf86cd799439012');
 });
