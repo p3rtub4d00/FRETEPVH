@@ -55,6 +55,7 @@ function StatusText({ request }) {
       return <span className="wallet-status">{label} · sem transferência bancária real</span>;
     }
     if (request.paymentStatus === "refunded_simulated") return <span className="wallet-status">Devolução de registro antigo sem conciliação bancária</span>;
+    if (request.paymentStatus === "refunded_asaas") return <span className="wallet-status success">Reembolso confirmado pelo Asaas</span>;
     if (request.paymentStatus === "refunded_mp") return <span className="wallet-status success">Reembolso confirmado pelo Mercado Pago</span>;
     if (request.paymentStatus === "refunded_pagbank") return <span className="wallet-status success">Reembolso confirmado pelo PagBank</span>;
     if (request.paymentStatus === "awaiting") return <span className="wallet-status warning">Aguardando Pix do cliente</span>;
@@ -132,13 +133,13 @@ export function masterFinancialAction(request) {
   if (request.payoutStatus === "requested" || request.commissionStatus === "pending") return true;
   return request.status === "completed" && !request.deliveryConfirmedAt &&
     request.disputeStatus !== "resolved_cancelled" &&
-    (request.paymentMethod !== "pix_freteon" || ["simulated_paid", "paid_mp", "paid_pagbank"].includes(request.paymentStatus));
+    (request.paymentMethod !== "pix_freteon" || ["simulated_paid", "paid_mp", "paid_asaas", "paid_pagbank"].includes(request.paymentStatus));
 }
 function masterSettled(request) {
   if (masterFinancialAction(request) || !["completed", "cancelled"].includes(request.status)) return false;
   if (["pending", "approved"].includes(request.refundStatus)) return false;
   if (request.payoutStatus === "available" || request.payoutStatus === "requested") return false;
-  return ["refunded_simulated", "refunded_mp", "refunded_pagbank"].includes(request.refundStatus) ||
+  return ["refunded_simulated", "refunded_mp", "refunded_asaas", "refunded_pagbank"].includes(request.refundStatus) ||
     request.disputeStatus === "resolved_cancelled" ||
     ["paid", "waived"].includes(request.commissionStatus) ||
     ["paid_simulated", "paid_manual", "paid_sandbox"].includes(request.payoutStatus);
@@ -177,6 +178,7 @@ function masterFinanceLabel(request) {
         ? "Comissão vencida" : "Comissão a receber";
   if (request.status === "completed" && !request.deliveryConfirmedAt) return "Entrega aguardando confirmação";
   if (request.refundStatus === "refunded_simulated") return "Devolução registrada anteriormente; verificar comprovante";
+  if (request.refundStatus === "refunded_asaas") return "Devolução confirmada pelo Asaas";
   if (request.refundStatus === "refunded_mp") return "Devolução confirmada pelo Mercado Pago";
   if (request.refundStatus === "refunded_pagbank") return "Devolução confirmada pelo PagBank";
   if (request.refundStatus === "rejected") return "Reembolso recusado";
@@ -209,7 +211,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
   const isMaster = role === "master";
   const may = permission => !isMaster || adminRole === "owner" || adminPermissions.includes(permission);
   const amount = request.agreedPriceCents;
-  const realTransfer = request.paymentStatus === "paid_mp" ||
+  const realTransfer = request.paymentStatus === "paid_mp" || (request.paymentStatus === "paid_asaas" && request.paymentProviderEnvironment === "production") ||
     (request.paymentStatus === "paid_pagbank" && request.paymentProviderEnvironment === "production");
   const pagBankSandbox = request.paymentProvider === "pagbank" &&
     request.paymentProviderEnvironment === "sandbox" && Boolean(request.pagbankTestApprovedAt);
@@ -281,7 +283,7 @@ function FreightFinanceRow({ request, role, drivers, busy, onAction, compact = f
       {isMaster && may("freights.manage") && !refundBlocked(request) && request.status === "completed" &&
         !request.deliveryConfirmedAt && request.disputeStatus !== "open" &&
         request.disputeStatus !== "resolved_cancelled" &&
-        (request.paymentMethod !== "pix_freteon" || ["paid_mp", "paid_pagbank"].includes(request.paymentStatus)) && (
+        (request.paymentMethod !== "pix_freteon" || ["paid_mp", "paid_asaas", "paid_pagbank"].includes(request.paymentStatus)) && (
           <button className="secondary full" disabled={busy}
             onClick={() => onAction(request.id, "confirm_delivery_master")}>
             Confirmar entrega após análise

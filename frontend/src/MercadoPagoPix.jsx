@@ -83,7 +83,7 @@ export default function MercadoPagoPix({ requestId, kind, onPaid, gateway, compa
   const approved = order?.status === "approved";
   const unavailable = Boolean(order?.unavailable) || (!gateway?.enabled && !order?.qrCode && !approved);
   const provider = order?.provider || gateway?.preferred || "mercadopago";
-  const providerName = provider === "pagbank" ? "PagBank" : "Mercado Pago";
+  const providerName = provider === "asaas" ? "Asaas" : provider === "pagbank" ? "PagBank" : "Mercado Pago";
   const sandbox = provider === "pagbank" && gateway?.pagbankEnvironment === "sandbox";
   return <section className={`mp-pix-panel${compact ? " mp-pix-panel-compact" : ""}`} aria-label={labels[kind]}>
     <div className="mp-pix-head"><QrCode size={20}/><strong>{labels[kind]} · {providerName}</strong></div>
@@ -99,7 +99,7 @@ export default function MercadoPagoPix({ requestId, kind, onPaid, gateway, compa
             ? `Pagamento identificado no ${providerName}, aguardando conferência do Master.`
             : `Pagamento confirmado pelo ${providerName}. O financeiro do FreteOn foi atualizado.`}</span>
       </div>
-    ) : order?.qrCode ? (
+    ) : order?.status === "refunded" ? (<p className="info">Pagamento devolvido pelo banco.</p>) : order?.qrCode && ["pending", "created"].includes(order.status) ? (
       <div className="mp-pix-payment">
         <strong>Pix de {money(order.amountCents / 100)}</strong>
         {order.qrCodeBase64 && (

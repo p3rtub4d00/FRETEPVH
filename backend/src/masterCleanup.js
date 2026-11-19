@@ -1,6 +1,8 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { Account, Session, Freight, FreightChat, FreightReport, PushSubscription } from "./models.js";
+import { AsaasOrder } from "./asaas.js";
+import { PaymentReservation } from "./paymentGateway.js";
 import { PagBankOrder } from "./pagBank.js";
 import { MercadoPagoOrder } from "./mercadoPago.js";
 import { authorize, fail } from "./auth.js";
@@ -53,7 +55,9 @@ masterCleanup.delete("/master/cleanup/:kind/:id", async (req, res) => {
       if (!freight) fail(404, "Chamado não encontrado.");
       if (!safeFreight(freight))
         fail(409, "Chamado com propostas, contratação ou movimentação financeira não pode ser excluído.");
-      if (await PagBankOrder.exists({ freightId: freight._id }).session(session) ||
+      if (await AsaasOrder.exists({ freightId: freight._id }).session(session) ||
+          await PaymentReservation.exists({ freightId: freight._id }).session(session) ||
+          await PagBankOrder.exists({ freightId: freight._id }).session(session) ||
           await MercadoPagoOrder.exists({ freightId: freight._id }).session(session))
         fail(409, "Este chamado possui uma cobrança registrada. Preserve o histórico financeiro.");
       const removed = await Freight.deleteOne({

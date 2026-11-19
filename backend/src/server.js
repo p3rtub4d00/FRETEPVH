@@ -11,6 +11,8 @@ import { maps } from "./maps.js";
 import { Account, Session, Freight, PrivacyRequest, PushSubscription } from "./models.js";
 import { privacyRouter } from "./privacyChannel.js";
 import { mercadoPagoPublic, MercadoPagoOrder } from "./mercadoPago.js";
+import { asaasWebhook, AsaasOrder, AsaasEvent, processAsaasEvents } from "./asaas.js";
+import { PaymentReservation } from "./paymentGateway.js";
 import { pagBankWebhook, PagBankOrder } from "./pagBank.js";
 import { PaymentProviderSettings } from "./paymentProviderSettings.js";
 import { dispatchDueCampaigns, campaignMedia } from "./campaigns.js";
@@ -41,6 +43,7 @@ app.use(
 );
 app.use(cookieParser());
 // Webhook público: a assinatura HMAC do Mercado Pago substitui a sessão/cabeçalhos do PWA.
+app.use("/api/asaas", express.json({ limit: "50kb" }), asaasWebhook);
 app.use("/api/mercadopago", express.json({ limit: "50kb" }), mercadoPagoPublic);
 // PagBank assina o corpo ORIGINAL. Não usar express.json antes da verificação ECDSA.
 app.use("/api/pagbank", express.raw({ type: "application/json", limit: "50kb" }), pagBankWebhook);
@@ -143,7 +146,7 @@ let startupStage = "conexão MongoDB";
 try {
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
   startupStage = "criação de índices";
-  await Promise.all([Account.init(), Session.init(), Freight.init(), PrivacyRequest.init(), PushSubscription.init(), MercadoPagoOrder.init(), PagBankOrder.init(), PaymentProviderSettings.init()]);
+  await Promise.all([Account.init(), Session.init(), Freight.init(), PrivacyRequest.init(), PushSubscription.init(), MercadoPagoOrder.init(), PagBankOrder.init(), PaymentProviderSettings.init(), AsaasOrder.init(), AsaasEvent.init(), PaymentReservation.init()]);
   startupStage = "criação do Master";
   await bootstrapAdmin();
   console.log("MongoDB conectado.");
@@ -172,6 +175,9 @@ try {
   process.exit(1);
 }
 // O agendador roda apenas enquanto a instância Render está ativa.
+const asaasTimer = setInterval(() => { void processAsaasEvents().catch(() => console.warn("Asaas: fila pendente.")); }, 15000);
+asaasTimer.unref();
+void processAsaasEvents().catch(() => console.warn("Asaas: fila pendente."));
 const campaignTimer = setInterval(() => { void dispatchDueCampaigns().catch(e => console.warn("Agendador de campanhas:", e?.name)); }, 30000);
 campaignTimer.unref();
 void dispatchDueCampaigns().catch(e => console.warn("Campanhas pendentes:", e?.name));

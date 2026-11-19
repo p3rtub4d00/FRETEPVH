@@ -188,7 +188,7 @@ function ClientPixCheckoutCompact({
   const awaitingPix = request.paymentStatus === "awaiting";
   const sandboxApproved = request.paymentProvider === "pagbank" &&
     request.paymentProviderEnvironment === "sandbox" && Boolean(request.pagbankTestApprovedAt);
-  const bankPaid = ["paid_mp", "paid_pagbank"].includes(request.paymentStatus) && !sandboxApproved;
+  const bankPaid = ["paid_mp", "paid_asaas", "paid_pagbank"].includes(request.paymentStatus) && !sandboxApproved;
 
   return (
     <div className="client-pix-compact">
@@ -278,7 +278,7 @@ function DriverContractCompact({ request, currentUserId, busy, onAdvance, onPhot
     request.paymentProvider === "pagbank" && request.paymentProviderEnvironment === "sandbox" &&
     Boolean(request.pagbankTestApprovedAt);
   const pixWaiting = request.paymentMethod === "pix_freteon" &&
-    !(request.paymentStatus === "paid_mp" ||
+    !(request.paymentStatus === "paid_mp" || (request.paymentStatus === "paid_asaas" && request.paymentProviderEnvironment === "production") ||
       (request.paymentStatus === "paid_pagbank" && request.paymentProviderEnvironment === "production")) &&
     !sandboxApproved;
   const startBlocked = busy || refundBlocked(request) || (request.status === "booked" && pixWaiting);
@@ -1868,7 +1868,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                 <h3>Confirme a entrega</h3>
                 <p>
                   {selected.paymentMethod === "pix_freteon"
-                    ? ["paid_mp", "paid_pagbank"].includes(selected.paymentStatus)
+                    ? ["paid_mp", "paid_asaas", "paid_pagbank"].includes(selected.paymentStatus)
                       ? "Confirme que recebeu sua carga corretamente. O Pix foi confirmado pelo banco."
                       : "Confirme sua entrega somente após verificar que o pagamento consta como aprovado no FreteOn."
                     : "Confirme somente se recebeu a carga e efetuou o pagamento combinado diretamente ao motorista."}
@@ -2193,7 +2193,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
               <p className="info">Pix de teste aprovado no PagBank. O motorista pode realizar o fluxo de homologação; não há repasse bancário real.</p>
             )}
           {area === "cliente" && selected.paymentMethod === "pix_freteon" &&
-            ["paid_mp", "paid_pagbank"].includes(selected.paymentStatus) && (
+            ["paid_mp", "paid_asaas", "paid_pagbank"].includes(selected.paymentStatus) && (
               <p className="info">Pix do frete confirmado pelo banco responsável.</p>
           )}
           {area === "cliente" && selected.status === "completed" &&
@@ -2248,7 +2248,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
           )}
           {area === "cliente" &&
             ["open", "booked"].includes(selected.status) && !refundBlocked(selected) &&
-            !(selected.paymentMethod === "pix_freteon" && ["simulated_paid", "paid_mp", "paid_pagbank"].includes(selected.paymentStatus)) && (
+            !(selected.paymentMethod === "pix_freteon" && ["simulated_paid", "paid_mp", "paid_asaas", "paid_pagbank"].includes(selected.paymentStatus)) && (
               <button
                 className="danger-link"
                 onClick={() => setModal({ type: "cancel", id: selected.id })}

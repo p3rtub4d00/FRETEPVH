@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { money } from './format.js';
 
-export const refundBlocked = request => ['pending', 'approved', 'refunded_simulated', 'refunded_mp', 'refunded_pagbank'].includes(request.refundStatus);
+export const refundBlocked = request => ['pending', 'approved', 'refunded_simulated', 'refunded_mp', 'refunded_asaas', 'refunded_pagbank'].includes(request.refundStatus);
 const labels = {
   pending: 'Reembolso em análise', approved: 'Reembolso aprovado · aguardando confirmação do banco',
   rejected: 'Reembolso recusado', refunded_simulated: 'Registro antigo: devolução não conciliada',
+  refunded_asaas: 'Reembolso confirmado pelo Asaas',
   refunded_mp: 'Reembolso confirmado pelo Mercado Pago',
   refunded_pagbank: 'Reembolso confirmado pelo PagBank',
 };
@@ -16,7 +17,7 @@ export default function RefundPanel({ request, role, busy, onAction, canManage =
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
   const status = request.refundStatus || 'none';
-  const gatewayPix = ['paid_mp', 'refunded_mp', 'paid_pagbank', 'refunded_pagbank'].includes(request.paymentStatus);
+  const gatewayPix = ['paid_asaas', 'refunded_asaas', 'paid_mp', 'refunded_mp', 'paid_pagbank', 'refunded_pagbank'].includes(request.paymentStatus);
   const sandboxPix = ['paid_pagbank', 'refunded_pagbank'].includes(request.paymentStatus) && request.paymentProviderEnvironment === 'sandbox';
   const realPix = gatewayPix && !sandboxPix;
   const canAsk = role === 'cliente' && request.canRequestRefund && gatewayPix;
@@ -50,7 +51,7 @@ export default function RefundPanel({ request, role, busy, onAction, canManage =
       </label>
       {role === 'master' ? <>
         <p>Analise a etapa do transporte e o motivo. A aprovação cancela o frete e solicita a devolução pelo provedor do pagamento.</p>
-        <button className="primary full" disabled={busy || !gatewayPix}>{gatewayPix ? `Aprovar e devolver via ${request.paymentStatus === "paid_pagbank" ? "PagBank" : "Mercado Pago"}${sandboxPix ? " (teste)" : ""}` : "Reembolso bancário indisponível para registro antigo"}</button>
+        <button className="primary full" disabled={busy || !gatewayPix}>{gatewayPix ? `Aprovar e devolver via ${request.paymentStatus === "paid_asaas" ? "Asaas" : request.paymentStatus === "paid_pagbank" ? "PagBank" : "Mercado Pago"}${sandboxPix ? " (teste)" : ""}` : "Reembolso bancário indisponível para registro antigo"}</button>
         <button type="button" className="secondary full" disabled={busy || reason.trim().length < 10} onClick={() => submit('reject_refund')}>Recusar com justificativa</button>
       </> : <>
         <p>Solicitação de {money(request.agreedPriceCents / 100)}. O pedido ficará suspenso para análise; não há aprovação automática.</p>
@@ -59,6 +60,7 @@ export default function RefundPanel({ request, role, busy, onAction, canManage =
       </>}
     </form>}
     {role === 'master' && status === 'approved' && !gatewayPix && <p className="wallet-note">Registro antigo sem pagamento conciliado. Não efetue devolução pelo sistema; confira os registros anteriores.</p>}
+    {role === 'master' && canManage && status === 'approved' && request.paymentStatus === 'paid_asaas' && <button type="button" className="secondary full" disabled={busy} onClick={() => submit('approve_refund')}>Consultar ou retomar devolução Asaas</button>}
     {error && <p className="error" role="alert">{error}</p>}
   </section>;
 }

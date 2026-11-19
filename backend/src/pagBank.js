@@ -157,7 +157,7 @@ export async function syncPagBankOrder(order, remote) {
         commissionStatus: "pending",
         commissionCents: order.amountCents,
         disputeStatus: { $ne: "open" },
-        refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_pagbank"] }
+        refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_asaas", "refunded_pagbank"] }
       }, { $set: {
         commissionStatus: "paid",
         commissionPaidAt: order.verifiedAt || new Date(),
@@ -182,7 +182,7 @@ export async function syncPagBankOrder(order, remote) {
         _id: freight._id, driverId: order.payerId,
         commissionStatus: "pending", commissionCents: order.amountCents,
         disputeStatus: { $ne: "open" },
-        refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_pagbank"] }
+        refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_asaas", "refunded_pagbank"] }
       }, { $set: { commissionStatus: "paid", commissionPaidAt: new Date(),
         commissionProvider: "pagbank",
         commissionProviderEnvironment: order.environment } });

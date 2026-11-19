@@ -6,6 +6,7 @@ import { authorize, fail, text } from "./auth.js";
 import { notifyInBackground, notifyMasters } from "./webPush.js";
 import { mercadoPagoEnabled, refundMercadoPagoPayment, MercadoPagoOrder } from "./mercadoPago.js";
 import { refundPagBankPayment, PagBankOrder } from "./pagBank.js";
+import { AsaasOrder, refundAsaasPayment } from "./asaas.js";
 import { getPaymentProvider } from "./paymentProviderSettings.js";
 
 export const PAYMENT_METHODS = ["pix_freteon", "card_driver", "cash_driver"];
@@ -33,7 +34,7 @@ export async function bookFinancials(request, proposal, driver, suppliedConfig =
 
 // Um retorno aprovado no sandbox não comprova o recebimento de dinheiro.
 export function isRealBankPayment(request) {
-  return request?.paymentStatus === "paid_mp" ||
+  return request?.paymentStatus === "paid_mp" || (request?.paymentStatus === "paid_asaas" && request?.paymentProviderEnvironment === "production") ||
     (request?.paymentStatus === "paid_pagbank" &&
       request?.paymentProviderEnvironment === "production");
 }
@@ -144,7 +145,7 @@ export function walletSummary(requests, user, realEnabled = false) {
         request.commissionStatus === "paid") {
       if (request.commissionProviderEnvironment === "sandbox") {
         testCommissionRevenueCents += request.commissionCents;
-      } else if (["mercadopago", "pagbank"].includes(request.commissionProvider) &&
+      } else if (["mercadopago", "pagbank", "asaas"].includes(request.commissionProvider) &&
         request.commissionProviderEnvironment !== "sandbox") {
         commissionRevenueCents += request.commissionCents;
       }
@@ -214,11 +215,27 @@ finance.post("/requests/:id/finance", async (req, res) => {
   const refundAction = ["request_refund", "approve_refund", "reject_refund", "simulate_refund"].includes(action);
   if (!refundAction && refundBlocks(request))
     fail(409, "Este frete está bloqueado por uma solicitação de reembolso.");
+  if (action === "approve_refund" && request.paymentStatus === "paid_asaas") {
+    if (!isMaster) fail(403, "Somente a administração pode aprovar reembolso.");
+    if (request.refundStatus === "pending") {
+      applyRefund(request, req.user, action, req.body.reason);
+      const saved = await Freight.updateOne({ _id: request._id, paymentStatus: "paid_asaas", refundStatus: "pending",
+        payoutStatus: { $nin: ["paid_manual", "paid_simulated"] } }, { $set: {
+          refundStatus: "approved", refundDecisionReason: request.refundDecisionReason,
+          refundReviewedAt: request.refundReviewedAt, refundReviewedBy: own(req.user), refundedBy: own(req.user),
+          status: "cancelled", payoutStatus: "none", commissionStatus: "waived", commissionDueAt: null
+        } });
+      if (!saved.modifiedCount) fail(409, "O pagamento mudou. Atualize antes de estornar.");
+    } else if (request.refundStatus !== "approved") fail(409, "Não existe reembolso aguardando confirmação.");
+    if (["paid_manual", "paid_simulated"].includes(request.payoutStatus)) fail(409, "Repasse já efetuado; confira no banco.");
+    await refundAsaasPayment(request);
+    return res.json({ ok: true });
+  }
   if (refundAction) {
     if (action === "simulate_refund")
       fail(409, "Devoluções exigem confirmação do provedor de pagamento.");
     const realRefund = action === "approve_refund" &&
-      ["paid_mp", "paid_pagbank"].includes(request.paymentStatus);
+      ["paid_mp", "paid_asaas", "paid_pagbank"].includes(request.paymentStatus);
     const provider = request.paymentStatus;
     applyRefund(request, req.user, action, req.body.reason);
     if (realRefund) {
@@ -292,7 +309,7 @@ finance.post("/requests/:id/finance", async (req, res) => {
       fail(409, "Não existe repasse solicitado para confirmar.");
     const driver = await Account.findById(request.driverId);
     if (!driver?.pixKey) fail(409, "Motorista não cadastrou chave Pix.");
-    const realTransfer = request.paymentStatus === "paid_mp" ||
+    const realTransfer = request.paymentStatus === "paid_mp" || (request.paymentStatus === "paid_asaas" && request.paymentProviderEnvironment === "production") ||
       (request.paymentStatus === "paid_pagbank" &&
         request.paymentProviderEnvironment === "production");
     if (!realTransfer)

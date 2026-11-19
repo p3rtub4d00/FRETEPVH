@@ -193,7 +193,7 @@ api.get("/state", async (req, res) => {
       ["cash_driver", "card_driver"].includes(request.paymentMethod) &&
       request.commissionStatus === "pending" && request.driverId &&
       request.disputeStatus !== "open" &&
-      !["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_pagbank"].includes(request.refundStatus)
+      !["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_asaas", "refunded_pagbank"].includes(request.refundStatus)
     );
     if (commissionCandidates.length) {
       const approvedCommissions = await PagBankOrder.find({
@@ -217,7 +217,7 @@ api.get("/state", async (req, res) => {
           _id: request._id, commissionStatus: "pending",
           commissionCents: order.amountCents,
           disputeStatus: { $ne: "open" },
-          refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_pagbank"] }
+          refundStatus: { $nin: ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_asaas", "refunded_pagbank"] }
         }, { $set: changes });
         if (changed.modifiedCount) request.set(changes);
       }
@@ -521,7 +521,7 @@ api.patch("/requests/:id", async (req, res) => {
       req.body.status === "cancelled" &&
       ["open", "booked"].includes(request.status)
     ) {
-      if (request.paymentMethod === "pix_freteon" && ["simulated_paid", "paid_mp", "paid_pagbank"].includes(request.paymentStatus))
+      if (request.paymentMethod === "pix_freteon" && ["simulated_paid", "paid_mp", "paid_asaas", "paid_pagbank"].includes(request.paymentStatus))
         fail(409, "Use Cancelar e solicitar reembolso para o Master analisar o Pix pago.");
       request.status = "cancelled";
       request.payoutStatus = "none";

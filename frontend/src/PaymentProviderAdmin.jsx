@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Building2, CheckCircle2, AlertCircle } from "lucide-react";
 import { api } from "./api.js";
-const names = { mercadopago: "Mercado Pago", pagbank: "PagBank" };
+const names = { mercadopago: "Mercado Pago", pagbank: "PagBank", asaas: "Asaas" };
 
 export default function PaymentProviderAdmin({ initial, onSaved, readOnly = false }) {
   const [current, setCurrent] = useState(initial?.preferred || "mercadopago");

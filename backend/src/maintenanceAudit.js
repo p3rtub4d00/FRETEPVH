@@ -2,18 +2,19 @@
 // o FreteOn. Não registra nomes, documentos, telefones, tokens ou referências.
 import { Account, Session, Freight, FreightChat, FreightReport, PushSubscription, PrivacyRequest } from "./models.js";
 import { MercadoPagoOrder } from "./mercadoPago.js";
+import { AsaasOrder } from "./asaas.js";
 import { PagBankOrder } from "./pagBank.js";
 
 export async function maintenancePreflight() {
   const opts = {
     realOrAmbiguousPayment: {
       $or: [
-        { paymentStatus: { $in: ["paid_mp", "paid_pagbank", "refunded_mp", "refunded_pagbank"] } },
+        { paymentStatus: { $in: ["paid_mp", "paid_asaas", "paid_pagbank", "refunded_mp", "refunded_asaas", "refunded_pagbank"] } },
         { payoutStatus: "paid_manual" },
         { commissionStatus: "paid", commissionProviderEnvironment: { $ne: "sandbox" } },
         { paymentStatus: "received_driver" },
         { commissionStatus: "pending", paymentMethod: { $in: ["card_driver", "cash_driver"] } },
-        { refundStatus: { $in: ["pending", "approved", "refunded_mp", "refunded_pagbank"] } }
+        { refundStatus: { $in: ["pending", "approved", "refunded_mp", "refunded_asaas", "refunded_pagbank"] } }
       ]
     },
     commercialActive: {
@@ -31,6 +32,7 @@ export async function maintenancePreflight() {
     ["sessoes", Session.countDocuments({})],
     ["pushSubscriptions", PushSubscription.countDocuments({})],
     ["privacidadeSolicitacoes", PrivacyRequest.countDocuments({})],
+    ["asaasOrders", AsaasOrder.countDocuments({})],
     ["mercadoPagoOrders", MercadoPagoOrder.countDocuments({})],
     ["mercadoPagoOrdersApproved", MercadoPagoOrder.countDocuments({ status: "approved" })],
     ["pagBankOrdersSandbox", PagBankOrder.countDocuments({ environment: "sandbox" })],
@@ -49,13 +51,14 @@ export async function maintenancePreflight() {
     collectionsRelacionadas: collectionNames.filter(x =>
       /freteon|account|session|freight|private_driver_documents|privacyrequest|pushsubscription/i.test(x)).sort(),
     paymentEnvironment: {
+      asaasEnabled: process.env.ASAAS_ENABLED === "true",
       mpEnabled: process.env.MP_PAYMENTS_ENABLED === "true",
       pagBankEnabled: process.env.PAGBANK_ENABLED === "true",
       pagBankEnvironment: process.env.PAGBANK_ENV === "production" ? "production" : "sandbox",
       pagBankProductionAllowed: process.env.PAGBANK_PRODUCTION_ALLOWED === "true"
     },
     excludeFromDeletionIfPresent: [
-      "mercadoPagoOrders", "pagBankOrdersProduction",
+      "asaasOrders", "mercadoPagoOrders", "pagBankOrdersProduction",
       "fretesFinanceirosRequeremPreservacao", "fretesAtivosForaHomologacao"
     ].filter(key => counts[key] > 0),
   };

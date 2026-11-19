@@ -101,7 +101,7 @@ export function canCreateMercadoPagoPix(freight, kind, user) {
   } else if (user.role !== "motorista" || freight.driverId !== id ||
     !["cash_driver", "card_driver"].includes(freight.paymentMethod) ||
     freight.commissionStatus !== "pending" || freight.disputeStatus === "open" ||
-    ["pending", "approved", "refunded_simulated"].includes(freight.refundStatus))
+    ["pending", "approved", "refunded_simulated", "refunded_mp", "refunded_pagbank", "refunded_asaas"].includes(freight.refundStatus))
     fail(409, "Esta comissão não permite gerar Pix.");
   return amountFor(freight, kind);
 }

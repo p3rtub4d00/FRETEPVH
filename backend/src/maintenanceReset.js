@@ -15,6 +15,7 @@ const RESET_FLAG = "RESET_NONMASTER_HOMOLOGATION_ONCE";
 
 export function resetPreflightAllowed(preflight) {
   return preflight.counts.masters === 1 &&
+    !preflight.paymentEnvironment.asaasEnabled && !(preflight.counts.asaasOrders > 0) &&
     !preflight.paymentEnvironment.mpEnabled &&
     preflight.paymentEnvironment.pagBankEnvironment === "sandbox" &&
     !preflight.paymentEnvironment.pagBankProductionAllowed &&
@@ -40,13 +41,13 @@ export async function resetHomologationOnce() {
   // como recebimento em produção, mesmo que o pedido externo esteja ausente.
   const hasActualBankMovement = await Freight.exists({
     $or: [
-      { paymentStatus: { $in: ["paid_mp","refunded_mp"] } },
+      { paymentStatus: { $in: ["paid_mp","refunded_mp","paid_asaas","refunded_asaas"] } },
       { paymentStatus: { $in: ["paid_pagbank","refunded_pagbank"] },
         paymentProviderEnvironment: { $ne: "sandbox" } },
-      { commissionProvider: "mercadopago", commissionStatus: "paid" },
+      { commissionProvider: { $in: ["mercadopago", "asaas"] }, commissionStatus: "paid" },
       { commissionProvider: "pagbank", commissionStatus: "paid",
         commissionProviderEnvironment: { $ne: "sandbox" } },
-      { refundStatus: { $in: ["refunded_mp", "refunded_pagbank"] } }
+      { refundStatus: { $in: ["refunded_mp", "refunded_asaas", "refunded_pagbank"] } }
     ]
   });
   if (hasActualBankMovement) {

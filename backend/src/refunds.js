@@ -6,10 +6,10 @@ const reasonText = value => {
   if (reason.length < 10 || reason.length > 500) reject(400, 'Informe um motivo de 10 a 500 caracteres.');
   return reason;
 };
-export const refundBlocks = request => ['pending', 'approved', 'refunded_simulated', 'refunded_mp', 'refunded_pagbank'].includes(request.refundStatus);
+export const refundBlocks = request => ['pending', 'approved', 'refunded_simulated', 'refunded_mp', 'refunded_asaas', 'refunded_pagbank'].includes(request.refundStatus);
 export const canRequestRefund = request => request.paymentMethod === 'pix_freteon' &&
   Number.isSafeInteger(request.agreedPriceCents) && request.agreedPriceCents > 0 &&
-  ['simulated_paid', 'paid_mp', 'paid_pagbank'].includes(request.paymentStatus) && ['booked', 'transit', 'completed', 'cancelled'].includes(request.status) &&
+  ['simulated_paid', 'paid_mp', 'paid_asaas', 'paid_pagbank'].includes(request.paymentStatus) && ['booked', 'transit', 'completed', 'cancelled'].includes(request.status) &&
   !['paid_simulated', 'paid_manual'].includes(request.payoutStatus) && request.disputeStatus !== 'open' &&
   (!request.refundStatus || request.refundStatus === 'none');
 
@@ -26,7 +26,7 @@ export function applyRefund(request, user, action, reason) {
     request.refundAmountCents = request.agreedPriceCents;
   } else {
     if (!master) reject(403, 'Somente o Master pode decidir sobre o reembolso.');
-    if (request.paymentMethod !== 'pix_freteon' || !['simulated_paid', 'paid_mp', 'paid_pagbank'].includes(request.paymentStatus) ||
+    if (request.paymentMethod !== 'pix_freteon' || !['simulated_paid', 'paid_mp', 'paid_asaas', 'paid_pagbank'].includes(request.paymentStatus) ||
         ['paid_simulated', 'paid_manual'].includes(request.payoutStatus)) reject(409, 'Pagamento indisponível para reembolso.');
     if (['approve_refund', 'reject_refund'].includes(action)) {
       if (request.refundStatus !== 'pending') reject(409, 'Não existe reembolso aguardando análise.');
