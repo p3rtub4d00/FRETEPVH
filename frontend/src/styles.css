@@ -5070,3 +5070,129 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .master-users-appeal-response textarea{width:100%;max-width:650px;min-height:88px;padding:11px;box-sizing:border-box;font:inherit;border:1px solid #d7e1ec;border-radius:9px}
 .master-users-appeal-actions{display:flex;gap:8px;flex-wrap:wrap}
 .master-users-appeal-actions button{min-height:41px;width:auto;flex:1 1 145px;padding:9px 12px;font-size:12px}
+
+
+/* FreteOn UI Refresh 2026-11-23 — ajustes de apresentação, sem mudar regras de negócio. */
+.public-site {background:#f6f8fb}
+.public-header.public-header-refined {border-bottom-color:#e7edf3}
+.public-header-actions{margin-left:auto;display:flex;align-items:center;gap:20px}
+.public-header-location{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#687e94;font-weight:600;white-space:nowrap}
+.public-header-login{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:41px;padding:9px 15px;border:1px solid #dce5ee;border-radius:11px;background:white;font-weight:700!important;color:#12324c!important}
+.public-header-login:hover{background:#f2f6fa;border-color:#adbecf}
+.public-site .public-home-refined{max-width:1220px;display:flex;flex-direction:column;align-items:stretch;gap:32px;padding:clamp(22px,4vw,54px) clamp(18px,3.5vw,42px) 60px}
+.public-home-stage{min-width:0;display:grid;grid-template-columns:minmax(0,1.13fr) minmax(300px,.87fr);gap:clamp(22px,4vw,56px);align-items:center}
+.public-home-refined .public-copy{min-width:0}
+.public-location-chip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:#eaf1f9;border:1px solid #dce6f1;padding:9px 13px;color:#436580;font-size:10px;letter-spacing:1px;font-weight:800}
+.public-home-refined .public-copy h1{max-width:680px;font-size:clamp(42px,5.1vw,72px);letter-spacing:-.052em;line-height:1.07;margin:24px 0 22px;color:#112842}
+.public-home-refined .public-copy h1 em{font-style:normal;color:#ed7926}
+.public-home-refined .public-copy>p{max-width:505px;font-size:clamp(15px,1.35vw,18px);line-height:1.65;color:#5e7085;margin:0}
+.public-cta-group{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;max-width:530px;margin-top:29px}
+.public-cta-group a{min-height:58px;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:13px;font-weight:800;text-decoration:none;font-size:14px;transition:background .16s,border-color .16s,transform .16s}
+.public-cta-group a span{flex:1;text-align:center}
+.public-cta-group a svg{flex-shrink:0}
+.public-cta-primary{background:#f98530;color:#10243e;box-shadow:0 9px 24px #f9853024}
+.public-cta-primary:hover{background:#ff9b50;transform:translateY(-1px)}
+.public-cta-secondary{background:#fff;color:#173550;border:1px solid #d5e0eb}
+.public-cta-secondary:hover{border-color:#9fb6cc;background:#f9fbfd}
+.public-trust-note{display:flex;align-items:flex-start;gap:9px;max-width:515px;margin-top:20px;font-size:12px;line-height:1.55;color:#64798c}
+.public-trust-note svg{flex:0 0 auto;color:#227454}
+.public-journey-card{min-width:0;overflow:hidden;border-radius:24px;background:linear-gradient(145deg,#102b49,#0d1e32);color:white;padding:28px;border:1px solid #1f405d;box-shadow:0 22px 48px #10243e1c}
+.public-journey-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.public-journey-header>span:first-child{display:inline-flex;align-items:center;gap:7px;color:#e5eef8;font-size:13px;font-weight:800}
+.public-journey-header>span:first-child svg{color:#ff943f}
+.public-journey-state{padding:6px 10px;background:#ffffff14;border:1px solid #ffffff23;border-radius:999px;color:#c0d1e2;font-size:10px;font-weight:650}
+.public-journey-illustration{display:grid;place-items:center;min-height:164px;margin:14px 0 10px;border-radius:18px;background:radial-gradient(circle at 52% 50%,#244d69 0,#16344f 48%,#112a44 82%)}
+.public-journey-route{display:flex;align-items:center;justify-content:center;gap:10px;max-width:100%;width:100%}
+.public-route-node{width:68px;height:68px;border-radius:21px;display:grid;place-items:center;flex:0 0 auto;color:#ff9a51;background:#183f59;border:1px solid #4c718c}
+.public-route-node-end{color:#11263c;background:#ff913d;border-color:#ff913d}
+.public-route-dashes{position:relative;flex:1;max-width:160px;min-width:38px;border-top:3px dashed #69889f}
+.public-route-dashes:after{content:"";position:absolute;right:-3px;top:-7px;width:10px;height:10px;border-top:2px solid #ff9a51;border-right:2px solid #ff9a51;transform:rotate(45deg)}
+.public-journey-card h2{font-size:clamp(22px,2.4vw,30px);line-height:1.18;letter-spacing:-.035em;margin:15px 0 11px;color:#fff;max-width:360px}
+.public-journey-card>p{font-size:13px;line-height:1.65;color:#bccddd;max-width:395px;margin:0}
+.public-journey-footer{display:flex;flex-wrap:wrap;gap:9px 16px;padding-top:19px;margin-top:19px;border-top:1px solid #ffffff24}
+.public-journey-footer span{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:#e3edf5}
+.public-journey-footer svg{color:#ff9b57}
+.public-how{padding:22px 25px 28px;background:#fff;border:1px solid #e5ebf2;border-radius:20px}
+.public-how-heading{display:flex;flex-direction:column;align-items:center;gap:5px;margin-bottom:22px}
+.public-how-heading>span{font-weight:800;letter-spacing:1.4px;font-size:10px;color:#b46827}
+.public-how-heading h2{font-size:24px;letter-spacing:-.035em;margin:0}
+.public-how-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.public-how-steps>div{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:7px 18px}
+.public-how-icon{width:49px;height:49px;border:1px solid #e5edf4;border-radius:15px;display:grid;place-items:center;color:#e67b2b;background:#fff6ec}
+.public-how-steps strong{color:#173550;font-size:14px}
+.public-how-steps p{font-size:12px;line-height:1.55;color:#62758a;margin:0;max-width:230px}
+.public-site .auth-layout{max-width:535px;margin:auto}
+.public-site .auth-card{box-shadow:0 18px 50px #10243e0b;border-color:#e2eaf2;border-radius:20px}
+.public-site .auth-card h1{font-size:clamp(25px,3vw,31px);line-height:1.16}
+.public-site .auth-icon{border-radius:14px}
+.public-site .auth-card input{border-radius:11px}
+.app-shell-cliente,.app-shell-motorista{background:#f5f8fb}
+.app-shell-cliente .page-heading,.app-shell-motorista .page-heading{margin-bottom:19px}
+.app-shell-cliente .page-heading h1,.app-shell-motorista .page-heading h1{letter-spacing:-.045em;font-size:clamp(25px,2.6vw,34px)}
+.app-shell-cliente .page-heading .eyebrow,.app-shell-motorista .page-heading .eyebrow{font-size:10px;letter-spacing:1.15px;color:#c16d2b;font-weight:800}
+.app-shell-cliente .subtitle,.app-shell-motorista .subtitle{font-size:13px;line-height:1.5}
+.app-shell-cliente .hero-freteon{background:linear-gradient(115deg,#0e2844 0%,#163b5b 100%);border-radius:20px;padding:clamp(22px,3vw,36px);min-height:218px;gap:20px;box-shadow:0 10px 30px #112b4514}
+.app-shell-cliente .hero-freteon-content{position:relative;z-index:1;max-width:550px;min-width:0;flex:1}
+.app-shell-cliente .hero-freteon .hero-kicker{display:inline-flex;align-items:center;gap:6px;color:#ffac6b;background:#ffffff13;border:1px solid #ffffff1a;border-radius:99px;padding:7px 10px;letter-spacing:1px;font-size:10px}
+.app-shell-cliente .hero-freteon h2{font-size:clamp(26px,3vw,39px);line-height:1.12;letter-spacing:-.045em;margin:17px 0 12px}
+.app-shell-cliente .hero-freteon p{color:#ccd9e6;font-size:13px;line-height:1.6;max-width:420px;margin:0 0 20px}
+.app-shell-cliente .hero-freteon button{background:#ff903d;color:#10243e;border-radius:11px;font-size:13px;font-weight:800;gap:9px;min-height:46px;padding:11px 15px}
+.app-shell-cliente .hero-freteon button:hover{background:#ffab68}
+.app-shell-cliente .hero-art-refined{width:215px;min-width:215px;min-height:185px;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0;opacity:1}
+.app-shell-cliente .hero-art-refined:before,.app-shell-cliente .hero-art-refined:after{display:none}
+.app-shell-cliente .hero-art-refined .hero-route-symbol{width:67px;height:67px;display:grid;place-items:center;flex-shrink:0;background:#1b435e;border:1px solid #3c6481;border-radius:18px;color:#ffaf72;transform:none}
+.app-shell-cliente .hero-art-refined .hero-route-symbol-end{background:#ff923e;color:#14283e;border-color:#ff923e}
+.app-shell-cliente .hero-route-connector{display:flex;align-items:center;justify-content:center;gap:9px;padding:11px 0}
+.app-shell-cliente .hero-route-connector>span{display:block;width:5px;height:5px;border-radius:50%;background:#98adc1}
+.app-shell-cliente .hero-art-refined>span{font-size:11px;color:#b9cede;text-align:center;margin-top:11px}
+.driver-welcome{background:linear-gradient(115deg,#fff,#f6faff);display:flex;align-items:center;justify-content:space-between;gap:20px;padding:23px 26px;border:1px solid #dfeaf3;border-radius:18px;margin-bottom:22px;box-shadow:0 8px 22px #183b5710}
+.driver-welcome>div{min-width:0}
+.driver-welcome-kicker{display:inline-flex;align-items:center;gap:7px;color:#b45e18;font-size:10px;letter-spacing:1px;font-weight:800}
+.driver-welcome h2{font-size:clamp(22px,2.5vw,29px);letter-spacing:-.04em;margin:11px 0 7px;color:#132c47}
+.driver-welcome p{font-size:13px;color:#687b8d;margin:0;line-height:1.6}
+.driver-welcome>button{min-width:167px;border-radius:11px;gap:8px;font-weight:700;color:#214866}
+.app-shell-cliente .stats,.app-shell-motorista .stats{gap:12px;margin-bottom:24px}
+.app-shell-cliente .stats>div,.app-shell-motorista .stats>div{border-radius:14px;border:1px solid #e2e9f0;padding:17px 18px;box-shadow:0 4px 16px #19324b08}
+.app-shell-cliente .stats strong,.app-shell-motorista .stats strong{font-variant-numeric:tabular-nums}
+.app-shell-cliente .freight-card,.app-shell-motorista .freight-card{border-radius:16px;border-color:#e1e8f0;box-shadow:0 5px 18px #19324b08}
+.app-shell-cliente .freight-card button,.app-shell-motorista .freight-card button{min-height:40px}
+.app-shell-cliente .mobile-nav,.app-shell-motorista .mobile-nav{box-shadow:0 -7px 24px #142e4512;border-top:1px solid #e5ecf2}
+@media(max-width:860px){
+  .public-site .public-home-refined{padding:36px 22px 46px;gap:26px}
+  .public-home-stage{grid-template-columns:minmax(0,1fr);gap:25px}
+  .public-journey-card{max-width:none}
+  .public-journey-illustration{min-height:115px}
+}
+@media(max-width:760px){
+  .public-header-actions{gap:9px}
+  .public-header-location{font-size:10px}
+  .public-header-login{padding:8px 10px;font-size:12px!important;min-height:38px}
+  .public-site .public-home-refined{padding:29px 18px 39px}
+  .public-home-refined .public-copy h1{font-size:clamp(36px,9vw,52px);margin:20px 0 14px}
+  .public-home-refined .public-copy>p{font-size:15px;line-height:1.58}
+  .public-cta-group{margin-top:23px;gap:10px}
+  .public-cta-group a{min-height:54px;font-size:12px;padding:10px}
+  .public-journey-card{padding:22px 20px;border-radius:18px}
+  .public-journey-illustration{display:none}
+  .public-journey-card h2{margin:17px 0 8px;font-size:23px}
+  .public-how{padding:22px 13px}
+  .public-how-steps{gap:5px}
+  .public-how-steps>div{padding:5px 4px}
+  .public-how-steps p{font-size:11px}
+  .public-how-steps strong{font-size:12px}
+  .public-how-icon{width:42px;height:42px;border-radius:12px}
+  .app-shell-cliente .hero-freteon{min-height:0;padding:22px 20px}
+  .app-shell-cliente .hero-freteon h2{font-size:29px}
+  .app-shell-cliente .hero-art-refined{display:none}
+  .driver-welcome{align-items:flex-start;flex-direction:column;padding:19px 20px}
+  .driver-welcome>button{width:100%;min-height:43px}
+}
+@media(max-width:380px){
+  .public-header-location{display:none}
+  .public-cta-group{grid-template-columns:minmax(0,1fr)}
+  .public-journey-footer{flex-direction:column;gap:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  .public-cta-group a{transition:none}
+  .public-cta-primary:hover{transform:none}
+}

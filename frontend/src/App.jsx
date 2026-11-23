@@ -37,7 +37,6 @@ import {
 import { money, statusLabels } from "./format.js";
 import { api } from "./api.js";
 import RoutePicker from "./RoutePicker.jsx";
-import RoleSwitcher from "./RoleSwitcher.jsx";
 import ProfilePhotoEditor, { Avatar } from "./ProfilePhotoEditor.jsx";
 import ProfileDetailsEditor from "./ProfileDetailsEditor.jsx";
 import FreightPhotoPicker, { FreightPhotoImage } from "./FreightPhotoPicker.jsx";
@@ -693,7 +692,7 @@ function RequestForm({ onCreate, onClose, requestError, userId }) {
   );
 }
 
-export default function App({ user, onLogout, onExpired, sessions, onSwitchRole }) {
+export default function App({ user, onLogout, onExpired }) {
   const area = user.role;
   const masterOwner = area === "master" && user.adminRole === "owner";
   const menu = visibleNavigation(area, user);
@@ -1134,7 +1133,7 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell app-shell-${area}`}>
       {busy && (
         <div className="operation-status" role="status">
           Salvando…
@@ -1220,17 +1219,10 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <Avatar account={state.user} />
           </div>
         </header>
-        <div className="account-bar">
-          <span>
-            {state.user.name} · {area === "master" ? (masterOwner ? "Master Principal" : user.adminRole === "financeiro" ? "Financeiro" : user.adminRole === "operacional" ? "Operacional" : user.adminRole === "atendimento" ? "Atendimento" : "Auditor") : areas[area]}
-          </span>
-          <RoleSwitcher
-            activeRole={area}
-            sessions={sessions}
-            onSwitch={onSwitchRole}
-          />
-          <button onClick={logout}>Sair desta conta</button>
-        </div>
+        {area === "master" && <div className="account-bar">
+          <span>{state.user.name} · {masterOwner ? "Master Principal" : user.adminRole === "financeiro" ? "Financeiro" : user.adminRole === "operacional" ? "Operacional" : user.adminRole === "atendimento" ? "Atendimento" : "Auditor"}</span>
+          <button onClick={logout}>Sair da conta</button>
+        </div>}
         <main>
           {(area === "cliente" || area === "motorista") && <CampaignViewer role={area} />}
           {!loaded && <p role="status">Carregando seus dados…</p>}
@@ -1327,9 +1319,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             <div>
               <p className="eyebrow">
                 {area === "cliente"
-                  ? "VAMOS COLOCAR SEUS PLANOS EM MOVIMENTO"
+                  ? "PAINEL DO CLIENTE"
                   : area === "motorista"
-                    ? "SEU PRÓXIMO FRETE COMEÇA AQUI"
+                    ? "PAINEL DO MOTORISTA"
                     : "ADMINISTRAÇÃO FRETEON"}
               </p>
               <h1>
@@ -1349,9 +1341,9 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
                       ? "Atualize seu perfil e sua documentação."
                       : "Gerencie os dados da sua conta."
                   : area === "cliente"
-                    ? "Encontre o motorista certo para o seu frete."
+                    ? page === "inicio" ? "Solicite um frete ou acompanhe seus pedidos." : "Tudo sobre seus fretes, em um só lugar."
                     : area === "motorista"
-                      ? "Escolha os pedidos e envie o seu melhor preço."
+                      ? page === "inicio" ? "Encontre fretes disponíveis e envie suas propostas." : "Acompanhe seus serviços e propostas."
                       : "Acompanhe a operação em Porto Velho."}
               </p>
             </div>
@@ -1366,33 +1358,33 @@ export default function App({ user, onLogout, onExpired, sessions, onSwitchRole 
             )}
           </div>
           {page === "inicio" && area === "cliente" && (
-            <section className="hero">
-              <div>
-                <span className="hero-kicker">FRETES EM PORTO VELHO</span>
-                <h2>
-                  Precisa levar?
-                  <br />A gente conecta.
-                </h2>
-                <p>
-                  Conte o que vai transportar, receba propostas
-                  <br className="desktop-only" /> e escolha quem vai com você.
-                </p>
+            <section className="hero hero-freteon">
+              <div className="hero-freteon-content">
+                <span className="hero-kicker"><MapPin size={15} aria-hidden="true"/> PORTO VELHO, RO</span>
+                <h2>Precisa transportar?<br/>A gente conecta.</h2>
+                <p>Publique seu pedido, compare propostas e escolha quem vai levar sua carga.</p>
                 <button onClick={() => setModal({ type: "create" })}>
-                  Pedir meu frete
-                  <ArrowRight size={19} />
+                  <Package size={19} aria-hidden="true"/> Solicitar meu frete <ArrowRight size={19}/>
                 </button>
               </div>
-              <div className="hero-art" aria-hidden="true">
-                <div className="road" />
-                <div className="art-pin">
-                  <MapPin size={27} />
-                </div>
-                <Truck size={125} strokeWidth={1.3} />
-                <div className="art-package">
-                  <Package size={35} />
-                </div>
-                <span>Do seu ponto A ao ponto B.</span>
+              <div className="hero-art hero-art-refined" aria-hidden="true">
+                <div className="hero-route-symbol"><Package size={30}/></div>
+                <div className="hero-route-connector"><span/><span/><span/></div>
+                <div className="hero-route-symbol hero-route-symbol-end"><Truck size={33}/></div>
+                <span>Da retirada até a entrega.</span>
               </div>
+            </section>
+          )}
+          {page === "inicio" && area === "motorista" && (
+            <section className="driver-welcome">
+              <div>
+                <span className="driver-welcome-kicker"><MapPin size={15} aria-hidden="true"/> FRETES EM PORTO VELHO</span>
+                <h2>Encontre seu próximo serviço.</h2>
+                <p>Veja os pedidos disponíveis, confira a carga e envie seu preço.</p>
+              </div>
+              <button type="button" className="secondary" onClick={() => setPage("propostas")}>
+                Minhas propostas <ArrowRight size={17} aria-hidden="true"/>
+              </button>
             </section>
           )}
           {page === "inicio" && (

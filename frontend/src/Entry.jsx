@@ -7,11 +7,13 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
+  MapPin,
+  MessageSquare,
+  CheckCircle2,
 } from "lucide-react";
 import Dashboard from "./App.jsx";
 import { RecoveryRequest, RecoveryReset } from "./PasswordRecovery.jsx";
 import { api } from "./api.js";
-import RoleSwitcher from "./RoleSwitcher.jsx";
 import InstallInvitation from "./InstallInvitation.jsx";
 import LegalPage, { LEGAL_VERSION } from "./LegalPage.jsx";
 import LegalAcceptanceGate from "./LegalAcceptanceGate.jsx";
@@ -92,9 +94,6 @@ export default function Entry() {
     });
     navigate(`/${role}`);
   }
-  function switchRole(role) {
-    navigate(`/${role}`);
-  }
   const area = path.split("/")[1];
   const user = sessions[area] || null;
   const legalAccepted = area === "master" || (user?.termsVersion === LEGAL_VERSION && user?.privacyNoticeVersion === LEGAL_VERSION);
@@ -135,8 +134,6 @@ export default function Entry() {
         key={user.id}
         user={user}
         onLogout={logout}
-        sessions={sessions}
-        onSwitchRole={switchRole}
         onExpired={() => {
           setSessions((previous) => {
             const next = { ...previous };
@@ -162,70 +159,81 @@ export default function Entry() {
         >
           <img src="/assets/logo.png" alt="FreteOn — início" />
         </a>
-        {Object.keys(sessions).length ? (
-          <RoleSwitcher
-            activeRole={area}
-            sessions={sessions}
-            onSwitch={switchRole}
-          />
-        ) : (
-          <span>Porto Velho, RO</span>
-        )}
+        <div className="public-header-actions">
+          <span className="public-header-location"><MapPin size={15} aria-hidden="true"/> Porto Velho, RO</span>
+          {path === "/" && <a className="public-header-login" href="/cliente"
+            onClick={event => { event.preventDefault(); navigate("/cliente"); }}>
+            Acessar <ArrowRight size={16} aria-hidden="true"/>
+          </a>}
+        </div>
       </header>
       {path === "/recuperar-senha" ? <RecoveryReset onBack={() => navigate("/cliente")}/> : (area === "cliente" || area === "motorista") && path.endsWith("/esqueci-senha") ? <RecoveryRequest role={area} onBack={() => navigate(`/${area}`)}/> : path === "/termos" || path === "/privacidade" ? (
         <LegalPage kind={path === "/termos" ? "termos" : "privacidade"} navigate={navigate} />
       ) : path === "/" ? (
-        <main className="public-home">
-          <div className="public-copy">
-            <span className="eyebrow">FRETES EM PORTO VELHO</span>
-            <h1>
-              Seu frete.
-              <br />
-              <em>Sua escolha.</em>
-            </h1>
-            <p>
-              Receba propostas de motoristas, compare os preços e escolha quem
-              vai transportar sua carga.
-            </p>
-            <div className="entry-cards">
-              <a
-                href="/cliente"
-                onClick={(event) => {
-                  event.preventDefault();
-                  navigate("/cliente");
-                }}
-              >
-                <Package />
-                <strong>Preciso de um frete</strong>
-                <span>Solicite e compare propostas.</span>
-                <ArrowRight />
-              </a>
-              <a
-                href="/motorista"
-                onClick={(event) => {
-                  event.preventDefault();
-                  navigate("/motorista");
-                }}
-              >
-                <Truck />
-                <strong>Sou motorista</strong>
-                <span>Encontre pedidos e envie seu preço.</span>
-                <ArrowRight />
-              </a>
-            </div>
+        <main className="public-home public-home-refined">
+          <div className="public-home-stage">
+            <section className="public-copy" aria-labelledby="public-home-title">
+              <span className="public-location-chip"><MapPin size={15} aria-hidden="true"/> FRETES EM PORTO VELHO</span>
+              <h1 id="public-home-title">Seu frete.<br/><em>Sua escolha.</em></h1>
+              <p>Descreva o que precisa transportar, receba propostas e escolha o motorista ideal para você.</p>
+              <div className="public-cta-group">
+                <a className="public-cta-primary" href="/cliente"
+                  onClick={event => { event.preventDefault(); navigate("/cliente"); }}>
+                  <Package size={21} aria-hidden="true"/>
+                  <span>Solicitar meu frete</span>
+                  <ArrowRight size={19} aria-hidden="true"/>
+                </a>
+                <a className="public-cta-secondary" href="/motorista"
+                  onClick={event => { event.preventDefault(); navigate("/motorista"); }}>
+                  <Truck size={21} aria-hidden="true"/>
+                  <span>Sou motorista</span>
+                  <ArrowRight size={18} aria-hidden="true"/>
+                </a>
+              </div>
+              <div className="public-trust-note"><ShieldCheck size={18} aria-hidden="true"/>
+                <span>Motoristas passam por verificação documental antes de enviar propostas.</span>
+              </div>
+            </section>
+            <aside className="public-journey-card" aria-label="Como o frete acontece">
+              <div className="public-journey-header">
+                <span><Truck size={18} aria-hidden="true"/> FreteOn</span>
+                <span className="public-journey-state">Simples de usar</span>
+              </div>
+              <div className="public-journey-illustration" aria-hidden="true">
+                <div className="public-journey-route">
+                  <span className="public-route-node"><Package size={24}/></span>
+                  <span className="public-route-dashes"/>
+                  <span className="public-route-node public-route-node-end"><MapPin size={25}/></span>
+                </div>
+              </div>
+              <h2>Da retirada à entrega, tudo mais simples.</h2>
+              <p>Você combina o preço com o motorista e acompanha seu pedido em um só lugar.</p>
+              <div className="public-journey-footer">
+                <span><MessageSquare size={17} aria-hidden="true"/> Propostas em um só lugar</span>
+                <span><CheckCircle2 size={17} aria-hidden="true"/> Você decide</span>
+              </div>
+            </aside>
           </div>
-          <aside className="public-promise">
-            <Truck size={100} strokeWidth={1.2} />
-            <h2>
-              Do seu ponto A<br />
-              ao ponto B.
-            </h2>
-            <p>Retirada, entrega e propostas organizadas em um só lugar.</p>
-            <div>
-              <ShieldCheck size={20} />
-              Motoristas aprovados pela administração
+          <section className="public-how" aria-labelledby="public-how-title">
+            <div className="public-how-heading">
+              <span>SEM COMPLICAÇÃO</span>
+              <h2 id="public-how-title">Como funciona</h2>
             </div>
-          </aside>
+            <div className="public-how-steps">
+              <div><span className="public-how-icon"><Package size={23}/></span>
+                <strong>1. Solicite</strong>
+                <p>Informe a retirada, a entrega e o que será transportado.</p>
+              </div>
+              <div><span className="public-how-icon"><MessageSquare size={23}/></span>
+                <strong>2. Compare</strong>
+                <p>Receba propostas dos motoristas e escolha a melhor para você.</p>
+              </div>
+              <div><span className="public-how-icon"><CheckCircle2 size={23}/></span>
+                <strong>3. Contrate</strong>
+                <p>Confirme sua escolha e acompanhe a realização do frete.</p>
+              </div>
+            </div>
+          </section>
         </main>
       ) : titles[area] ? (
         <AuthForm
