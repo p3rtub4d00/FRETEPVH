@@ -11,7 +11,7 @@ export function shouldOfferPush({
   dismissedAt,
   now,
 }) {
-  if (!["cliente", "motorista"].includes(role) || !canDisplay || !loaded ||
+  if (!["cliente", "motorista", "master"].includes(role) || !canDisplay || !loaded ||
       !serverEnabled || !supported || active || permission === "denied")
     return false;
   return !(Number.isFinite(dismissedAt) && dismissedAt > 0 &&

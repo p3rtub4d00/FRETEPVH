@@ -7,17 +7,19 @@ const base = {
   role: "motorista", canDisplay: true, loaded: true, serverEnabled: true,
   supported: true, permission: "default", active: false, dismissedAt: 0, now,
 };
-test("mostra o convite automaticamente para Cliente e Motorista sem permissão ativa", () => {
+test("oferece convite push para Cliente, Motorista e Master no mesmo PWA", () => {
   assert.equal(shouldOfferPush(base), true);
   assert.equal(shouldOfferPush({ ...base, role: "cliente" }), true);
-  assert.equal(shouldOfferPush({ ...base, permission: "granted" }), true);
+  assert.equal(shouldOfferPush({ ...base, role: "master" }), true);
+  assert.equal(shouldOfferPush({ ...base, role: "master", permission: "granted" }), true);
 });
-test("não mostra para Master, aparelho sem suporte, permissão negada ou push já ativo", () => {
+test("não mostra quando falta suporte, permissão, configuração ou quando já está ativo", () => {
   for (const options of [
-    { role: "master" }, { supported: false }, { permission: "denied" },
+    { supported: false }, { permission: "denied" },
     { active: true }, { serverEnabled: false }, { loaded: false },
-    { canDisplay: false },
+    { canDisplay: false }, { role: "visitante" },
   ]) assert.equal(shouldOfferPush({ ...base, ...options }), false);
+  assert.equal(shouldOfferPush({ ...base, role: "master", active: true }), false);
 });
 test("respeita dispensa por sete dias, evitando repetição em cada acesso", () => {
   assert.equal(shouldOfferPush({ ...base, dismissedAt: now - 1000 }), false);

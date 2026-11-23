@@ -161,10 +161,16 @@ export default function Entry() {
         </a>
         <div className="public-header-actions">
           <span className="public-header-location"><MapPin size={15} aria-hidden="true"/> Porto Velho, RO</span>
-          {path === "/" && <a className="public-header-login" href="/cliente"
-            onClick={event => { event.preventDefault(); navigate("/cliente"); }}>
-            Acessar <ArrowRight size={16} aria-hidden="true"/>
-          </a>}
+          {path === "/" && <>
+            <a className="public-header-login" href="/cliente"
+              onClick={event => { event.preventDefault(); navigate("/cliente"); }}>
+              Acessar <ArrowRight size={16} aria-hidden="true"/>
+            </a>
+            <a className="public-header-admin" href="/master" aria-label="Acessar painel administrativo"
+              onClick={event => { event.preventDefault(); navigate("/master"); }}>
+              <ShieldCheck size={19} aria-hidden="true"/>
+            </a>
+          </>}
         </div>
       </header>
       {path === "/recuperar-senha" ? <RecoveryReset onBack={() => navigate("/cliente")}/> : (area === "cliente" || area === "motorista") && path.endsWith("/esqueci-senha") ? <RecoveryRequest role={area} onBack={() => navigate(`/${area}`)}/> : path === "/termos" || path === "/privacidade" ? (
@@ -264,6 +270,9 @@ export default function Entry() {
         <nav className="rubli-footer-links" aria-label="Links institucionais">
           <a href="/privacidade" onClick={event => { event.preventDefault(); navigate("/privacidade"); }}>Privacidade</a>
           <a href="/termos" onClick={event => { event.preventDefault(); navigate("/termos"); }}>Termos de Uso</a>
+          <a href="/master" onClick={event => { event.preventDefault(); navigate("/master"); }}>
+            <ShieldCheck size={15} aria-hidden="true"/> Acesso administrativo
+          </a>
         </nav>
         <p className="rubli-footer-credit">© {new Date().getFullYear()} FreteOn · Uma plataforma do <strong>Grupo Rubli</strong>. O FreteOn atua na intermediação de fretes entre clientes e motoristas parceiros.</p>
       </footer>

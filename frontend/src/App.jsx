@@ -1600,6 +1600,13 @@ export default function App({ user, onLogout, onExpired }) {
                   <ChevronRight size={18} aria-hidden="true" />
                 </button>
               )}
+              {area !== "master" && (
+                <a className="profile-admin-access" href="/master">
+                  <ShieldCheck size={17} aria-hidden="true"/>
+                  Acesso administrativo
+                  <ChevronRight size={17} aria-hidden="true"/>
+                </a>
+              )}
               <button className="secondary" onClick={logout}>
                 Sair da conta
               </button>

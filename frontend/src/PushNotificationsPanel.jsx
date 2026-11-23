@@ -194,7 +194,9 @@ export default function PushNotificationsPanel({
       setActive(true);
       setCount((value) => Math.max(1, value));
       broadcast(true);
-      setNotice("Avisos ativados neste dispositivo. Você receberá atualizações de fretes e mensagens do chat.");
+      setNotice(role === "master"
+        ? "Avisos do Master ativados neste dispositivo. Solicitações e ocorrências poderão aparecer mesmo com o aplicativo fechado."
+        : "Avisos ativados neste dispositivo. Você receberá atualizações de fretes e mensagens do chat.");
     } catch (e) {
       setError(e.message || "Não foi possível ativar os avisos.");
     } finally {
@@ -300,9 +302,11 @@ export default function PushNotificationsPanel({
           <span className="push-invite-eyebrow">FRETEON · AVISOS IMPORTANTES</span>
           <h2 id="push-invite-title">Ative as notificações</h2>
           <p>
-            {role === "motorista"
-              ? "Receba avisos de novos fretes e saiba quando sua proposta for aceita, mesmo fora do painel."
-              : "Saiba quando chegar uma proposta, um motorista for contratado ou seu frete for concluído."}
+            {role === "master"
+              ? "Receba solicitações de confirmação de celular, novos cadastros e avisos administrativos, mesmo com o painel fechado."
+              : role === "motorista"
+                ? "Receba avisos de novos fretes e saiba quando sua proposta for aceita, mesmo fora do painel."
+                : "Saiba quando chegar uma proposta, um motorista for contratado ou seu frete for concluído."}
           </p>
           <div className="push-invite-benefits">
             <span><CheckCircle2 size={17}/> Você escolhe se deseja autorizar.</span>
