@@ -177,15 +177,22 @@ auth.post("/register", limit, async (req, res) => {
 const masterLoginLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
-  skip: req => req.body?.role !== "master",
+  // Proteger também a conta Master quando alguém mente sobre o perfil.
+  // O papel real vem do banco, não do corpo enviado pelo navegador.
+  skip: req => !req.isAdminLoginAttempt,
   skipSuccessfulRequests: true,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: { error: "Muitas tentativas de acesso administrativo. Aguarde 15 minutos." },
 });
-auth.post("/login", limit, masterLoginLimit, async (req, res) => {
-  const phone = phoneNumber(req.body.phone);
-  const user = await Account.findOne({ phone }).select("+passwordHash");
+auth.post("/login", limit, async (req, _res, next) => {
+  const phone = phoneNumber(req.body?.phone);
+  req.loginAccount = await Account.findOne({ phone }).select("+passwordHash");
+  req.isAdminLoginAttempt = req.body?.role === "master" ||
+    ["master", "staff"].includes(req.loginAccount?.role);
+  next();
+}, masterLoginLimit, async (req, res) => {
+  const user = req.loginAccount;
   // Derive a key on missing accounts too, keeping the same expensive operation.
   const stored = user?.passwordHash || `${"0".repeat(32)}:${"0".repeat(128)}`;
   if (!(await verifyPassword(req.body.password, stored)) || !user)
