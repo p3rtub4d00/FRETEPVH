@@ -16,7 +16,7 @@ import { PaymentReservation } from "./paymentGateway.js";
 import { pagBankWebhook, PagBankOrder } from "./pagBank.js";
 import { PaymentProviderSettings } from "./paymentProviderSettings.js";
 import { dispatchDueCampaigns, campaignMedia } from "./campaigns.js";
-import { allowsApiMutation } from "./securityGuards.js";
+import { allowsApiMutation, adminPageProtection } from "./securityGuards.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -90,11 +90,7 @@ app.use("/api", (req, res) =>
 // Páginas de entrada administrativas não devem ser indexadas ou
 // armazenadas por caches compartilhados. A senha e as permissões continuam
 // sendo obrigatórias no backend mesmo que alguém descubra /master.
-app.use("/master", (_req, res, next) => {
-  res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
-  res.setHeader("Cache-Control", "no-store, private");
-  next();
-});
+app.use("/master", adminPageProtection);
 const publicDirectory = fileURLToPath(
   new URL("../../frontend/dist/", import.meta.url),
 );

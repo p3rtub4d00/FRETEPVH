@@ -15,3 +15,9 @@ export function allowsApiMutation(method, requestFlag, isJson, fetchSite) {
   return ["GET", "HEAD", "OPTIONS"].includes(method) ||
     (requestFlag === "1" && isJson && fetchSite !== "cross-site");
 }
+
+export function adminPageProtection(_req, res, next) {
+  res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
+  res.setHeader("Cache-Control", "no-store, private");
+  next();
+}
