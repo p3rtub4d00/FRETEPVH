@@ -13,6 +13,7 @@ import { LEGAL_VERSION } from "./legalVersion.js";
 import { BlockedAppeal } from "./blockedAppeals.js";
 import { notifyMasters } from "./webPush.js";
 import { staffAccessForRequest, trackAdministrativeAction } from "./teamAccess.js";
+import { sessionPolicy, validAdminSession } from "./securityGuards.js";
 
 const scrypt = promisify(scryptCallback);
 const cookieName = "freteon_session"; // Compatibilidade com sessões anteriores.
@@ -79,6 +80,9 @@ async function findSessionUser(token) {
   });
   if (!session) return null;
   const user = await Account.findById(session.userId);
+  // Sessões administrativas legadas (sete dias) devem exigir novo login:
+  // somente tokens emitidos sob a política de curta duração são aceitos.
+  if (!validAdminSession(session, user?.role)) return null;
   if (user?.role === "staff" && (!user.staffEnabled || user.status !== "approved")) return null;
   if (["cliente", "motorista"].includes(user?.role) && user.blockedAt) return null;
   return user;
@@ -100,11 +104,12 @@ async function issueSession(req, res, user) {
     await Session.deleteOne({ tokenHash: digest(oldToken) });
   }
   const token = randomBytes(32).toString("hex");
-  const maxAge = 7 * 24 * 60 * 60 * 1000;
+  const { maxAge, adminSession } = sessionPolicy(user.role);
   await Session.create({
     tokenHash: digest(token),
     userId: user._id,
     expiresAt: new Date(Date.now() + maxAge),
+    adminSession,
   });
   res.cookie(name, token, { ...cookieOptions, maxAge });
   return publicUser(user);
@@ -167,7 +172,18 @@ auth.post("/register", limit, async (req, res) => {
   if (role === "motorista") void notifyMasters({ title: "Novo motorista cadastrado", body: "Um motorista aguarda análise no painel Master.", category: "motoristas", id: String(user._id) });
   res.status(201).json({ user: await issueSession(req, res, user) });
 });
-auth.post("/login", limit, async (req, res) => {
+// Contenção adicional de tentativas na administração, sem prejudicar
+// quem solicita fretes. Cinco falhas por IP em quinze minutos.
+const masterLoginLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  skip: req => req.body?.role !== "master",
+  skipSuccessfulRequests: true,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Muitas tentativas de acesso administrativo. Aguarde 15 minutos." },
+});
+auth.post("/login", limit, masterLoginLimit, async (req, res) => {
   const phone = phoneNumber(req.body.phone);
   const user = await Account.findOne({ phone }).select("+passwordHash");
   // Derive a key on missing accounts too, keeping the same expensive operation.

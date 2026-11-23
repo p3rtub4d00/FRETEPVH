@@ -692,7 +692,7 @@ function RequestForm({ onCreate, onClose, requestError, userId }) {
   );
 }
 
-export default function App({ user, onLogout, onExpired }) {
+export default function App({ user, onLogout, onExpired, adminSessionAvailable = false }) {
   const area = user.role;
   const masterOwner = area === "master" && user.adminRole === "owner";
   const menu = visibleNavigation(area, user);
@@ -1600,7 +1600,7 @@ export default function App({ user, onLogout, onExpired }) {
                   <ChevronRight size={18} aria-hidden="true" />
                 </button>
               )}
-              {area !== "master" && (
+              {area !== "master" && adminSessionAvailable && (
                 <a className="profile-admin-access" href="/master">
                   <ShieldCheck size={17} aria-hidden="true"/>
                   Acesso administrativo

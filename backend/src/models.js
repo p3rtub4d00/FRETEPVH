@@ -79,6 +79,7 @@ const sessionSchema = new mongoose.Schema({
     required: true,
   },
   expiresAt: { type: Date, required: true, expires: 0 },
+  adminSession: { type: Boolean, default: false },
 });
 const proposalSchema = new mongoose.Schema(
   {

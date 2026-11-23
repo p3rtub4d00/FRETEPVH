@@ -16,14 +16,17 @@ import { PaymentReservation } from "./paymentGateway.js";
 import { pagBankWebhook, PagBankOrder } from "./pagBank.js";
 import { PaymentProviderSettings } from "./paymentProviderSettings.js";
 import { dispatchDueCampaigns, campaignMedia } from "./campaigns.js";
+import { allowsApiMutation } from "./securityGuards.js";
 
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(
   helmet({
+    frameguard: { action: "deny" },
     contentSecurityPolicy: {
       directives: {
+        "frame-ancestors": ["'none'"],
         "script-src": ["'self'", "https://maps.googleapis.com", "https://maps.gstatic.com"],
         "connect-src": ["'self'", "https://maps.googleapis.com", "https://places.googleapis.com"],
         "img-src": ["'self'", "data:", "blob:", "https://maps.googleapis.com", "https://maps.gstatic.com"],
@@ -59,12 +62,12 @@ app.get("/api/health", (req, res) =>
 );
 app.use("/api", (req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
-  if (
-    !["GET", "HEAD", "OPTIONS"].includes(req.method) &&
-    (req.get("X-FreteOn-Request") !== "1" ||
-      !req.is("application/json") ||
-      req.get("Sec-Fetch-Site") === "cross-site")
-  )
+  if (!allowsApiMutation(
+    req.method,
+    req.get("X-FreteOn-Request"),
+    Boolean(req.is("application/json")),
+    req.get("Sec-Fetch-Site"),
+  ))
     return res.status(403).json({ error: "Requisição não autorizada." });
   if (mongoose.connection.readyState !== 1)
     return res
@@ -84,6 +87,14 @@ app.use("/api", api);
 app.use("/api", (req, res) =>
   res.status(404).json({ error: "Endpoint não encontrado." }),
 );
+// Páginas de entrada administrativas não devem ser indexadas ou
+// armazenadas por caches compartilhados. A senha e as permissões continuam
+// sendo obrigatórias no backend mesmo que alguém descubra /master.
+app.use("/master", (_req, res, next) => {
+  res.setHeader("X-Robots-Tag", "noindex, nofollow, noarchive");
+  res.setHeader("Cache-Control", "no-store, private");
+  next();
+});
 const publicDirectory = fileURLToPath(
   new URL("../../frontend/dist/", import.meta.url),
 );
