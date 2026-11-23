@@ -5196,3 +5196,12 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
   .public-cta-group a{transition:none}
   .public-cta-primary:hover{transform:none}
 }
+
+/* Ações principais empilhadas em celulares: leitura fácil, sem texto apertado. */
+@media(max-width:560px){
+  .public-cta-group{grid-template-columns:minmax(0,1fr)}
+  .public-cta-group a{min-height:52px;font-size:14px}
+}
+@media(max-width:440px){
+  .public-header-location{display:none}
+}
