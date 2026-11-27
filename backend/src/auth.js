@@ -197,11 +197,18 @@ auth.post("/login", limit, async (req, _res, next) => {
   const stored = user?.passwordHash || `${"0".repeat(32)}:${"0".repeat(128)}`;
   if (!(await verifyPassword(req.body.password, stored)) || !user)
     fail(401, "Telefone ou senha incorretos.");
+  if (user.role === "staff" && (!user.staffEnabled || user.status !== "approved"))
+    fail(403, "Conta da equipe bloqueada. Consulte o Master Principal.");
+  // Se credenciais administrativas válidas forem informadas na entrada
+  // Cliente/Motorista do PWA, oferecer acesso Master somente após
+  // autenticação completa. Não mostrar atalhos públicos ou revelar
+  // existência de conta administrativa com senha incorreta.
+  if (["cliente", "motorista"].includes(req.body.role) &&
+      ["master", "staff"].includes(user.role))
+    return res.json({ user: await issueSession(req, res, user), adminAccess: true });
   if (!roles.includes(req.body.role) ||
       (user.role !== req.body.role && !(user.role === "staff" && req.body.role === "master")))
     fail(403, "Use a página de entrada correspondente ao seu perfil.");
-  if (user.role === "staff" && (!user.staffEnabled || user.status !== "approved"))
-    fail(403, "Conta da equipe bloqueada. Consulte o Master Principal.");
   if (["cliente", "motorista"].includes(user.role) && user.blockedAt)
     return res.status(403).json({ code: "ACCOUNT_BLOCKED", error: "Sua conta está bloqueada. Você pode solicitar uma revisão à equipe FreteOn." });
   res.json({ user: await issueSession(req, res, user) });

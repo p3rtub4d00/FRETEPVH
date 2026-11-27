@@ -251,6 +251,7 @@ export default function Entry() {
           error={error}
           navigate={navigate}
           authenticated={authenticated}
+          adminAuthenticated={account => setSessions(previous => ({ ...previous, master: account }))}
           logout={logout}
         />
       ) : (
@@ -287,11 +288,13 @@ function AuthForm({
   error: initialError,
   navigate,
   authenticated,
+  adminAuthenticated,
   logout,
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
   const [visible, setVisible] = useState(false);
+  const [adminReady, setAdminReady] = useState(false);
   const [appealAuth, setAppealAuth] = useState(null);
   const [appealOpen, setAppealOpen] = useState(false);
   const [appealText, setAppealText] = useState("");
@@ -326,6 +329,7 @@ function AuthForm({
   async function submit(event) {
     event.preventDefault();
     setError("");
+    setAdminReady(false);
     setAppealAuth(null); setAppealOpen(false); setAppealError("");
     setAppealMessage(""); setAppealResult(null);
     const fields = Object.fromEntries(new FormData(event.currentTarget));
@@ -345,7 +349,13 @@ function AuthForm({
         method: "POST",
         body: { ...fields, role: area },
       });
-      authenticated(result.user);
+      if (!register && result.adminAccess === true &&
+          result.user?.role === "master") {
+        adminAuthenticated(result.user);
+        setAdminReady(true);
+      } else {
+        authenticated(result.user);
+      }
     } catch (error) {
       setError(error.message);
       if (!register && ["cliente", "motorista"].includes(area) &&
@@ -518,6 +528,19 @@ function AuthForm({
           <p className="error" role="alert">
             {error}
           </p>
+        )}
+        {adminReady && !register && !user && (
+          <section className="auth-admin-confirmed" aria-label="Acesso administrativo confirmado" role="status">
+            <div className="auth-admin-confirmed-heading">
+              <ShieldCheck size={21} aria-hidden="true"/>
+              <strong>Conta administrativa confirmada</strong>
+            </div>
+            <p>Suas credenciais foram verificadas. Você pode acessar seu painel Master neste aplicativo.</p>
+            <button type="button" className="primary full"
+              onClick={() => navigate("/master")}>
+              Acessar Painel Master <ArrowRight size={18} aria-hidden="true"/>
+            </button>
+          </section>
         )}
         {appealAuth && !register && !user && <section className="blocked-account-appeal" aria-label="Solicitar revisão do bloqueio">
           <h2>Fale com a equipe FreteOn</h2>

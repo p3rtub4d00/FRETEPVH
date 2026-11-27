@@ -5214,3 +5214,11 @@ dialog:has(.client-pix-compact) .modal-head h2 { font-size: 19px; line-height: 1
 .profile-admin-access>svg:last-child{margin-left:auto}
 .profile-admin-access:hover{background:#f0f5fa;color:#163b5f}
 @media(max-width:440px){.public-header-admin{width:38px;flex-basis:38px;height:38px}.public-header-actions{gap:7px}}
+
+/* Entrada administrativa contextual: aparece somente após validação real
+   do celular e senha pelo servidor, nunca como link público. */
+.auth-admin-confirmed{display:grid;gap:12px;border:1px solid #d7e8de;border-radius:13px;background:#f4fbf7;padding:17px 15px;margin:14px 0}
+.auth-admin-confirmed-heading{display:flex;align-items:center;gap:9px;color:#205940;font-size:14px}
+.auth-admin-confirmed-heading svg{flex-shrink:0}
+.auth-admin-confirmed p{color:#405a4b;font-size:13px;line-height:1.6;margin:0}
+.auth-admin-confirmed button{min-height:46px;display:flex;align-items:center;justify-content:center;gap:9px}
